@@ -45,15 +45,30 @@ class DVFService:
         # Get the first two digits of postal code for department matching
         department = postal_code[:2] if postal_code else None
 
+        # Build postal code matching conditions (handle float storage as string)
+        postal_conditions = []
+        if postal_code:
+            # Try exact match
+            postal_conditions.append(DVFRecord.postal_code == postal_code)
+            # Try with .0 suffix (float storage)
+            postal_conditions.append(DVFRecord.postal_code == f"{postal_code}.0")
+            # LIKE match for postal code prefix
+            postal_conditions.append(DVFRecord.postal_code.like(f"{postal_code}%"))
+
+        if department:
+            postal_conditions.append(DVFRecord.department == department)
+            # Match any postal code starting with department
+            postal_conditions.append(DVFRecord.postal_code.like(f"{department}%"))
+
         query = db.query(DVFRecord).filter(
             and_(
                 DVFRecord.sale_date >= cutoff_date,
                 DVFRecord.property_type == property_type,
                 DVFRecord.surface_area.between(min_surface, max_surface),
-                or_(
-                    DVFRecord.postal_code == postal_code,
-                    DVFRecord.department == department
-                )
+                DVFRecord.surface_area.isnot(None),
+                DVFRecord.price_per_sqm.isnot(None),
+                DVFRecord.price_per_sqm > 0,
+                or_(*postal_conditions) if postal_conditions else True
             )
         ).order_by(DVFRecord.sale_date.desc()).limit(max_results)
 

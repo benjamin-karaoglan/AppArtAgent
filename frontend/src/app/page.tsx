@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { Home, FileText, Image, TrendingUp, Shield, Calculator } from 'lucide-react'
+import Header from '@/components/Header'
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <Header />
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">

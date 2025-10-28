@@ -153,3 +153,6 @@ export const photosAPI = {
     return response.data
   },
 }
+
+// Default export for convenience
+export default api

@@ -14,7 +14,8 @@ import json
 from sqlalchemy.orm import Session
 
 # Add parent directory to path
-sys.path.append('..')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import SessionLocal, engine
 from app.models.property import DVFRecord, Base
@@ -25,10 +26,10 @@ Base.metadata.create_all(bind=engine)
 
 def parse_dvf_csv(file_path: str) -> pd.DataFrame:
     """Parse DVF CSV file."""
-    print(f"Reading CSV file: {file_path}")
+    print(f"Reading DVF file: {file_path}")
 
-    # Read CSV with specific encoding
-    df = pd.read_csv(file_path, encoding='utf-8', low_memory=False)
+    # Read pipe-delimited file with specific encoding
+    df = pd.read_csv(file_path, sep='|', encoding='utf-8', low_memory=False)
 
     print(f"Loaded {len(df)} records")
     return df
@@ -38,19 +39,19 @@ def clean_and_transform(df: pd.DataFrame) -> pd.DataFrame:
     """Clean and transform DVF data."""
     print("Cleaning and transforming data...")
 
-    # Common DVF column mappings (adjust based on actual CSV structure)
+    # DVF column mappings (matching actual file structure)
     column_mapping = {
-        'date_mutation': 'sale_date',
-        'valeur_fonciere': 'sale_price',
-        'adresse_numero': 'street_number',
-        'adresse_nom_voie': 'street_name',
-        'code_postal': 'postal_code',
-        'commune': 'city',
-        'code_departement': 'department',
-        'type_local': 'property_type',
-        'surface_reelle_bati': 'surface_area',
-        'nombre_pieces_principales': 'rooms',
-        'surface_terrain': 'land_surface',
+        'Date mutation': 'sale_date',
+        'Valeur fonciere': 'sale_price',
+        'No voie': 'street_number',
+        'Voie': 'street_name',
+        'Code postal': 'postal_code',
+        'Commune': 'city',
+        'Code departement': 'department',
+        'Type local': 'property_type',
+        'Surface reelle bati': 'surface_area',
+        'Nombre pieces principales': 'rooms',
+        'Surface terrain': 'land_surface',
     }
 
     # Rename columns if they exist
