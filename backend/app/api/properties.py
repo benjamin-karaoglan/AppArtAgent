@@ -8,13 +8,14 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.property import Property, DVFRecord
+from app.models.property import Property, DVFRecord, DVFGroupedTransaction
 from app.schemas.property import (
     PropertyCreate,
     PropertyUpdate,
     PropertyResponse,
     PriceAnalysisResponse,
-    DVFRecordResponse
+    DVFRecordResponse,
+    DVFGroupedTransactionResponse
 )
 from app.services.dvf_service import dvf_service
 
@@ -249,21 +250,37 @@ async def analyze_property_price(
         )
 
     if analysis_type == "trend":
-        # TREND ANALYSIS: Get exact address sales + neighboring sales for trend
-        exact_sales = dvf_service.get_comparable_sales(
+        # TREND ANALYSIS: Get GROUPED exact address sales + neighboring sales for trend
+        grouped_exact_sales = dvf_service.get_grouped_exact_address_sales(
             db=db,
             postal_code=property.postal_code or "",
             property_type=property.property_type or "Appartement",
-            surface_area=property.surface_area,
             address=property.address or "",
         )
 
+        # Convert grouped sales to compatible format for analysis
+        exact_sales = []
+        for sale in grouped_exact_sales:
+            class CompatibleSale:
+                def __init__(self, grouped_sale):
+                    self.id = grouped_sale.id
+                    self.sale_date = grouped_sale.sale_date
+                    self.sale_price = grouped_sale.sale_price
+                    self.surface_area = grouped_sale.total_surface_area
+                    self.price_per_sqm = grouped_sale.grouped_price_per_sqm
+                    self.address = grouped_sale.address
+                    self.city = grouped_sale.city
+                    self.postal_code = grouped_sale.postal_code
+            exact_sales.append(CompatibleSale(sale))
+
+        # Get neighboring sales for trend (ONLY 2024-2025 data for projection)
         neighboring_sales = dvf_service.get_neighboring_sales_for_trend(
             db=db,
             postal_code=property.postal_code or "",
             property_type=property.property_type or "Appartement",
             surface_area=property.surface_area,
             address=property.address or "",
+            months_back=24  # Only current + past year (2024-2025)
         )
 
         # Check if we have enough data
@@ -282,15 +299,29 @@ async def analyze_property_price(
         # Detect outliers in neighboring sales
         neighboring_outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
 
-        # Calculate trend-based projection (excluding outliers)
-        neighboring_outlier_indices = [i for i, is_outlier in enumerate(neighboring_outlier_flags) if is_outlier]
-        filtered_neighboring_sales = [sale for i, sale in enumerate(neighboring_sales) if i not in neighboring_outlier_indices]
+        # CRITICAL: Filter out outliers for consistent trend calculation (same as chart)
+        filtered_neighboring_sales = [
+            sale for i, sale in enumerate(neighboring_sales)
+            if not neighboring_outlier_flags[i]
+        ]
 
+        outliers_excluded = len(neighboring_sales) - len(filtered_neighboring_sales)
+
+        print(f"\n🎯 INITIAL TREND ANALYSIS for property {property_id}")
+        print(f"   Exact address sales: {len(exact_sales)}")
+        print(f"   Total neighboring sales: {len(neighboring_sales)}")
+        print(f"   Outliers excluded: {outliers_excluded}")
+        print(f"   Filtered neighboring sales: {len(filtered_neighboring_sales)}")
+
+        # Calculate trend-based projection with FILTERED sales (outliers removed)
         trend_projection = dvf_service.calculate_trend_based_projection(
             exact_address_sales=exact_sales,
-            neighboring_sales=filtered_neighboring_sales,
+            neighboring_sales=filtered_neighboring_sales,  # Use filtered sales WITHOUT outliers
             surface_area=property.surface_area
         )
+
+        print(f"   Initial trend_used: {trend_projection.get('trend_used', 'N/A')}%")
+        print(f"   Initial sample size: {trend_projection.get('trend_sample_size', 'N/A')}")
 
         # Detect outliers in exact/comparable sales
         comparable_for_analysis = exact_sales if exact_sales else neighboring_sales
@@ -311,6 +342,7 @@ async def analyze_property_price(
         trend_projection_with_sales = trend_projection.copy()
         trend_projection_with_sales["neighboring_sales"] = [
             {
+                "id": sale.id,  # CRITICAL: Include ID for frontend toggling
                 "address": sale.address,
                 "sale_date": sale.sale_date.isoformat() if hasattr(sale.sale_date, 'isoformat') else str(sale.sale_date),
                 "sale_price": sale.sale_price,
@@ -326,26 +358,27 @@ async def analyze_property_price(
             "trend_projection": trend_projection_with_sales,
             "data_source": "exact_address" if exact_sales else "neighboring_addresses",
             "exact_sales_count": len(exact_sales),
-            "neighboring_sales_count": len(neighboring_sales)
+            "neighboring_sales_count": len(filtered_neighboring_sales)  # Use filtered count (outliers excluded)
         })
 
-        # Add outlier flags to comparable sales response
+        # Add outlier flags to comparable sales response (using grouped format)
         comparable_sales_response = []
-        for i, sale in enumerate(comparable_for_analysis[:10]):
-            sale_response = DVFRecordResponse.from_orm(sale)
+        for i, sale in enumerate(grouped_exact_sales[:10]):
+            sale_response = DVFGroupedTransactionResponse.from_orm(sale)
             sale_response.is_outlier = outlier_flags[i] if i < len(outlier_flags) else False
+            sale_response.is_multi_unit = sale.unit_count > 1
             comparable_sales_response.append(sale_response)
 
     else:
-        # SIMPLE ANALYSIS: Use ONLY exact address sales (no neighbors)
-        comparable_sales = dvf_service.get_exact_address_sales(
+        # SIMPLE ANALYSIS: Use GROUPED exact address sales (multi-unit aggregated)
+        grouped_sales = dvf_service.get_grouped_exact_address_sales(
             db=db,
             postal_code=property.postal_code or "",
             property_type=property.property_type or "Appartement",
             address=property.address or "",
         )
 
-        if not comparable_sales:
+        if not grouped_sales:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(
@@ -357,26 +390,41 @@ async def analyze_property_price(
                 )
             )
 
+        # Convert grouped sales to format compatible with analysis
+        # Use total_surface_area and grouped_price_per_sqm for correct calculations
+        comparable_sales_for_analysis = []
+        for sale in grouped_sales:
+            # Create a compatible object for analysis
+            class CompatibleSale:
+                def __init__(self, grouped_sale):
+                    self.sale_date = grouped_sale.sale_date
+                    self.sale_price = grouped_sale.sale_price
+                    self.surface_area = grouped_sale.total_surface_area
+                    self.price_per_sqm = grouped_sale.grouped_price_per_sqm
+
+            comparable_sales_for_analysis.append(CompatibleSale(sale))
+
         # Detect outliers using IQR method
-        outlier_flags = dvf_service.detect_outliers_iqr(comparable_sales)
+        outlier_flags = dvf_service.detect_outliers_iqr(comparable_sales_for_analysis)
 
         # Calculate price analysis (excluding outliers by default)
         outlier_indices = [i for i, is_outlier in enumerate(outlier_flags) if is_outlier]
         analysis = dvf_service.calculate_price_analysis(
             asking_price=property.asking_price,
             surface_area=property.surface_area,
-            comparable_sales=comparable_sales,
+            comparable_sales=comparable_sales_for_analysis,
             exclude_indices=outlier_indices,
             apply_time_adjustment=False  # Use raw prices for simple analysis
         )
 
         analysis["analysis_type"] = "simple"
 
-        # Add outlier flags to response
+        # Convert grouped sales to response format with multi-unit details
         comparable_sales_response = []
-        for i, sale in enumerate(comparable_sales[:10]):
-            sale_response = DVFRecordResponse.from_orm(sale)
+        for i, sale in enumerate(grouped_sales[:10]):
+            sale_response = DVFGroupedTransactionResponse.from_orm(sale)
             sale_response.is_outlier = outlier_flags[i] if i < len(outlier_flags) else False
+            sale_response.is_multi_unit = sale.unit_count > 1
             comparable_sales_response.append(sale_response)
 
     # Update property with analysis results
@@ -415,30 +463,41 @@ async def recalculate_analysis(
         )
 
     # Get the latest analysis data from property (we need to know what sales were used)
-    # For simplicity, we'll re-fetch the comparable sales
-    # This assumes simple analysis for now
-    comparable_sales = dvf_service.get_exact_address_sales(
+    # Use GROUPED sales to match the original analysis
+    grouped_sales = dvf_service.get_grouped_exact_address_sales(
         db=db,
         postal_code=property.postal_code or "",
         property_type=property.property_type or "Appartement",
         address=property.address or "",
     )
 
-    if not comparable_sales:
+    if not grouped_sales:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No comparable sales found"
         )
 
+    # Convert grouped sales to compatible format
+    comparable_sales_for_analysis = []
+    for sale in grouped_sales:
+        class CompatibleSale:
+            def __init__(self, grouped_sale):
+                self.id = grouped_sale.id
+                self.sale_date = grouped_sale.sale_date
+                self.sale_price = grouped_sale.sale_price
+                self.surface_area = grouped_sale.total_surface_area
+                self.price_per_sqm = grouped_sale.grouped_price_per_sqm
+        comparable_sales_for_analysis.append(CompatibleSale(sale))
+
     # Build exclusion indices based on sale IDs
     sale_id_set = set(excluded_sale_ids)
-    exclude_indices = [i for i, sale in enumerate(comparable_sales) if sale.id in sale_id_set]
+    exclude_indices = [i for i, sale in enumerate(comparable_sales_for_analysis) if sale.id in sale_id_set]
 
     # Recalculate analysis (use raw prices, no time adjustment for simple analysis)
     analysis = dvf_service.calculate_price_analysis(
         asking_price=property.asking_price,
         surface_area=property.surface_area,
-        comparable_sales=comparable_sales,
+        comparable_sales=comparable_sales_for_analysis,
         exclude_indices=exclude_indices,
         apply_time_adjustment=False
     )
@@ -446,8 +505,8 @@ async def recalculate_analysis(
     # Log the calculated values for debugging
     print(f"🔍 RECALCULATE ANALYSIS:")
     print(f"   Excluded indices: {exclude_indices}")
-    print(f"   Total sales: {len(comparable_sales)}")
-    print(f"   Filtered sales: {len(comparable_sales) - len(exclude_indices)}")
+    print(f"   Total sales: {len(comparable_sales_for_analysis)}")
+    print(f"   Filtered sales: {len(comparable_sales_for_analysis) - len(exclude_indices)}")
     print(f"   Estimated value: {analysis['estimated_value']:.2f} €")
     print(f"   Market avg: {analysis['market_avg_price_per_sqm']:.2f} €/m²")
     print(f"   Surface area: {property.surface_area} m²")
@@ -463,6 +522,108 @@ async def recalculate_analysis(
         "confidence_score": analysis["confidence_score"],
         "comparables_count": analysis.get("comparables_count"),
         "market_trend_annual": analysis.get("market_trend_annual"),
+    }
+
+
+@router.get("/{property_id}/market-trend")
+async def get_market_trend(
+    property_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Get year-over-year market trend data for visualization.
+    Returns average price per m² by year with year-over-year change percentages.
+    """
+    property = db.query(Property).filter(
+        Property.id == property_id,
+        Property.user_id == int(current_user)
+    ).first()
+
+    if not property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+
+    # Get all neighboring sales for trend (last 5 years)
+    neighboring_sales = dvf_service.get_neighboring_sales_for_trend(
+        db=db,
+        postal_code=property.postal_code or "",
+        property_type=property.property_type or "Appartement",
+        surface_area=property.surface_area,
+        address=property.address or "",
+        months_back=60  # 5 years
+    )
+
+    if not neighboring_sales:
+        return {
+            "years": [],
+            "average_prices": [],
+            "year_over_year_changes": [],
+            "sample_counts": [],
+            "total_sales": 0,
+            "outliers_excluded": 0
+        }
+
+    # CRITICAL: Detect and EXCLUDE outliers for consistent trend calculation
+    outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
+    filtered_sales = [
+        sale for i, sale in enumerate(neighboring_sales)
+        if not outlier_flags[i]
+    ]
+
+    outliers_excluded = len(neighboring_sales) - len(filtered_sales)
+
+    print(f"\n📊 MARKET TREND CHART for property {property_id}")
+    print(f"   Total sales (5 years): {len(neighboring_sales)}")
+    print(f"   Outliers detected: {outliers_excluded}")
+    print(f"   Sales after filtering: {len(filtered_sales)}")
+
+    # Group sales by year and calculate averages
+    from collections import defaultdict
+    import statistics
+
+    sales_by_year = defaultdict(list)
+    for sale in filtered_sales:  # Use filtered sales WITHOUT outliers
+        if sale.sale_date and sale.price_per_sqm and sale.price_per_sqm > 0:
+            year = sale.sale_date.year
+            sales_by_year[year].append(sale.price_per_sqm)
+
+    # Sort years
+    sorted_years = sorted(sales_by_year.keys())
+
+    # Calculate averages and YoY changes
+    years = []
+    average_prices = []
+    year_over_year_changes = []
+    sample_counts = []
+
+    for i, year in enumerate(sorted_years):
+        avg_price = statistics.mean(sales_by_year[year])
+        years.append(year)
+        average_prices.append(round(avg_price, 2))
+        sample_counts.append(len(sales_by_year[year]))
+
+        if i > 0:
+            prev_avg = statistics.mean(sales_by_year[sorted_years[i-1]])
+            yoy_change = ((avg_price - prev_avg) / prev_avg) * 100
+            year_over_year_changes.append(round(yoy_change, 2))
+        else:
+            year_over_year_changes.append(0)  # No change for first year
+
+    # Extract street name for display
+    from app.services.dvf_service import DVFService
+    _, street_name = DVFService.extract_street_info(property.address or "")
+
+    return {
+        "years": years,
+        "average_prices": average_prices,
+        "year_over_year_changes": year_over_year_changes,
+        "sample_counts": sample_counts,
+        "street_name": street_name or property.address or "Unknown",
+        "total_sales": len(neighboring_sales),
+        "outliers_excluded": outliers_excluded
     }
 
 
@@ -487,21 +648,34 @@ async def recalculate_trend(
             detail="Property not found"
         )
 
-    # Get exact address sales
-    exact_sales = dvf_service.get_exact_address_sales(
+    # Get GROUPED exact address sales (same as initial analysis)
+    grouped_exact_sales = dvf_service.get_grouped_exact_address_sales(
         db=db,
         postal_code=property.postal_code or "",
         property_type=property.property_type or "Appartement",
         address=property.address or "",
     )
 
-    # Get neighboring sales
+    # Convert to compatible format
+    exact_sales = []
+    for sale in grouped_exact_sales:
+        class CompatibleSale:
+            def __init__(self, grouped_sale):
+                self.id = grouped_sale.id
+                self.sale_date = grouped_sale.sale_date
+                self.sale_price = grouped_sale.sale_price
+                self.surface_area = grouped_sale.total_surface_area
+                self.price_per_sqm = grouped_sale.grouped_price_per_sqm
+        exact_sales.append(CompatibleSale(sale))
+
+    # Get neighboring sales (ONLY 2024-2025, matching initial analysis)
     neighboring_sales = dvf_service.get_neighboring_sales_for_trend(
         db=db,
         postal_code=property.postal_code or "",
         property_type=property.property_type or "Appartement",
         surface_area=property.surface_area,
         address=property.address or "",
+        months_back=24  # Only current + past year
     )
 
     if not exact_sales and not neighboring_sales:
@@ -510,22 +684,30 @@ async def recalculate_trend(
             detail="No sales found for trend analysis"
         )
 
-    # Filter out user-excluded sales
+    # Detect outliers in ALL neighboring sales
+    neighboring_outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
+
+    # Filter based on user selections (excluded_neighboring_sale_ids)
     excluded_id_set = set(excluded_neighboring_sale_ids)
     filtered_neighboring_sales = [
         sale for sale in neighboring_sales
         if sale.id not in excluded_id_set
     ]
 
-    # Detect outliers in ALL neighboring sales (including user-excluded ones)
-    neighboring_outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
+    print(f"\n🔄 RECALCULATE TREND for property {property_id}")
+    print(f"   Total neighboring sales: {len(neighboring_sales)}")
+    print(f"   Excluded sale IDs: {excluded_id_set}")
+    print(f"   Filtered neighboring sales: {len(filtered_neighboring_sales)}")
 
-    # Recalculate trend projection with filtered sales
+    # Recalculate trend projection with user-filtered sales
     trend_projection = dvf_service.calculate_trend_based_projection(
         exact_address_sales=exact_sales,
-        neighboring_sales=filtered_neighboring_sales,
+        neighboring_sales=filtered_neighboring_sales,  # Use filtered based on user choices
         surface_area=property.surface_area
     )
+
+    print(f"   Recalculated trend_used: {trend_projection.get('trend_used', 'N/A')}%")
+    print(f"   Recalculated sample size: {trend_projection.get('trend_sample_size', 'N/A')}")
 
     # Include full neighboring sales list with outlier flags for UI
     trend_projection_with_sales = trend_projection.copy()

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, date
 import statistics
 import re
 
-from app.models.property import DVFRecord, Property
+from app.models.property import DVFRecord, DVFGroupedTransaction, Property
 
 
 class DVFService:
@@ -112,6 +112,9 @@ class DVFService:
         Get sales for the EXACT address only, no neighbors or fallbacks.
         Used for simple analysis to show only the building's history.
 
+        DEPRECATED: Use get_grouped_exact_address_sales() instead to handle
+        multi-unit sales correctly.
+
         Args:
             db: Database session
             postal_code: Property postal code
@@ -143,6 +146,56 @@ class DVFService:
         ).order_by(DVFRecord.sale_date.desc()).limit(max_results)
 
         return exact_query.all()
+
+    @staticmethod
+    def get_grouped_exact_address_sales(
+        db: Session,
+        postal_code: str,
+        property_type: str,
+        address: str,
+        months_back: int = 60,
+        max_results: int = 20
+    ) -> List[DVFGroupedTransaction]:
+        """
+        Get GROUPED sales (multi-unit sales aggregated) for exact address.
+        Returns ONE row per transaction, not per lot.
+
+        This correctly handles cases where multiple apartments/houses
+        were sold together in a single transaction.
+
+        Args:
+            db: Database session
+            postal_code: Property postal code
+            property_type: Type of property (Appartement, Maison)
+            address: Property address for exact matching
+            months_back: How many months of historical data to consider
+            max_results: Maximum number of results to return
+
+        Returns:
+            List of grouped DVF transactions at exact address
+        """
+        cutoff_date = datetime.now() - timedelta(days=30 * months_back)
+
+        # Extract street information
+        street_number, street_name = DVFService.extract_street_info(address)
+
+        if not street_number or not street_name:
+            return []
+
+        # Query grouped transactions view
+        query = db.query(DVFGroupedTransaction).filter(
+            DVFGroupedTransaction.sale_date >= cutoff_date,
+            DVFGroupedTransaction.property_type == property_type,
+            DVFGroupedTransaction.total_surface_area.isnot(None),
+            DVFGroupedTransaction.grouped_price_per_sqm.isnot(None),
+            DVFGroupedTransaction.grouped_price_per_sqm > 0,
+            DVFGroupedTransaction.postal_code == postal_code,
+            DVFGroupedTransaction.address.ilike(f'{street_number} {street_name}%')
+        ).order_by(
+            DVFGroupedTransaction.sale_date.desc()
+        ).limit(max_results)
+
+        return query.all()
 
     @staticmethod
     def get_comparable_sales(
@@ -307,15 +360,16 @@ class DVFService:
         property_type: str,
         surface_area: float,
         address: str,
-        months_back: int = 48,
+        months_back: int = 24,  # Changed to 24 months (2024-2025)
         max_results: int = 200  # Increased to get ALL sales on the street
     ) -> List[DVFRecord]:
         """
         Get neighboring address sales for trend calculation.
         Used when exact address doesn't have enough historical data.
 
-        Returns sales from neighboring addresses (±2, ±4, ±6, ±8, ±10) and same street.
+        Returns sales from neighboring addresses (±2, ±4, ±6, ±8, ±10) same street.
         NO surface area filter - we want all sales to calculate accurate trends.
+        By default returns last 24 months (current + past year) for projection.
         """
         street_number, street_name = DVFService.extract_street_info(address)
 
@@ -357,9 +411,14 @@ class DVFService:
         return query.all()
 
     @staticmethod
-    def calculate_market_trend(comparable_sales: List[DVFRecord]) -> float:
+    def calculate_market_trend(comparable_sales: List[DVFRecord], use_latest_year_only: bool = False) -> float:
         """
         Calculate market trend (annual price increase/decrease percentage).
+
+        Args:
+            comparable_sales: List of comparable sales
+            use_latest_year_only: If True, only use the latest year's trend (most recent YoY change)
+                                 If False, average all year-over-year changes (default)
 
         Returns:
             Annual trend as percentage (e.g., 5.0 for +5% per year)
@@ -401,8 +460,11 @@ class DVFService:
                 annual_change_pct = (price_change / year_averages[prev_year]) / years_diff * 100
                 yoy_changes.append(annual_change_pct)
 
-        # Return average annual trend
-        return statistics.mean(yoy_changes) if yoy_changes else 0.0
+        # Return latest year trend or average of all trends
+        if use_latest_year_only and yoy_changes:
+            return yoy_changes[-1]  # Most recent year-over-year change
+        else:
+            return statistics.mean(yoy_changes) if yoy_changes else 0.0
 
     @staticmethod
     def apply_time_adjustment(
@@ -469,8 +531,27 @@ class DVFService:
         exact_address_sales.sort(key=lambda x: x.sale_date, reverse=True)
         base_sale = exact_address_sales[0]
 
-        # Calculate trend from neighboring addresses
-        trend_pct = DVFService.calculate_market_trend(neighboring_sales)
+        # Calculate trend from neighboring addresses (use ONLY latest year)
+        trend_pct = DVFService.calculate_market_trend(
+            neighboring_sales,
+            use_latest_year_only=True
+        )
+
+        # Debug logging
+        print("🔍 TREND CALCULATION DEBUG:")
+        print(f"   Total neighboring sales: {len(neighboring_sales)}")
+        sales_by_year_debug = {}
+        for sale in neighboring_sales:
+            if sale.sale_date and sale.price_per_sqm:
+                year = sale.sale_date.year
+                if year not in sales_by_year_debug:
+                    sales_by_year_debug[year] = []
+                sales_by_year_debug[year].append(sale.price_per_sqm)
+        for year in sorted(sales_by_year_debug.keys()):
+            avg = statistics.mean(sales_by_year_debug[year])
+            count = len(sales_by_year_debug[year])
+            print(f"   {year}: {count} sales, avg {avg:.0f} €/m²")
+        print(f"   Calculated trend: {trend_pct:.2f}%")
 
         if abs(trend_pct) < 0.1:  # No significant trend
             # Use base sale price without adjustment
