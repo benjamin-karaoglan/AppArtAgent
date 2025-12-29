@@ -693,3 +693,276 @@ async def get_document_status(
         "processing_error": document.processing_error,
         "workflow_status": workflow_status
     }
+
+
+@router.post("/bulk-upload", status_code=status.HTTP_202_ACCEPTED)
+async def bulk_upload_documents(
+    files: list[UploadFile] = File(...),
+    property_id: int = Form(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Upload multiple documents at once with intelligent classification and processing.
+
+    This endpoint uses LangGraph AI agent to:
+    1. Automatically classify document types (PV AG, diagnostics, taxes, charges)
+    2. Route each document to specialized processing agents
+    3. Process all documents in parallel
+    4. Synthesize results across all documents
+    5. Generate comprehensive property summary
+
+    The agent handles the entire workflow - you just upload all files at once!
+
+    Returns:
+    - workflow_id: ID to track the bulk processing workflow
+    - document_ids: List of created document IDs
+    - status: "processing"
+    """
+    logger.info(
+        f"Bulk upload initiated - user: {current_user}, property_id: {property_id}, "
+        f"{len(files)} files"
+    )
+
+    if not files or len(files) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided"
+        )
+
+    if len(files) > 50:  # Reasonable limit
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 50 files per bulk upload"
+        )
+
+    # Verify property belongs to user
+    from app.models.property import Property
+    property = db.query(Property).filter(
+        Property.id == property_id,
+        Property.user_id == int(current_user)
+    ).first()
+
+    if not property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+
+    uploaded_documents = []
+    document_uploads_info = []
+
+    try:
+        # Step 1: Upload all files to MinIO and create document records
+        minio_service = get_minio_service()
+
+        for file in files:
+            # Validate file
+            file_ext = os.path.splitext(file.filename)[1].lower()
+            if file_ext not in settings.ALLOWED_EXTENSIONS:
+                logger.warning(f"Skipping invalid file type: {file.filename}")
+                continue
+
+            # Read file
+            content = await file.read()
+            file_size = len(content)
+            file_hash = hashlib.sha256(content).hexdigest()
+
+            # Create document record
+            document = Document(
+                user_id=int(current_user),
+                property_id=property_id,
+                filename=file.filename,
+                file_path="",  # Will be updated
+                file_type=file_ext,
+                document_category="pending_classification",  # Agent will classify
+                file_size=file_size,
+                file_hash=file_hash,
+                processing_status="pending"
+            )
+            db.add(document)
+            db.flush()  # Get document ID
+
+            # Upload to MinIO
+            minio_key = f"documents/{document.id}/{file.filename}"
+            minio_service.upload_file(
+                file_data=content,
+                object_name=minio_key,
+                content_type=file.content_type or "application/octet-stream",
+                metadata={
+                    "document_id": str(document.id),
+                    "user_id": str(current_user),
+                    "property_id": str(property_id)
+                }
+            )
+
+            # Update document
+            document.minio_key = minio_key
+            document.minio_bucket = settings.MINIO_BUCKET
+            document.file_path = f"minio://{settings.MINIO_BUCKET}/{minio_key}"
+
+            uploaded_documents.append(document)
+            document_uploads_info.append({
+                "document_id": document.id,
+                "minio_key": minio_key,
+                "filename": file.filename
+            })
+
+            logger.info(f"Uploaded {file.filename} to MinIO: {minio_key}")
+
+        db.commit()
+
+        # Step 2: Start bulk processing workflow with LangGraph agent
+        if settings.ENABLE_TEMPORAL_WORKFLOWS and len(uploaded_documents) > 0:
+            try:
+                temporal_client = get_temporal_client()
+
+                workflow_info = await temporal_client.start_bulk_document_processing(
+                    property_id=property_id,
+                    document_uploads=document_uploads_info
+                )
+
+                # Update documents with workflow ID
+                for doc in uploaded_documents:
+                    doc.workflow_id = workflow_info["workflow_id"]
+                    doc.workflow_run_id = workflow_info["workflow_run_id"]
+                    doc.processing_status = "processing"
+
+                db.commit()
+
+                logger.info(f"Started bulk processing workflow: {workflow_info['workflow_id']}")
+
+                return {
+                    "status": "processing",
+                    "workflow_id": workflow_info["workflow_id"],
+                    "workflow_run_id": workflow_info["workflow_run_id"],
+                    "document_ids": [doc.id for doc in uploaded_documents],
+                    "total_files": len(uploaded_documents),
+                    "message": (
+                        f"Successfully uploaded {len(uploaded_documents)} documents. "
+                        "The AI agent is now classifying and processing them. "
+                        "Check the workflow status to see progress."
+                    )
+                }
+
+            except Exception as e:
+                logger.error(f"Failed to start bulk workflow: {e}", exc_info=True)
+                # Mark documents as failed
+                for doc in uploaded_documents:
+                    doc.processing_status = "failed"
+                    doc.processing_error = f"Failed to start workflow: {str(e)}"
+                db.commit()
+
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to start processing workflow: {str(e)}"
+                )
+        else:
+            # Temporal not enabled, return documents as pending
+            logger.info("Temporal workflows disabled - documents uploaded but not processed")
+            return {
+                "status": "pending",
+                "document_ids": [doc.id for doc in uploaded_documents],
+                "total_files": len(uploaded_documents),
+                "message": (
+                    f"Successfully uploaded {len(uploaded_documents)} documents. "
+                    "Temporal workflows are disabled - documents will need manual processing."
+                )
+            }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Bulk upload failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Bulk upload failed: {str(e)}"
+        )
+
+
+@router.get("/bulk-status/{workflow_id}")
+async def get_bulk_processing_status(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Get the status of a bulk document processing workflow.
+
+    Returns:
+    - status: Overall workflow status
+    - documents: List of document statuses
+    - synthesis: Final synthesis (if complete)
+    - progress: Processing progress
+    """
+    logger.info(f"Bulk status check for workflow {workflow_id}")
+
+    # Get all documents for this workflow
+    documents = db.query(Document).filter(
+        Document.workflow_id == workflow_id,
+        Document.user_id == int(current_user)
+    ).all()
+
+    if not documents:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found or no documents associated"
+        )
+
+    property_id = documents[0].property_id
+
+    # Get workflow status from Temporal
+    workflow_status = None
+    if settings.ENABLE_TEMPORAL_WORKFLOWS:
+        try:
+            temporal_client = get_temporal_client()
+            workflow_status = await temporal_client.get_workflow_status(workflow_id)
+        except Exception as e:
+            logger.error(f"Failed to get workflow status: {e}")
+
+    # Get synthesis if available
+    synthesis = db.query(DocumentSummary).filter(
+        DocumentSummary.property_id == property_id
+    ).first()
+
+    # Calculate progress
+    total = len(documents)
+    completed = sum(1 for d in documents if d.processing_status == "completed")
+    failed = sum(1 for d in documents if d.processing_status == "failed")
+    processing = sum(1 for d in documents if d.processing_status == "processing")
+
+    return {
+        "workflow_id": workflow_id,
+        "property_id": property_id,
+        "status": workflow_status.get("status") if workflow_status else "unknown",
+        "progress": {
+            "total": total,
+            "completed": completed,
+            "failed": failed,
+            "processing": processing,
+            "percentage": int((completed / total) * 100) if total > 0 else 0
+        },
+        "documents": [
+            {
+                "id": doc.id,
+                "filename": doc.filename,
+                "document_category": doc.document_category,
+                "document_subcategory": doc.document_subcategory,
+                "processing_status": doc.processing_status,
+                "is_analyzed": doc.is_analyzed,
+                "processing_error": doc.processing_error
+            }
+            for doc in documents
+        ],
+        "synthesis": {
+            "summary": synthesis.overall_summary if synthesis else None,
+            "total_annual_cost": synthesis.total_annual_cost if synthesis else None,
+            "total_one_time_cost": synthesis.total_one_time_cost if synthesis else None,
+            "risk_level": synthesis.risk_level if synthesis else None,
+            "key_findings": synthesis.key_findings if synthesis else [],
+            "recommendations": synthesis.recommendations if synthesis else []
+        } if synthesis else None,
+        "workflow_status": workflow_status
+    }

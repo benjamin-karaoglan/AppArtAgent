@@ -105,6 +105,46 @@ class TemporalClient:
             "workflow_run_id": handle.result_run_id,
         }
 
+    async def start_bulk_document_processing(
+        self,
+        property_id: int,
+        document_uploads: list[Dict[str, Any]]
+    ) -> Dict[str, str]:
+        """
+        Start a bulk document processing workflow with LangGraph agent.
+
+        Args:
+            property_id: Database ID of the property
+            document_uploads: List of dicts with document_id, minio_key, filename
+
+        Returns:
+            Dict with workflow_id and workflow_run_id
+        """
+        await self.connect()
+
+        import time
+        timestamp = int(time.time())
+        workflow_id = f"bulk-processing-{property_id}-{timestamp}"
+
+        logger.info(
+            f"Starting bulk processing workflow: {workflow_id} "
+            f"for {len(document_uploads)} documents"
+        )
+
+        handle = await self._client.start_workflow(
+            "BulkDocumentProcessingWorkflow",
+            args=[property_id, document_uploads],
+            id=workflow_id,
+            task_queue=settings.TEMPORAL_TASK_QUEUE,
+        )
+
+        logger.info(f"Bulk workflow started: {handle.id}, run_id: {handle.result_run_id}")
+
+        return {
+            "workflow_id": handle.id,
+            "workflow_run_id": handle.result_run_id,
+        }
+
     async def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
         """
         Get the status of a workflow.

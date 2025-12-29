@@ -48,5 +48,13 @@
   "terminal.integrated.env.linux": {
     "COMPOSE_DOCKER_CLI_BUILD": "1",
     "DOCKER_BUILDKIT": "1"
+  },
+
+  // MCP Server Configuration
+  "mcp.servers": {
+    "langchain-docs": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-langchain-docs"]
+    }
   }
 }

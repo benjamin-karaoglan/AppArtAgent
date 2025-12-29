@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "langchain-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-langchain-docs"
+      ]
+    }
+  }
+}

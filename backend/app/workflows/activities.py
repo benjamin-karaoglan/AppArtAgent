@@ -13,9 +13,10 @@ from typing import Dict, Any, List
 from temporalio import activity
 
 from app.core.database import SessionLocal
-from app.models.document import Document
+from app.models.document import Document, DocumentSummary
 from app.services.minio_service import get_minio_service
 from app.services.langchain_service import get_langchain_service
+from app.services.langgraph_agent_service import get_langgraph_agent
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +254,91 @@ async def calculate_file_hash(file_data: bytes) -> str:
     file_hash = hashlib.sha256(file_data).hexdigest()
     logger.info(f"File hash: {file_hash}")
     return file_hash
+
+
+@activity.defn(name="run_langgraph_agent")
+async def run_langgraph_agent(
+    agent_documents: List[Dict[str, Any]],
+    property_id: int
+) -> Dict[str, Any]:
+    """
+    Run the LangGraph agent for bulk document processing.
+
+    Args:
+        agent_documents: List of dicts with filename, file_data_base64, document_id
+        property_id: Property ID
+
+    Returns:
+        Agent result with classification, processing, and synthesis
+    """
+    logger.info(f"Activity: Running LangGraph agent for {len(agent_documents)} documents")
+
+    agent = get_langgraph_agent()
+
+    # Run the agent workflow
+    result = await agent.process_bulk_upload(
+        documents=agent_documents,
+        property_id=property_id
+    )
+
+    logger.info("LangGraph agent completed successfully")
+
+    # Extract the final state from the result
+    # The result is a dict of states, we need the last one
+    if result:
+        # Get the last state from the stream
+        final_state = list(result.values())[-1] if isinstance(result, dict) else result
+        return final_state
+    else:
+        raise Exception("LangGraph agent returned empty result")
+
+
+@activity.defn(name="save_document_synthesis")
+async def save_document_synthesis(
+    property_id: int,
+    synthesis: Dict[str, Any]
+) -> None:
+    """
+    Save document synthesis to DocumentSummary table.
+
+    Args:
+        property_id: Property ID
+        synthesis: Synthesis result from LangGraph agent
+    """
+    logger.info(f"Activity: Saving document synthesis for property {property_id}")
+
+    db = SessionLocal()
+    try:
+        # Create or update DocumentSummary
+        summary = db.query(DocumentSummary).filter(
+            DocumentSummary.property_id == property_id
+        ).first()
+
+        if not summary:
+            summary = DocumentSummary(property_id=property_id)
+            db.add(summary)
+
+        # Update fields from synthesis
+        summary.overall_summary = synthesis.get("summary", "")
+        summary.total_annual_cost = synthesis.get("total_annual_costs", 0)
+        summary.total_one_time_cost = synthesis.get("total_one_time_costs", 0)
+        summary.risk_level = synthesis.get("risk_level", "unknown")
+        summary.key_findings = synthesis.get("key_findings", [])
+        summary.recommendations = synthesis.get("recommendations", [])
+
+        # Store full synthesis as JSON
+        summary.synthesis_data = json.dumps(synthesis)
+        summary.last_updated = datetime.utcnow()
+
+        db.commit()
+        logger.info(f"Document synthesis saved for property {property_id}")
+
+    except Exception as e:
+        logger.error(f"Error saving document synthesis: {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def _get_prompt_for_document_type(document_type: str) -> str:

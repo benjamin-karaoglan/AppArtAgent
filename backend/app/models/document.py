@@ -72,16 +72,23 @@ class DocumentSummary(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     property_id = Column(Integer, ForeignKey("properties.id"), nullable=False)
-    category = Column(String, nullable=False)  # pv_ag, diags, taxe_fonciere, charges
+    category = Column(String, nullable=True)  # pv_ag, diags, taxe_fonciere, charges (nullable for overall summary)
 
     # Aggregated analysis
     summary = Column(Text, nullable=True)
+    overall_summary = Column(Text, nullable=True)  # Overall synthesis across all document types
     key_findings = Column(JSON, nullable=True)
+    recommendations = Column(JSON, nullable=True)
 
     # Financial summary
     total_estimated_annual_cost = Column(Float, nullable=True)
+    total_annual_cost = Column(Float, nullable=True)  # Alias for consistency
     total_one_time_costs = Column(Float, nullable=True)
+    total_one_time_cost = Column(Float, nullable=True)  # Alias for consistency
     cost_breakdown = Column(JSON, nullable=True)
+
+    # Risk assessment
+    risk_level = Column(String, nullable=True)  # low, medium, high
 
     # Specific insights per category
     # For PV d'AG: copropriétaire behavior, upcoming works, payment issues
@@ -90,9 +97,13 @@ class DocumentSummary(Base):
     # For Diags: urgent issues, compliance status
     diagnostic_issues = Column(JSON, nullable=True)
 
+    # Full synthesis data from LangGraph agent
+    synthesis_data = Column(JSON, nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_updated = Column(DateTime, default=datetime.utcnow)
     last_document_count = Column(Integer, default=0)  # Track when summary needs updating
 
     # Relationship
