@@ -1,0 +1,158 @@
+"""
+Pydantic schemas for Photo and PhotoRedesign models.
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+
+
+class PhotoUpload(BaseModel):
+    """Schema for uploading a new photo."""
+    property_id: Optional[int] = Field(None, description="Associated property ID")
+    room_type: Optional[str] = Field(None, description="Type of room (living_room, bedroom, kitchen, etc.)")
+    description: Optional[str] = Field(None, description="Optional description of the photo")
+
+
+class PhotoUpdate(BaseModel):
+    """Schema for updating photo metadata."""
+    room_type: Optional[str] = Field(None, description="Type of room (living_room, bedroom, kitchen, etc.)")
+
+
+class PhotoResponse(BaseModel):
+    """Schema for photo response."""
+    id: int
+    user_id: int
+    property_id: Optional[int]
+    filename: str
+    minio_key: str
+    minio_bucket: str
+    file_size: Optional[int]
+    mime_type: Optional[str]
+    room_type: Optional[str]
+    description: Optional[str]
+    uploaded_at: datetime
+    presigned_url: Optional[str] = Field(None, description="Temporary URL to access the photo")
+    redesign_count: int = Field(0, description="Number of redesigns created from this photo")
+
+    class Config:
+        from_attributes = True
+
+
+class RedesignRequest(BaseModel):
+    """Schema for requesting a photo redesign."""
+    style_preset: Optional[str] = Field(
+        None,
+        description="Preset style: modern_norwegian, minimalist_scandinavian, or cozy_hygge"
+    )
+    custom_prompt: Optional[str] = Field(
+        None,
+        description="Custom redesign prompt (used if style_preset not provided)"
+    )
+    room_type: str = Field("living room", description="Type of room being redesigned")
+    additional_details: Optional[str] = Field(None, description="Additional customization details")
+    aspect_ratio: str = Field("16:9", description="Image aspect ratio: 1:1, 16:9, 9:16, 4:3, or 3:4")
+    parent_redesign_id: Optional[int] = Field(
+        None,
+        description="ID of parent redesign for multi-turn iteration"
+    )
+
+
+class RedesignResponse(BaseModel):
+    """Schema for redesign response."""
+    id: int
+    redesign_uuid: str
+    photo_id: int
+    minio_key: str
+    minio_bucket: str
+    file_size: Optional[int]
+    style_preset: Optional[str]
+    prompt: str
+    aspect_ratio: str
+    model_used: str
+    conversation_history: Optional[List[Dict[str, Any]]]
+    is_multi_turn: bool
+    parent_redesign_id: Optional[int]
+    created_at: datetime
+    generation_time_ms: Optional[int]
+    is_favorite: bool
+    user_rating: Optional[int]
+    presigned_url: Optional[str] = Field(None, description="Temporary URL to access the redesigned image")
+
+    class Config:
+        from_attributes = True
+
+
+class PhotoListResponse(BaseModel):
+    """Schema for list of photos."""
+    photos: List[PhotoResponse]
+    total: int
+
+
+class RedesignListResponse(BaseModel):
+    """Schema for list of redesigns."""
+    redesigns: List[RedesignResponse]
+    total: int
+
+
+class StylePresetsResponse(BaseModel):
+    """Schema for available style presets."""
+    presets: List[Dict[str, str]] = Field(
+        default=[
+            {
+                "id": "modern_norwegian",
+                "name": "Modern Norwegian",
+                "description": "Clean lines, natural wood tones, Nordic light, minimalist elegance",
+                "prompt_template": (
+                    "You are an interior architect.\n"
+                    "Redesign this apartment {room_type} in a modern Norwegian style:\n"
+                    "- Keep room geometry and windows unchanged\n"
+                    "- Use clean lines with warm, natural wood tones (light oak or birch)\n"
+                    "- Flooring: warm oak wood\n"
+                    "- Walls: white and cream with accents of deep forest green, midnight blue, or charcoal gray\n"
+                    "- Add cozy textiles like wool throws and linen cushions\n"
+                    "- Lighting: warm and inviting with designer pendant lights or floor lamps\n"
+                    "- Include minimal but impactful decor: a single statement plant, ceramic vases, or contemporary Norwegian art\n"
+                    "- The overall atmosphere should feel spacious, airy, and connected to nature while maintaining sophisticated modern elegance\n"
+                    "Return only the edited image."
+                )
+            },
+            {
+                "id": "minimalist_scandinavian",
+                "name": "Minimalist Scandinavian",
+                "description": "Lagom philosophy, monochromatic whites and grays, functional design",
+                "prompt_template": (
+                    "You are an interior architect.\n"
+                    "Redesign this apartment {room_type} as a minimalist Scandinavian sanctuary:\n"
+                    "- Keep room geometry and windows unchanged\n"
+                    "- Use monochromatic white and light gray base with pale wood accents\n"
+                    "- Furniture should be functional, sculptural pieces with clean geometric forms\n"
+                    "- Include subtle warmth through natural materials: jute rug, linen textiles\n"
+                    "- Add one or two green plants in simple ceramic pots\n"
+                    "- The space should have generous negative space, emphasizing openness and tranquility\n"
+                    "- Every object serves a purpose while contributing to the overall aesthetic harmony\n"
+                    "- Mood: calm, uncluttered, and effortlessly sophisticated\n"
+                    "Return only the edited image."
+                )
+            },
+            {
+                "id": "cozy_hygge",
+                "name": "Cozy Hygge",
+                "description": "Warm embrace, soft textiles, ambient lighting, intimate comfort",
+                "prompt_template": (
+                    "You are an interior architect.\n"
+                    "Transform this apartment {room_type} into the ultimate hygge retreat:\n"
+                    "- Keep room geometry and windows unchanged\n"
+                    "- Feature a plush, oversized sofa with layers of soft blankets and cushions in warm neutrals (creams, beiges, soft grays)\n"
+                    "- Add warm, ambient lighting from multiple sources: candles clustered on surfaces, vintage-style floor lamp with warm LED bulbs\n"
+                    "- Include natural wood elements with a weathered, lived-in quality\n"
+                    "- A chunky knit throw drapes over a chair\n"
+                    "- Color palette: warm and inviting - caramel, terracotta, dusty rose, and cream\n"
+                    "- Add books stacked casually, a steaming mug on a side table\n"
+                    "- The atmosphere should evoke safety, comfort, and intimate togetherness\n"
+                    "- Lighting: cozy warm evening\n"
+                    "Return only the edited image."
+                )
+            }
+        ]
+    )

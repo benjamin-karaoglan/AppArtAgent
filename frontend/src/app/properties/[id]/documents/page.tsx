@@ -13,7 +13,10 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Clock,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -48,6 +51,48 @@ interface DocumentSummary {
   created_at: string;
   updated_at: string;
   document_count: number;
+}
+
+interface PropertySynthesis {
+  id: number;
+  property_id: number;
+  overall_summary: string;
+  risk_level: string;
+  total_annual_cost: number;
+  total_one_time_cost: number;
+  key_findings: string[];
+  recommendations: string[];
+  last_updated: string;
+}
+
+interface BulkUploadStatus {
+  workflow_id: string;
+  property_id: number;
+  status: string;
+  progress: {
+    total: number;
+    completed: number;
+    failed: number;
+    processing: number;
+    percentage: number;
+  };
+  documents: Array<{
+    id: number;
+    filename: string;
+    document_category: string;
+    document_subcategory?: string;
+    processing_status: string;
+    is_analyzed: boolean;
+    processing_error?: string;
+  }>;
+  synthesis?: {
+    summary: string;
+    total_annual_cost: number;
+    total_one_time_cost: number;
+    risk_level: string;
+    key_findings: string[];
+    recommendations: string[];
+  };
 }
 
 const DOCUMENT_CATEGORIES = [
@@ -100,15 +145,22 @@ function DocumentsPageContent() {
 
   const [documents, setDocuments] = useState<Record<string, Document[]>>({});
   const [summaries, setSummaries] = useState<Record<string, DocumentSummary>>({});
+  const [synthesis, setSynthesis] = useState<PropertySynthesis | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<Record<string, string>>({});
   const [regenerating, setRegenerating] = useState<string | null>(null);
 
+  // Smart upload states
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<BulkUploadStatus | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     loadDocuments();
     loadSummaries();
+    loadSynthesis();
   }, [propertyId]);
 
   const loadDocuments = async () => {
@@ -149,6 +201,16 @@ function DocumentsPageContent() {
     }
   };
 
+  const loadSynthesis = async () => {
+    try {
+      const response = await api.get(`/api/documents/synthesis/${propertyId}`);
+      setSynthesis(response.data);
+    } catch (error) {
+      console.error('Failed to load synthesis:', error);
+      setSynthesis(null);
+    }
+  };
+
   const handleFileUpload = async (category: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -181,6 +243,7 @@ function DocumentsPageContent() {
       // Reload documents and summaries
       await loadDocuments();
       await loadSummaries();
+      await loadSynthesis();
     } catch (err: any) {
       console.error('Upload error:', err);
       setError(err.response?.data?.detail || 'Failed to upload document');
@@ -196,6 +259,7 @@ function DocumentsPageContent() {
     try {
       await api.post(`/api/documents/summaries/${propertyId}/regenerate?category=${category}`);
       await loadSummaries();
+      await loadSynthesis();
     } catch (err: any) {
       console.error('Regenerate error:', err);
       setError(err.response?.data?.detail || 'Failed to regenerate summary');
@@ -211,9 +275,140 @@ function DocumentsPageContent() {
       await api.delete(`/api/documents/${documentId}`);
       await loadDocuments();
       await loadSummaries();
+      await loadSynthesis();
     } catch (err: any) {
       console.error('Delete error:', err);
       setError(err.response?.data?.detail || 'Failed to delete document');
+    }
+  };
+
+  // Bulk upload handlers
+  const handleBulkUpload = async (files: FileList) => {
+    setBulkUploading(true);
+    setError('');
+    setBulkStatus(null);
+
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach(file => {
+        formData.append('files', file);
+      });
+      formData.append('property_id', propertyId);
+
+      const response = await api.post('/api/documents/bulk-upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const { workflow_id } = response.data;
+
+      // Start polling for status
+      pollBulkStatus(workflow_id);
+    } catch (err: any) {
+      console.error('Bulk upload error:', err);
+      setError(err.response?.data?.detail || 'Failed to upload documents');
+      setBulkUploading(false);
+    }
+  };
+
+  const pollBulkStatus = async (workflowId: string) => {
+    const maxPolls = 300; // Poll for up to 10 minutes (300 x 2s = 600s)
+    let pollCount = 0;
+
+    const poll = async () => {
+      try {
+        const response = await api.get(`/api/documents/bulk-status/${workflowId}`);
+        const status: BulkUploadStatus = response.data;
+        setBulkStatus(status);
+
+        // Check if workflow is complete
+        if (status.status === 'completed' || status.progress.percentage === 100) {
+          // Continue polling for synthesis (takes ~30s to generate)
+          // Poll every 2 seconds for up to 20 attempts (40 seconds total)
+          let currentStatus = status;
+          let synthesisAttempts = 0;
+          const maxSynthesisAttempts = 20;
+
+          while (!currentStatus.synthesis && synthesisAttempts < maxSynthesisAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            try {
+              const synthResponse = await api.get(`/api/documents/bulk-status/${workflowId}`);
+              currentStatus = synthResponse.data;
+              setBulkStatus(currentStatus);
+
+              if (currentStatus.synthesis) {
+                break; // Synthesis found!
+              }
+              synthesisAttempts++;
+            } catch (err) {
+              console.error('Synthesis poll error:', err);
+              break;
+            }
+          }
+
+          setBulkUploading(false);
+          await loadDocuments();
+          await loadSummaries();
+          await loadSynthesis();
+          return;
+        }
+
+        // Check if workflow failed
+        if (status.status === 'failed') {
+          setBulkUploading(false);
+          setError('Bulk processing failed. Check individual document errors.');
+          return;
+        }
+
+        // Continue polling if still processing
+        pollCount++;
+        if (pollCount < maxPolls && (status.status === 'running' || status.status === 'processing')) {
+          setTimeout(poll, 2000); // Poll every 2 seconds
+        } else if (pollCount >= maxPolls) {
+          setBulkUploading(false);
+          setError('Processing is taking longer than expected. Please check back later.');
+        }
+      } catch (err: any) {
+        console.error('Status poll error:', err);
+        pollCount++;
+        if (pollCount < maxPolls) {
+          setTimeout(poll, 2000);
+        } else {
+          setBulkUploading(false);
+          setError('Failed to check processing status');
+        }
+      }
+    };
+
+    poll();
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleBulkUpload(files);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleBulkUpload(files);
     }
   };
 
@@ -254,6 +449,326 @@ function DocumentsPageContent() {
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
+
+          {/* Smart Upload Section */}
+          <div className="mb-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl shadow-lg overflow-hidden border-2 border-purple-200">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+              <div className="flex items-center">
+                <Sparkles className="h-6 w-6 text-yellow-300 mr-3" />
+                <div>
+                  <h2 className="text-xl font-bold text-white">Smart Upload - AI Agent</h2>
+                  <p className="text-sm text-indigo-100">
+                    Drop all your documents at once. AI will automatically classify, analyze, and summarize everything!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {!bulkUploading && !bulkStatus && (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`relative border-3 border-dashed rounded-lg p-12 text-center transition-all ${
+                    isDragging
+                      ? 'border-purple-500 bg-purple-100 scale-105'
+                      : 'border-purple-300 bg-white hover:border-purple-400 hover:bg-purple-50'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf"
+                    onChange={handleFileSelect}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    id="bulk-upload-input"
+                  />
+                  <Sparkles className="h-16 w-16 mx-auto mb-4 text-purple-500" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Drop all your documents here
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    or click to browse files
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span>Auto-classification</span>
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span>Parallel processing</span>
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span>Smart synthesis</span>
+                  </div>
+                </div>
+              )}
+
+              {bulkUploading && bulkStatus && (
+                <div className="bg-white rounded-lg p-6 border border-purple-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <Loader2 className="h-6 w-6 text-purple-600 animate-spin mr-3" />
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Processing Documents</h3>
+                        <p className="text-sm text-gray-600">
+                          AI agent is classifying and analyzing your documents...
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-purple-600">
+                        {bulkStatus.progress.percentage}%
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {bulkStatus.progress.completed} / {bulkStatus.progress.total} complete
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mb-6">
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
+                        style={{ width: `${bulkStatus.progress.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Document list */}
+                  <div className="space-y-2">
+                    {bulkStatus.documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex items-center flex-1">
+                          <FileText className="h-4 w-4 text-gray-400 mr-3" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{doc.filename}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {doc.document_category && doc.document_category !== 'pending_classification' && (
+                                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                  {doc.document_category}
+                                </span>
+                              )}
+                              {doc.document_subcategory && (
+                                <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
+                                  {doc.document_subcategory}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
+                          {doc.processing_status === 'completed' && (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          )}
+                          {doc.processing_status === 'processing' && (
+                            <Loader2 className="h-5 w-5 text-purple-500 animate-spin" />
+                          )}
+                          {doc.processing_status === 'failed' && (
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                          )}
+                          {doc.processing_status === 'pending' && (
+                            <Clock className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!bulkUploading && bulkStatus && (
+                <div className="bg-white rounded-lg p-6 border border-green-200">
+                  <div className="flex items-center mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Processing Complete!</h3>
+                      <p className="text-sm text-gray-600">
+                        {bulkStatus.progress.completed} documents analyzed successfully
+                      </p>
+                    </div>
+                  </div>
+
+                  {bulkStatus.synthesis && (
+                    <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                      <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center">
+                        <Sparkles className="h-5 w-5 text-purple-500 mr-2" />
+                        AI Synthesis
+                      </h4>
+
+                      {bulkStatus.synthesis.summary && (
+                        <p className="text-sm text-gray-700 mb-4">{bulkStatus.synthesis.summary}</p>
+                      )}
+
+                      {bulkStatus.synthesis.risk_level && (
+                        <div className="mb-3">
+                          <span className="text-xs font-medium text-gray-700">Risk Level: </span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            bulkStatus.synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
+                            bulkStatus.synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {bulkStatus.synthesis.risk_level.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+
+                      {bulkStatus.synthesis.key_findings && bulkStatus.synthesis.key_findings.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-medium text-gray-700 mb-2">Key Findings:</p>
+                          <ul className="space-y-1">
+                            {bulkStatus.synthesis.key_findings.map((finding, idx) => (
+                              <li key={idx} className="text-sm text-gray-700 flex items-start">
+                                <span className="text-purple-500 mr-2">•</span>
+                                {finding}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {bulkStatus.synthesis.recommendations && bulkStatus.synthesis.recommendations.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-medium text-gray-700 mb-2">Recommendations:</p>
+                          <ul className="space-y-1">
+                            {bulkStatus.synthesis.recommendations.map((rec, idx) => (
+                              <li key={idx} className="text-sm text-gray-700 flex items-start">
+                                <span className="text-pink-500 mr-2">→</span>
+                                {rec}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {(bulkStatus.synthesis.total_annual_cost || bulkStatus.synthesis.total_one_time_cost) && (
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-purple-200">
+                          {bulkStatus.synthesis.total_annual_cost && (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Total Annual Costs</dt>
+                              <dd className="mt-1 text-lg font-semibold text-gray-900">
+                                {new Intl.NumberFormat('fr-FR', {
+                                  style: 'currency',
+                                  currency: 'EUR',
+                                  maximumFractionDigits: 0,
+                                }).format(bulkStatus.synthesis.total_annual_cost)}
+                              </dd>
+                            </div>
+                          )}
+                          {bulkStatus.synthesis.total_one_time_cost && (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Total One-Time Costs</dt>
+                              <dd className="mt-1 text-lg font-semibold text-gray-900">
+                                {new Intl.NumberFormat('fr-FR', {
+                                  style: 'currency',
+                                  currency: 'EUR',
+                                  maximumFractionDigits: 0,
+                                }).format(bulkStatus.synthesis.total_one_time_cost)}
+                              </dd>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setBulkStatus(null)}
+                    className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Upload More Documents
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Overall Property Synthesis */}
+          {synthesis && (
+            <div className="mb-8 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 rounded-xl p-6 border-2 border-purple-200 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                  <svg className="w-8 h-8 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  AI Property Analysis
+                </h2>
+                <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                  synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
+                  synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-green-100 text-green-700'
+                }`}>
+                  Risk: {synthesis.risk_level.toUpperCase()}
+                </span>
+              </div>
+
+              <p className="text-gray-700 mb-6 leading-relaxed">{synthesis.overall_summary}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white rounded-lg p-4 shadow">
+                  <dt className="text-sm font-medium text-gray-500">Total Annual Costs</dt>
+                  <dd className="mt-2 text-3xl font-bold text-gray-900">
+                    {new Intl.NumberFormat('fr-FR', {
+                      style: 'currency',
+                      currency: 'EUR',
+                      maximumFractionDigits: 0,
+                    }).format(synthesis.total_annual_cost)}
+                  </dd>
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow">
+                  <dt className="text-sm font-medium text-gray-500">Total One-Time Costs</dt>
+                  <dd className="mt-2 text-3xl font-bold text-gray-900">
+                    {new Intl.NumberFormat('fr-FR', {
+                      style: 'currency',
+                      currency: 'EUR',
+                      maximumFractionDigits: 0,
+                    }).format(synthesis.total_one_time_cost)}
+                  </dd>
+                </div>
+              </div>
+
+              {synthesis.key_findings && synthesis.key_findings.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Findings</h3>
+                  <ul className="space-y-2">
+                    {synthesis.key_findings.map((finding, idx) => (
+                      <li key={idx} className="flex items-start text-gray-700">
+                        <svg className="w-5 h-5 text-purple-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        {finding}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {synthesis.recommendations && synthesis.recommendations.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Recommendations</h3>
+                  <ul className="space-y-2">
+                    {synthesis.recommendations.map((rec, idx) => (
+                      <li key={idx} className="flex items-start text-gray-700">
+                        <svg className="w-5 h-5 text-pink-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual Upload Section Divider */}
+          <div className="mb-6 flex items-center">
+            <div className="flex-1 border-t border-gray-300"></div>
+            <div className="px-4 text-sm text-gray-500 font-medium">Or upload manually by category</div>
+            <div className="flex-1 border-t border-gray-300"></div>
+          </div>
 
           <div className="space-y-8">
             {DOCUMENT_CATEGORIES.map((category) => {

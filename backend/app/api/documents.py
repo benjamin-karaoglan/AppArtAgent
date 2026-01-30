@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import Optional
+from datetime import datetime
 import os
 import uuid
 import hashlib
@@ -19,16 +20,29 @@ from app.schemas.document import (
     DiagnosticAnalysisResponse,
     TaxChargesAnalysisResponse
 )
-from app.services.claude_service import claude_service
-from app.services.document_service_v2 import DocumentParsingService  # Use new multimodal service
+from app.services.ai import get_document_analyzer
+from app.services.documents import DocumentParser, get_document_parser
+from app.services.storage import get_storage_service
 from app.models.document import DocumentSummary
 from app.schemas.document import DocumentSummaryResponse
-from app.services.minio_service import get_minio_service
-from app.workflows.client import get_temporal_client
+
+# Backward compatibility aliases
+get_gemini_llm_service = get_document_analyzer
+DocumentParsingService = DocumentParser
+get_minio_service = get_storage_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-doc_parser = DocumentParsingService()
+
+# Lazy initialization - don't initialize at module level for Cloud Run compatibility
+_doc_parser = None
+
+def get_doc_parser():
+    """Get or create document parser (lazy initialization)."""
+    global _doc_parser
+    if _doc_parser is None:
+        _doc_parser = DocumentParsingService()
+    return _doc_parser
 
 
 def extract_text_from_pdf(file_path: str) -> str:
@@ -128,15 +142,15 @@ async def upload_document(
     if auto_parse and property_id:
         logger.info(f"Auto-parsing enabled for document ID {document.id}")
         try:
-            await doc_parser.parse_document(document, db)
+            await get_doc_parser().parse_document(document, db)
 
             # Trigger aggregation if this is pv_ag or diags
             if document_category == "pv_ag":
                 logger.info(f"Triggering PV AG aggregation for property {property_id}")
-                await doc_parser.aggregate_pv_ag_summaries(property_id, db)
+                await get_doc_parser().aggregate_pv_ag_summaries(property_id, db)
             elif document_category == "diags":
                 logger.info(f"Triggering diagnostic aggregation for property {property_id}")
-                await doc_parser.aggregate_diagnostic_summaries(property_id, db)
+                await get_doc_parser().aggregate_diagnostic_summaries(property_id, db)
         except Exception as e:
             logger.error(f"Auto-parse failed for document ID {document.id}: {e}", exc_info=True)
             # Don't fail the upload if parsing fails - document is still saved
@@ -214,8 +228,9 @@ async def analyze_pvag(
             detail="Only PDF files are supported for PV d'AG analysis"
         )
 
-    # Analyze with Claude
-    analysis = await claude_service.analyze_pvag_document(document_text)
+    # Analyze with Gemini
+    gemini_service = get_gemini_llm_service()
+    analysis = await gemini_service.analyze_pvag_document(document_text)
 
     # Update document with analysis
     import json
@@ -273,8 +288,9 @@ async def analyze_diagnostic(
             detail="Only PDF files are supported"
         )
 
-    # Analyze with Claude
-    analysis = await claude_service.analyze_diagnostic_document(document_text)
+    # Analyze with Gemini
+    gemini_service = get_gemini_llm_service()
+    analysis = await gemini_service.analyze_diagnostic_document(document_text)
 
     # Update document
     import json
@@ -321,8 +337,9 @@ async def analyze_tax_charges(
     # Determine document type from category
     doc_type = "taxe_fonciere" if "tax" in document.document_category.lower() else "charges"
 
-    # Analyze with Claude
-    analysis = await claude_service.analyze_tax_charges_document(document_text, doc_type)
+    # Analyze with Gemini
+    gemini_service = get_gemini_llm_service()
+    analysis = await gemini_service.analyze_tax_charges_document(document_text, doc_type)
 
     # Update document
     import json
@@ -431,6 +448,53 @@ async def get_document_summaries(
     return result
 
 
+@router.get("/synthesis/{property_id}")
+async def get_property_synthesis(
+    property_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Get the overall AI synthesis for a property (from bulk upload).
+
+    Returns the comprehensive analysis that covers all uploaded documents.
+    """
+    from app.models.property import Property
+
+    # Verify property belongs to user
+    property = db.query(Property).filter(
+        Property.id == property_id,
+        Property.user_id == int(current_user)
+    ).first()
+
+    if not property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Property not found"
+        )
+
+    # Get synthesis (category is NULL for overall synthesis)
+    synthesis = db.query(DocumentSummary).filter(
+        DocumentSummary.property_id == property_id,
+        DocumentSummary.category == None
+    ).first()
+
+    if not synthesis:
+        return None
+
+    return {
+        "id": synthesis.id,
+        "property_id": synthesis.property_id,
+        "overall_summary": synthesis.overall_summary,
+        "risk_level": synthesis.risk_level,
+        "total_annual_cost": synthesis.total_annual_cost,
+        "total_one_time_cost": synthesis.total_one_time_cost,
+        "key_findings": synthesis.key_findings,
+        "recommendations": synthesis.recommendations,
+        "last_updated": synthesis.last_updated
+    }
+
+
 @router.post("/summaries/{property_id}/regenerate")
 async def regenerate_summaries(
     property_id: int,
@@ -459,9 +523,9 @@ async def regenerate_summaries(
 
     try:
         if category == "pv_ag":
-            summary = await doc_parser.aggregate_pv_ag_summaries(property_id, db)
+            summary = await get_doc_parser().aggregate_pv_ag_summaries(property_id, db)
         elif category == "diags":
-            summary = await doc_parser.aggregate_diagnostic_summaries(property_id, db)
+            summary = await get_doc_parser().aggregate_diagnostic_summaries(property_id, db)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -508,13 +572,12 @@ async def upload_document_async(
     current_user: str = Depends(get_current_user)
 ):
     """
-    Upload a document for async processing with MinIO and Temporal.
+    Upload a document for async processing with MinIO.
 
     This endpoint:
     1. Saves file to MinIO object storage
     2. Creates document record with pending status
-    3. Optionally starts Temporal workflow for async processing (if ENABLE_TEMPORAL_WORKFLOWS=true)
-    4. Returns immediately without waiting for analysis
+    3. Returns immediately without waiting for analysis
 
     Categories:
     - pv_ag: PV d'AG (assembly minutes)
@@ -592,29 +655,9 @@ async def upload_document_async(
         document.minio_bucket = settings.MINIO_BUCKET
         document.file_path = f"minio://{settings.MINIO_BUCKET}/{minio_key}"
 
-        # Start Temporal workflow if enabled
-        if settings.ENABLE_TEMPORAL_WORKFLOWS:
-            try:
-                temporal_client = get_temporal_client()
-                document_type = document_subcategory or document_category
-
-                workflow_info = await temporal_client.start_document_processing(
-                    document_id=document_id,
-                    minio_key=minio_key,
-                    document_type=document_type
-                )
-
-                document.workflow_id = workflow_info["workflow_id"]
-                document.workflow_run_id = workflow_info["workflow_run_id"]
-
-                logger.info(f"Started Temporal workflow: {workflow_info['workflow_id']}")
-
-            except Exception as e:
-                logger.error(f"Failed to start Temporal workflow: {e}")
-                # Don't fail the upload, just log the error
-                document.processing_error = f"Failed to start workflow: {str(e)}"
-        else:
-            logger.info("Temporal workflows disabled, document will be processed synchronously later")
+        # Document will be processed via async_processor for bulk uploads
+        # or synchronously via doc_parser for single uploads
+        logger.info(f"Document {document_id} uploaded, ready for processing")
 
         db.commit()
         db.refresh(document)
@@ -672,15 +715,6 @@ async def get_document_status(
             detail="Document not found"
         )
 
-    # If using Temporal, get workflow status
-    workflow_status = None
-    if document.workflow_id and settings.ENABLE_TEMPORAL_WORKFLOWS:
-        try:
-            temporal_client = get_temporal_client()
-            workflow_status = await temporal_client.get_workflow_status(document.workflow_id)
-        except Exception as e:
-            logger.error(f"Failed to get workflow status: {e}")
-
     return {
         "document_id": document.id,
         "filename": document.filename,
@@ -690,8 +724,7 @@ async def get_document_status(
         "workflow_run_id": document.workflow_run_id,
         "processing_started_at": document.processing_started_at,
         "processing_completed_at": document.processing_completed_at,
-        "processing_error": document.processing_error,
-        "workflow_status": workflow_status
+        "processing_error": document.processing_error
     }
 
 
@@ -705,14 +738,11 @@ async def bulk_upload_documents(
     """
     Upload multiple documents at once with intelligent classification and processing.
 
-    This endpoint uses LangGraph AI agent to:
+    This endpoint uses Gemini AI to:
     1. Automatically classify document types (PV AG, diagnostics, taxes, charges)
-    2. Route each document to specialized processing agents
-    3. Process all documents in parallel
-    4. Synthesize results across all documents
-    5. Generate comprehensive property summary
-
-    The agent handles the entire workflow - you just upload all files at once!
+    2. Process each document with specialized prompts
+    3. Synthesize results across all documents
+    4. Generate comprehensive property summary
 
     Returns:
     - workflow_id: ID to track the bulk processing workflow
@@ -812,62 +842,62 @@ async def bulk_upload_documents(
 
         db.commit()
 
-        # Step 2: Start bulk processing workflow with LangGraph agent
-        if settings.ENABLE_TEMPORAL_WORKFLOWS and len(uploaded_documents) > 0:
+        # Step 2: Start async background processing
+        if len(uploaded_documents) > 0:
             try:
-                temporal_client = get_temporal_client()
+                from app.services.documents import get_bulk_processor
+                import uuid
 
-                workflow_info = await temporal_client.start_bulk_document_processing(
-                    property_id=property_id,
-                    document_uploads=document_uploads_info
-                )
+                # Generate workflow ID
+                workflow_id = f"bulk-{property_id}-{int(datetime.now().timestamp())}-{uuid.uuid4().hex[:8]}"
 
                 # Update documents with workflow ID
                 for doc in uploaded_documents:
-                    doc.workflow_id = workflow_info["workflow_id"]
-                    doc.workflow_run_id = workflow_info["workflow_run_id"]
+                    doc.workflow_id = workflow_id
                     doc.processing_status = "processing"
 
                 db.commit()
 
-                logger.info(f"Started bulk processing workflow: {workflow_info['workflow_id']}")
+                # Start background processing
+                processor = get_bulk_processor()
+                processor.start_background_task(
+                    workflow_id=workflow_id,
+                    property_id=property_id,
+                    document_uploads=document_uploads_info
+                )
+
+                logger.info(f"Started async bulk processing: {workflow_id}")
 
                 return {
                     "status": "processing",
-                    "workflow_id": workflow_info["workflow_id"],
-                    "workflow_run_id": workflow_info["workflow_run_id"],
+                    "workflow_id": workflow_id,
                     "document_ids": [doc.id for doc in uploaded_documents],
                     "total_files": len(uploaded_documents),
                     "message": (
                         f"Successfully uploaded {len(uploaded_documents)} documents. "
                         "The AI agent is now classifying and processing them. "
-                        "Check the workflow status to see progress."
+                        "Check the status to see progress."
                     )
                 }
 
             except Exception as e:
-                logger.error(f"Failed to start bulk workflow: {e}", exc_info=True)
+                logger.error(f"Failed to start processing: {e}", exc_info=True)
                 # Mark documents as failed
                 for doc in uploaded_documents:
                     doc.processing_status = "failed"
-                    doc.processing_error = f"Failed to start workflow: {str(e)}"
+                    doc.processing_error = f"Failed to start processing: {str(e)}"
                 db.commit()
 
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to start processing workflow: {str(e)}"
+                    detail=f"Failed to start processing: {str(e)}"
                 )
         else:
-            # Temporal not enabled, return documents as pending
-            logger.info("Temporal workflows disabled - documents uploaded but not processed")
             return {
                 "status": "pending",
-                "document_ids": [doc.id for doc in uploaded_documents],
-                "total_files": len(uploaded_documents),
-                "message": (
-                    f"Successfully uploaded {len(uploaded_documents)} documents. "
-                    "Temporal workflows are disabled - documents will need manual processing."
-                )
+                "document_ids": [],
+                "total_files": 0,
+                "message": "No valid documents to process"
             }
 
     except HTTPException:
@@ -913,30 +943,36 @@ async def get_bulk_processing_status(
 
     property_id = documents[0].property_id
 
-    # Get workflow status from Temporal
-    workflow_status = None
-    if settings.ENABLE_TEMPORAL_WORKFLOWS:
-        try:
-            temporal_client = get_temporal_client()
-            workflow_status = await temporal_client.get_workflow_status(workflow_id)
-        except Exception as e:
-            logger.error(f"Failed to get workflow status: {e}")
-
     # Get synthesis if available
     synthesis = db.query(DocumentSummary).filter(
         DocumentSummary.property_id == property_id
     ).first()
+
+    logger.info(f"Synthesis found for property {property_id}: {synthesis is not None}")
+    if synthesis:
+        logger.info(f"Synthesis data - risk: {synthesis.risk_level}, summary length: {len(synthesis.overall_summary) if synthesis.overall_summary else 0}")
 
     # Calculate progress
     total = len(documents)
     completed = sum(1 for d in documents if d.processing_status == "completed")
     failed = sum(1 for d in documents if d.processing_status == "failed")
     processing = sum(1 for d in documents if d.processing_status == "processing")
+    pending = sum(1 for d in documents if d.processing_status == "pending")
 
-    return {
+    # Determine overall status
+    if completed == total:
+        overall_status = "completed"
+    elif failed == total:
+        overall_status = "failed"
+    elif processing > 0 or pending > 0:
+        overall_status = "processing"
+    else:
+        overall_status = "unknown"
+
+    response_data = {
         "workflow_id": workflow_id,
         "property_id": property_id,
-        "status": workflow_status.get("status") if workflow_status else "unknown",
+        "status": overall_status,
         "progress": {
             "total": total,
             "completed": completed,
@@ -963,6 +999,9 @@ async def get_bulk_processing_status(
             "risk_level": synthesis.risk_level if synthesis else None,
             "key_findings": synthesis.key_findings if synthesis else [],
             "recommendations": synthesis.recommendations if synthesis else []
-        } if synthesis else None,
-        "workflow_status": workflow_status
+        } if synthesis else None
     }
+
+    logger.info(f"Returning synthesis: {response_data['synthesis'] is not None}")
+
+    return response_data

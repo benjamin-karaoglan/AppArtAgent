@@ -412,11 +412,11 @@ function PropertyDetailContent() {
                 </button>
 
                 <button
-                  onClick={() => router.push(`/properties/${propertyId}/photos`)}
+                  onClick={() => router.push(`/properties/${propertyId}/redesign-studio`)}
                   className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <Upload className="h-5 w-5 mr-2" />
-                  Upload Photos
+                  Apartment Redesign Studio
                 </button>
               </div>
             </div>

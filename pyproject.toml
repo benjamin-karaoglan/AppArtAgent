@@ -4,6 +4,16 @@ version = "1.0.0"
 description = "AI-powered apartment purchasing decision platform for France"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = [
+    "dotenv>=0.9.9",
+    "google>=3.0.0",
+    "google-genai>=1.57.0",
+    "ipykernel>=7.1.0",
+    "logfire[google-genai]>=4.19.0",
+    "pillow>=12.1.0",
+    "protobuf>=6.33.4",
+    "pymupdf>=1.26.7",
+]
 
 # [tool.uv.workspace]
 # members = ["backend"]

@@ -10,8 +10,19 @@ from app.core.security import get_current_user
 from app.models.property import Property
 from app.models.document import Document
 from app.models.analysis import Analysis
-from app.services.claude_service import claude_service
-from app.services.dvf_service import dvf_service
+from app.services.ai import get_document_analyzer
+from app.services.dvf_service import DVFService
+
+# Initialize services (lazy for Cloud Run compatibility)
+get_gemini_llm_service = get_document_analyzer
+_dvf_service = None
+
+def get_dvf_service():
+    """Get or create DVF service (lazy initialization)."""
+    global _dvf_service
+    if _dvf_service is None:
+        _dvf_service = DVFService()
+    return _dvf_service
 
 router = APIRouter()
 
@@ -42,13 +53,13 @@ async def generate_comprehensive_analysis(
     # Get price analysis
     price_analysis = {}
     if property.asking_price and property.surface_area:
-        comparable_sales = dvf_service.get_comparable_sales(
+        comparable_sales = get_dvf_service().get_comparable_sales(
             db=db,
             postal_code=property.postal_code or "",
             property_type=property.property_type or "Appartement",
             surface_area=property.surface_area,
         )
-        price_analysis = dvf_service.calculate_price_analysis(
+        price_analysis = get_dvf_service().calculate_price_analysis(
             asking_price=property.asking_price,
             surface_area=property.surface_area,
             comparable_sales=comparable_sales
@@ -92,7 +103,7 @@ async def generate_comprehensive_analysis(
                 continue
 
     # Calculate investment score
-    investment_metrics = dvf_service.calculate_investment_score(
+    investment_metrics = get_dvf_service().calculate_investment_score(
         property_data=property,
         price_analysis=price_analysis,
         annual_costs=annual_costs,
@@ -108,7 +119,8 @@ async def generate_comprehensive_analysis(
         "property_type": property.property_type,
     }
 
-    ai_report = await claude_service.generate_property_report(
+    gemini_service = get_gemini_llm_service()
+    ai_report = await gemini_service.generate_property_report(
         property_data=property_dict,
         price_analysis=price_analysis,
         documents_analysis=documents_analysis

@@ -1,0 +1,28 @@
+# =============================================================================
+# Terraform Variables - Copy to terraform.tfvars and customize
+# =============================================================================
+
+# Required: Your GCP Project ID
+project_id = "your-gcp-project-id"
+
+# GCP Region (europe-west1 = Belgium, us-central1 = Iowa)
+region = "europe-west1"
+
+# Environment: staging or production
+environment = "production"
+
+# Optional: Custom domain (leave empty to use Cloud Run URLs)
+domain = ""
+
+# Database tier
+# Development: db-f1-micro (1 vCPU, 614 MB RAM) - ~$10/month
+# Production:  db-custom-2-4096 (2 vCPU, 4 GB RAM) - ~$50/month
+db_tier = "db-f1-micro"
+
+# Redis tier
+# BASIC: Single zone, no HA - ~$35/month for 1GB
+# STANDARD_HA: Multi-zone, automatic failover - ~$70/month for 1GB
+redis_tier = "BASIC"
+
+# Redis memory size in GB
+redis_memory_size_gb = 1

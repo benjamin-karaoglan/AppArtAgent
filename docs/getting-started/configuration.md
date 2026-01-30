@@ -1,0 +1,191 @@
+# Configuration
+
+Appartment Agent uses environment variables for configuration. This guide covers all available settings.
+
+## Environment Files
+
+| File | Purpose |
+|------|---------|
+| `.env` | Root-level shared variables |
+| `backend/.env` | Backend-specific configuration |
+| `frontend/.env.local` | Frontend-specific configuration |
+
+## Root Configuration (.env)
+
+```bash
+# AI Provider - Google Cloud (Recommended)
+GOOGLE_CLOUD_API_KEY=your_google_api_key
+GOOGLE_CLOUD_PROJECT=your_gcp_project         # For Vertex AI
+GOOGLE_CLOUD_LOCATION=us-central1             # GCP region
+GEMINI_USE_VERTEXAI=false                     # Use Vertex AI instead of API key
+
+# AI Provider - Anthropic (Legacy)
+ANTHROPIC_API_KEY=your_anthropic_key          # Optional
+
+# Security
+SECRET_KEY=your-secret-key-at-least-32-chars  # Required
+
+# Optional: DVF auto-import on startup
+AUTO_IMPORT_DVF=false
+```
+
+## Backend Configuration (backend/.env)
+
+### Core Settings
+
+```bash
+# Application
+ENVIRONMENT=development                        # development | production
+LOG_LEVEL=INFO                                 # DEBUG | INFO | WARNING | ERROR
+
+# Database
+DATABASE_URL=postgresql://appartment:appartment@db:5432/appartment_agent
+
+# Security
+SECRET_KEY=your-secret-key-at-least-32-chars
+```
+
+### AI Configuration
+
+```bash
+# Gemini Models
+GEMINI_LLM_MODEL=gemini-2.0-flash-lite        # Text/document analysis
+GEMINI_IMAGE_MODEL=gemini-2.0-flash-exp       # Image generation
+GEMINI_USE_VERTEXAI=false                     # true for production on GCP
+
+# Google Cloud (required for Vertex AI)
+GOOGLE_CLOUD_API_KEY=your_api_key
+GOOGLE_CLOUD_PROJECT=your_project
+GOOGLE_CLOUD_LOCATION=us-central1
+```
+
+### Storage Configuration
+
+```bash
+# Storage Backend: 'minio' (local) or 'gcs' (production)
+STORAGE_BACKEND=minio
+
+# MinIO (Local Development)
+MINIO_ENDPOINT=minio:9000
+MINIO_PUBLIC_ENDPOINT=localhost:9000          # For presigned URLs
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=documents
+MINIO_SECURE=false
+
+# Google Cloud Storage (Production)
+GCS_DOCUMENTS_BUCKET=your-documents-bucket
+GCS_PHOTOS_BUCKET=your-photos-bucket
+```
+
+### Cache Configuration
+
+```bash
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+CACHE_TTL=3600                                # Cache TTL in seconds
+```
+
+### File Upload Settings
+
+```bash
+UPLOAD_DIR=/app/uploads
+MAX_UPLOAD_SIZE=10485760                      # 10MB in bytes
+```
+
+## Frontend Configuration (frontend/.env.local)
+
+```bash
+# API endpoint
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Optional: Analytics, feature flags, etc.
+```
+
+## Configuration by Environment
+
+### Development
+
+```bash
+# .env
+ENVIRONMENT=development
+LOG_LEVEL=DEBUG
+STORAGE_BACKEND=minio
+GEMINI_USE_VERTEXAI=false
+
+# Uses local MinIO for storage
+# Uses Gemini API key directly
+```
+
+### Production (GCP)
+
+```bash
+# Set via Secret Manager or Cloud Run env vars
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+STORAGE_BACKEND=gcs
+GEMINI_USE_VERTEXAI=true
+
+# Uses Google Cloud Storage
+# Uses Vertex AI with service account
+```
+
+## Security Best Practices
+
+!!! danger "Never commit secrets"
+    - Add `.env` files to `.gitignore`
+    - Use environment variables or secret managers in production
+    - Rotate API keys regularly
+
+### Generating a Secret Key
+
+```bash
+# Generate a secure secret key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### API Key Security
+
+1. **Restrict API key permissions** in Google Cloud Console
+2. **Set quotas** to prevent unexpected charges
+3. **Monitor usage** via Cloud Console
+
+## CORS Configuration
+
+For custom domains, add to backend config:
+
+```bash
+# Comma-separated list of additional origins
+EXTRA_CORS_ORIGINS=https://app.yourdomain.com,https://staging.yourdomain.com
+```
+
+## Validation
+
+Verify configuration is correct:
+
+```bash
+# Check backend config
+docker-compose exec backend python -c "
+from app.core.config import settings
+print(f'Environment: {settings.ENVIRONMENT}')
+print(f'Database: {settings.DATABASE_URL[:30]}...')
+print(f'Storage: {settings.STORAGE_BACKEND}')
+print(f'AI Model: {settings.GEMINI_LLM_MODEL}')
+"
+```
+
+## Configuration Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | - | PostgreSQL connection string |
+| `SECRET_KEY` | Yes | - | JWT signing key (32+ chars) |
+| `GOOGLE_CLOUD_API_KEY` | Yes* | - | Gemini API key |
+| `STORAGE_BACKEND` | No | `minio` | Storage: `minio` or `gcs` |
+| `GEMINI_LLM_MODEL` | No | `gemini-2.0-flash-lite` | Text analysis model |
+| `LOG_LEVEL` | No | `INFO` | Logging verbosity |
+| `REDIS_HOST` | No | `redis` | Redis hostname |
+| `CACHE_TTL` | No | `3600` | Cache TTL in seconds |
+
+*Required unless using Vertex AI with service account

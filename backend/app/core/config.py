@@ -22,14 +22,19 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
-    # CORS
+    # CORS - Updated for GCP deployment
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:8000",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        # Cloud Run URLs (pattern: https://*.run.app)
+        # Add specific domains here or use wildcard matching in middleware
     ]
+
+    # Additional CORS origins from environment (comma-separated)
+    EXTRA_CORS_ORIGINS: str = os.getenv("EXTRA_CORS_ORIGINS", "")
 
     # Database
     DATABASE_URL: str = os.getenv(
@@ -37,19 +42,34 @@ class Settings(BaseSettings):
         "postgresql://appartment:appartment@localhost:5432/appartment_agent"
     )
 
-    # Anthropic
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
+    # Google Cloud / Gemini (Primary LLM Provider)
+    GOOGLE_CLOUD_API_KEY: str = os.getenv("GOOGLE_CLOUD_API_KEY", "")
+    GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "")
+    GOOGLE_CLOUD_LOCATION: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    GEMINI_USE_VERTEXAI: bool = os.getenv("GEMINI_USE_VERTEXAI", "false").lower() == "true"
 
-    # File uploads
-    UPLOAD_DIR: str = os.path.join(os.path.dirname(__file__), "../../../uploads")
+    # Gemini Models
+    GEMINI_LLM_MODEL: str = os.getenv("GEMINI_LLM_MODEL", "gemini-2.0-flash-lite")  # Default for text/document analysis
+    GEMINI_IMAGE_MODEL: str = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.0-flash-exp")  # For image generation
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")  # Legacy alias for image model
+
+    # Anthropic (DEPRECATED - kept for backward compatibility)
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"  # Deprecated
+
+    # File uploads - Use environment variable or /tmp for Cloud Run
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/tmp/uploads")
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = [
         ".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".xls", ".xlsx"
     ]
 
-    # DVF Data
-    DVF_DATA_DIR: str = os.path.join(os.path.dirname(__file__), "../../../data/dvf")
+    # DVF Data - Use environment variable or /tmp for Cloud Run
+    DVF_DATA_DIR: str = os.getenv("DVF_DATA_DIR", "/tmp/data/dvf")
+    
+    # Logfire observability (optional - set LOGFIRE_TOKEN to enable)
+    LOGFIRE_TOKEN: str = os.getenv("LOGFIRE_TOKEN", "")
+    LOGFIRE_ENABLED: bool = os.getenv("LOGFIRE_ENABLED", "false").lower() == "true"
 
     # Redis Cache
     REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
@@ -57,19 +77,22 @@ class Settings(BaseSettings):
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
     CACHE_TTL: int = 3600  # 1 hour cache TTL
 
-    # Temporal Workflow Engine
-    TEMPORAL_HOST: str = os.getenv("TEMPORAL_HOST", "temporal")
-    TEMPORAL_PORT: int = int(os.getenv("TEMPORAL_PORT", "7233"))
-    TEMPORAL_NAMESPACE: str = os.getenv("TEMPORAL_NAMESPACE", "default")
-    TEMPORAL_TASK_QUEUE: str = os.getenv("TEMPORAL_TASK_QUEUE", "document-processing")
-    ENABLE_TEMPORAL_WORKFLOWS: bool = os.getenv("ENABLE_TEMPORAL_WORKFLOWS", "false").lower() == "true"
+    # Storage Backend Configuration
+    # Options: 'minio' (default for local), 'gcs' (for GCP production)
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "minio")
 
-    # MinIO Object Storage
+    # MinIO Object Storage (for local development)
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "minio:9000")
+    MINIO_PUBLIC_ENDPOINT: str = os.getenv("MINIO_PUBLIC_ENDPOINT", "")
+    MINIO_REGION: str = os.getenv("MINIO_REGION", "us-east-1")
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     MINIO_BUCKET: str = os.getenv("MINIO_BUCKET", "documents")
     MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+
+    # Google Cloud Storage (for GCP production)
+    GCS_DOCUMENTS_BUCKET: str = os.getenv("GCS_DOCUMENTS_BUCKET", "")
+    GCS_PHOTOS_BUCKET: str = os.getenv("GCS_PHOTOS_BUCKET", "")
 
     class Config:
         env_file = ".env"

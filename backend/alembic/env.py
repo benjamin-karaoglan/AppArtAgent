@@ -11,6 +11,7 @@ from app.models.property import DVFRecord, Property, DVFImport
 from app.models.user import User
 from app.models.document import Document
 from app.models.analysis import Analysis
+from app.models.photo import Photo, PhotoRedesign
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

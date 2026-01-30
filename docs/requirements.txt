@@ -1,0 +1,9 @@
+# MkDocs and theme
+mkdocs>=1.5.0
+mkdocs-material>=9.5.0
+
+# Markdown extensions for code highlighting, tabs, etc.
+pymdown-extensions>=10.0
+
+# Required for Mermaid diagrams (Material theme handles rendering)
+# No additional package needed - Material theme includes mermaid.js

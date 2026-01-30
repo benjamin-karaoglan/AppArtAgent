@@ -24,6 +24,7 @@ wheels/
 venv/
 env/
 ENV/
+.venv
 
 # Node
 node_modules/
@@ -52,7 +53,7 @@ dist
 .DS_Store
 
 # VS Code (keep settings for hot-reload configuration)
-# .vscode/ - Commented out to track settings.json
+.vscode
 
 # Database
 *.db
@@ -78,7 +79,29 @@ coverage/
 # Docker
 docker-compose.override.yml
 
+# Local secrets
+backend/.secrets/
+
 # Temporary files
 tmp/
 temp/
 *.tmp
+
+# Observability
+.logfire
+
+# Claude
+.claude
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform.lock.hcl
+*.tfplan
+
+# GCP Deployment
+deployer-key.json
+*-key.json
+*.pem

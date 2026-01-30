@@ -1,89 +1,547 @@
-"""Photos API routes for AI-powered style visualization."""
+"""Photos API routes for AI-powered apartment redesign using Gemini 2.5 Flash."""
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from typing import Dict, Any
-import os
+from typing import List, Dict, Any, Optional
+import logging
+import time
+from datetime import datetime, timedelta
 import uuid
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.core.config import settings
-from app.services.claude_service import claude_service
+from app.models.photo import Photo, PhotoRedesign
+from app.models.property import Property
+from app.schemas.photo import (
+    PhotoResponse,
+    PhotoListResponse,
+    RedesignRequest,
+    RedesignResponse,
+    RedesignListResponse,
+    StylePresetsResponse,
+    PhotoUpdate
+)
+from app.services.ai import get_image_generator
+from app.services.storage import get_storage_service
 
+# Initialize services (lazy - will be initialized on first use)
+get_gemini_service = get_image_generator
+# Note: Don't initialize at module level - use get_storage_service() in route handlers
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/analyze")
-async def analyze_photo(
-    file: UploadFile = File(...),
-    transformation_request: str = Form("Describe this space and suggest modern improvements"),
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
-) -> Dict[str, Any]:
-    """
-    Analyze apartment photo and provide AI-powered style recommendations.
-    """
-    # Validate file type
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be an image"
-        )
-
-    # Read image data
-    image_data = await file.read()
-
-    if len(image_data) > settings.MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File size exceeds maximum of {settings.MAX_UPLOAD_SIZE} bytes"
-        )
-
-    # Analyze with Claude Vision
-    analysis = await claude_service.analyze_property_photos(
-        image_data=image_data,
-        transformation_request=transformation_request
-    )
-
-    return {
-        "analysis": analysis["analysis"],
-        "transformation_request": transformation_request,
-        "filename": file.filename
-    }
+@router.get("/presets")
+async def get_style_presets() -> StylePresetsResponse:
+    """Get available design style presets."""
+    return StylePresetsResponse()
 
 
-@router.post("/upload-and-save")
+@router.post("/upload", response_model=PhotoResponse)
 async def upload_photo(
     file: UploadFile = File(...),
-    property_id: int = Form(...),
+    property_id: Optional[int] = Form(None),
+    room_type: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
-) -> Dict[str, Any]:
+):
     """
-    Upload and save apartment photo for future reference.
-    This can be linked to the document system for storage.
+    Upload an apartment photo.
+
+    Args:
+        file: Image file (JPEG, PNG)
+        property_id: Optional property ID to associate with
+        room_type: Optional room type (living_room, bedroom, kitchen, etc.)
+        description: Optional description
+
+    Returns:
+        Uploaded photo details with presigned URL
     """
     # Validate file type
-    if not file.content_type or not file.content_type.startswith("image/"):
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if not file.content_type or file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be an image"
+            detail="File must be an image (JPEG, JPG, PNG, or WebP)"
         )
 
-    # Generate unique filename
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
+    # Validate property ownership if provided
+    if property_id:
+        property = db.query(Property).filter(
+            Property.id == property_id,
+            Property.user_id == int(current_user)
+        ).first()
 
-    # Save file
-    with open(file_path, "wb") as buffer:
-        content = await file.read()
-        buffer.write(content)
+        if not property:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Property not found"
+            )
 
-    return {
-        "message": "Photo uploaded successfully",
-        "filename": unique_filename,
-        "property_id": property_id,
-        "file_path": f"/uploads/{unique_filename}"
-    }
+    try:
+        # Read file data
+        file_data = await file.read()
+        file_size = len(file_data)
+
+        # Upload to MinIO
+        minio_key = get_storage_service().upload_file(
+            file_data=file_data,
+            filename=file.filename,
+            bucket_name="photos"
+        )
+
+        # Create database record
+        photo = Photo(
+            user_id=int(current_user),
+            property_id=property_id,
+            filename=file.filename,
+            minio_key=minio_key,
+            minio_bucket="photos",
+            file_size=file_size,
+            mime_type=file.content_type,
+            room_type=room_type,
+            description=description
+        )
+
+        db.add(photo)
+        db.commit()
+        db.refresh(photo)
+
+        # Generate presigned URL
+        presigned_url = get_storage_service().get_presigned_url(
+            minio_key=minio_key,
+            bucket_name="photos",
+            expiry=timedelta(hours=1)
+        )
+
+        logger.info(f"✅ Photo {photo.id} uploaded: {file.filename}")
+
+        return PhotoResponse(
+            id=photo.id,
+            user_id=photo.user_id,
+            property_id=photo.property_id,
+            filename=photo.filename,
+            minio_key=photo.minio_key,
+            minio_bucket=photo.minio_bucket,
+            file_size=photo.file_size,
+            mime_type=photo.mime_type,
+            room_type=photo.room_type,
+            description=photo.description,
+            uploaded_at=photo.uploaded_at,
+            presigned_url=presigned_url,
+            redesign_count=0
+        )
+
+    except Exception as e:
+        logger.error(f"Error uploading photo: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload photo: {str(e)}"
+        )
+
+
+@router.post("/{photo_id}/redesign", response_model=RedesignResponse)
+async def create_redesign(
+    photo_id: int,
+    request: RedesignRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Generate a redesign of an apartment photo using Gemini 2.5 Flash.
+
+    Args:
+        photo_id: ID of the original photo
+        request: Redesign parameters (style_preset or custom_prompt)
+
+    Returns:
+        Generated redesign details with presigned URL
+    """
+    # Get original photo
+    photo = db.query(Photo).filter(
+        Photo.id == photo_id,
+        Photo.user_id == int(current_user)
+    ).first()
+
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found"
+        )
+
+    # Validate request
+    if not request.style_preset and not request.custom_prompt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either style_preset or custom_prompt must be provided"
+        )
+
+    try:
+        start_time = time.time()
+
+        # Get original image from MinIO
+        original_image_data = get_storage_service().get_file(
+            minio_key=photo.minio_key,
+            bucket_name=photo.minio_bucket
+        )
+
+        # Build prompt
+        gemini_service = get_gemini_service()
+
+        if request.style_preset:
+            prompt = gemini_service.create_detailed_prompt(
+                base_style=request.style_preset,
+                room_type=request.room_type or photo.room_type or "living room",
+                additional_details=request.additional_details
+            )
+        else:
+            prompt = request.custom_prompt
+
+        # Handle multi-turn if parent redesign specified
+        conversation_history = None
+        is_multi_turn = False
+
+        if request.parent_redesign_id:
+            parent = db.query(PhotoRedesign).filter(
+                PhotoRedesign.id == request.parent_redesign_id,
+                PhotoRedesign.photo_id == photo_id
+            ).first()
+
+            if parent:
+                conversation_history = parent.conversation_history or []
+                is_multi_turn = True
+
+        # Generate redesign
+        logger.info(f"Generating redesign for photo {photo_id} with prompt: {prompt[:100]}...")
+
+        result = await gemini_service.redesign_apartment(
+            image_data=original_image_data,
+            prompt=prompt,
+            aspect_ratio=request.aspect_ratio,
+            conversation_history=conversation_history
+        )
+
+        if not result.get("success"):
+            raise Exception(result.get("error", "Unknown error"))
+
+        generation_time_ms = int((time.time() - start_time) * 1000)
+
+        redesign_uuid = str(uuid.uuid4())
+        # Upload generated image to MinIO
+        generated_filename = f"redesign_{redesign_uuid}.png"
+        redesign_minio_key = get_storage_service().upload_file(
+            file_data=result["image_data"],
+            filename=generated_filename,
+            bucket_name="photos"
+        )
+
+        # Update conversation history for multi-turn
+        new_conversation_history = conversation_history or []
+        new_conversation_history.append({
+            "role": "user",
+            "content": prompt
+        })
+        new_conversation_history.append({
+            "role": "model",
+            "image": result["image_data"].hex()  # Store as hex for JSON compatibility
+        })
+
+        # Create database record
+        redesign = PhotoRedesign(
+            photo_id=photo_id,
+            redesign_uuid=redesign_uuid,
+            minio_key=redesign_minio_key,
+            minio_bucket="photos",
+            file_size=len(result["image_data"]),
+            style_preset=request.style_preset,
+            prompt=prompt,
+            aspect_ratio=request.aspect_ratio,
+            model_used=result["model"],
+            conversation_history=new_conversation_history,
+            is_multi_turn=is_multi_turn,
+            parent_redesign_id=request.parent_redesign_id,
+            generation_time_ms=generation_time_ms
+        )
+
+        db.add(redesign)
+        db.commit()
+        db.refresh(redesign)
+
+        # Generate presigned URL
+        presigned_url = get_storage_service().get_presigned_url(
+            minio_key=redesign_minio_key,
+            bucket_name="photos",
+            expiry=timedelta(hours=1)
+        )
+
+        logger.info(f"✅ Redesign {redesign.id} created for photo {photo_id} in {generation_time_ms}ms")
+
+        return RedesignResponse(
+            id=redesign.id,
+            redesign_uuid=redesign.redesign_uuid,
+            photo_id=redesign.photo_id,
+            minio_key=redesign.minio_key,
+            minio_bucket=redesign.minio_bucket,
+            file_size=redesign.file_size,
+            style_preset=redesign.style_preset,
+            prompt=redesign.prompt,
+            aspect_ratio=redesign.aspect_ratio,
+            model_used=redesign.model_used,
+            conversation_history=redesign.conversation_history,
+            is_multi_turn=redesign.is_multi_turn,
+            parent_redesign_id=redesign.parent_redesign_id,
+            created_at=redesign.created_at,
+            generation_time_ms=redesign.generation_time_ms,
+            is_favorite=redesign.is_favorite,
+            user_rating=redesign.user_rating,
+            presigned_url=presigned_url
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating redesign: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate redesign: {str(e)}"
+        )
+
+
+@router.get("/", response_model=PhotoListResponse)
+async def list_photos(
+    property_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    List all photos for the current user.
+
+    Args:
+        property_id: Optional filter by property
+
+    Returns:
+        List of photos with presigned URLs
+    """
+    query = db.query(Photo).filter(Photo.user_id == int(current_user))
+
+    if property_id:
+        query = query.filter(Photo.property_id == property_id)
+
+    photos = query.order_by(Photo.uploaded_at.desc()).all()
+
+    # Build response with presigned URLs and redesign counts
+    photo_responses = []
+    for photo in photos:
+        presigned_url = get_storage_service().get_presigned_url(
+            minio_key=photo.minio_key,
+            bucket_name=photo.minio_bucket,
+            expiry=timedelta(hours=1)
+        )
+
+        redesign_count = db.query(PhotoRedesign).filter(
+            PhotoRedesign.photo_id == photo.id
+        ).count()
+
+        photo_responses.append(PhotoResponse(
+            id=photo.id,
+            user_id=photo.user_id,
+            property_id=photo.property_id,
+            filename=photo.filename,
+            minio_key=photo.minio_key,
+            minio_bucket=photo.minio_bucket,
+            file_size=photo.file_size,
+            mime_type=photo.mime_type,
+            room_type=photo.room_type,
+            description=photo.description,
+            uploaded_at=photo.uploaded_at,
+            presigned_url=presigned_url,
+            redesign_count=redesign_count
+        ))
+
+    return PhotoListResponse(
+        photos=photo_responses,
+        total=len(photo_responses)
+    )
+
+
+@router.get("/{photo_id}/redesigns", response_model=RedesignListResponse)
+async def list_redesigns(
+    photo_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    List all redesigns for a specific photo.
+
+    Args:
+        photo_id: Photo ID
+
+    Returns:
+        List of redesigns with presigned URLs
+    """
+    # Verify photo ownership
+    photo = db.query(Photo).filter(
+        Photo.id == photo_id,
+        Photo.user_id == int(current_user)
+    ).first()
+
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found"
+        )
+
+    redesigns = db.query(PhotoRedesign).filter(
+        PhotoRedesign.photo_id == photo_id
+    ).order_by(PhotoRedesign.created_at.desc()).all()
+
+    # Build response with presigned URLs
+    redesign_responses = []
+    for redesign in redesigns:
+        presigned_url = get_storage_service().get_presigned_url(
+            minio_key=redesign.minio_key,
+            bucket_name=redesign.minio_bucket,
+            expiry=timedelta(hours=1)
+        )
+
+        redesign_responses.append(RedesignResponse(
+            id=redesign.id,
+            redesign_uuid=redesign.redesign_uuid,
+            photo_id=redesign.photo_id,
+            minio_key=redesign.minio_key,
+            minio_bucket=redesign.minio_bucket,
+            file_size=redesign.file_size,
+            style_preset=redesign.style_preset,
+            prompt=redesign.prompt,
+            aspect_ratio=redesign.aspect_ratio,
+            model_used=redesign.model_used,
+            conversation_history=redesign.conversation_history,
+            is_multi_turn=redesign.is_multi_turn,
+            parent_redesign_id=redesign.parent_redesign_id,
+            created_at=redesign.created_at,
+            generation_time_ms=redesign.generation_time_ms,
+            is_favorite=redesign.is_favorite,
+            user_rating=redesign.user_rating,
+            presigned_url=presigned_url
+        ))
+
+    return RedesignListResponse(
+        redesigns=redesign_responses,
+        total=len(redesign_responses)
+    )
+
+
+@router.delete("/{photo_id}")
+async def delete_photo(
+    photo_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Delete a photo and all its redesigns.
+
+    Args:
+        photo_id: Photo ID
+
+    Returns:
+        Success message
+    """
+    photo = db.query(Photo).filter(
+        Photo.id == photo_id,
+        Photo.user_id == int(current_user)
+    ).first()
+
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found"
+        )
+
+    try:
+        # Delete from MinIO (original photo)
+        get_storage_service().delete_file(
+            minio_key=photo.minio_key,
+            bucket_name=photo.minio_bucket
+        )
+
+        # Delete all redesigns from MinIO
+        redesigns = db.query(PhotoRedesign).filter(
+            PhotoRedesign.photo_id == photo_id
+        ).all()
+
+        for redesign in redesigns:
+            get_storage_service().delete_file(
+                minio_key=redesign.minio_key,
+                bucket_name=redesign.minio_bucket
+            )
+
+        # Database cascade will delete redesigns
+        db.delete(photo)
+        db.commit()
+
+        logger.info(f"✅ Photo {photo_id} and {len(redesigns)} redesigns deleted")
+
+        return {
+            "message": f"Photo and {len(redesigns)} redesigns deleted successfully"
+        }
+
+    except Exception as e:
+        logger.error(f"Error deleting photo: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete photo: {str(e)}"
+        )
+
+
+@router.patch("/{photo_id}", response_model=PhotoResponse)
+async def update_photo(
+    photo_id: int,
+    update: PhotoUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Update photo metadata.
+    """
+    photo = db.query(Photo).filter(
+        Photo.id == photo_id,
+        Photo.user_id == int(current_user)
+    ).first()
+
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found"
+        )
+
+    if update.room_type is not None:
+        photo.room_type = update.room_type
+
+    db.commit()
+    db.refresh(photo)
+
+    presigned_url = get_storage_service().get_presigned_url(
+        minio_key=photo.minio_key,
+        bucket_name=photo.minio_bucket,
+        expiry=timedelta(hours=1)
+    )
+
+    redesign_count = db.query(PhotoRedesign).filter(
+        PhotoRedesign.photo_id == photo.id
+    ).count()
+
+    return PhotoResponse(
+        id=photo.id,
+        user_id=photo.user_id,
+        property_id=photo.property_id,
+        filename=photo.filename,
+        minio_key=photo.minio_key,
+        minio_bucket=photo.minio_bucket,
+        file_size=photo.file_size,
+        mime_type=photo.mime_type,
+        room_type=photo.room_type,
+        description=photo.description,
+        uploaded_at=photo.uploaded_at,
+        presigned_url=presigned_url,
+        redesign_count=redesign_count
+    )

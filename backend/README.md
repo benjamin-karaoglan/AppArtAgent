@@ -4,11 +4,11 @@ AI-powered apartment purchasing decision platform for France - Backend API
 
 ## Features
 
-- **Async Document Processing**: Upload documents for background processing with Temporal workflows
+- **Async Document Processing**: Upload documents for background processing with async processor
 - **MinIO Object Storage**: S3-compatible object storage with file deduplication and presigned URLs
-- **LangChain Integration**: ChatAnthropic for document analysis with token tracking and cost estimation
-- **Temporal Workflows**: Durable, fault-tolerant workflow orchestration with automatic retries
-- **Multimodal Document Parsing**: Uses Claude's vision capabilities to parse PDF documents (diagnostics, PV d'AG, tax documents)
+- **Gemini AI Integration**: Google Gemini for document analysis with multimodal vision support
+- **Multimodal Document Parsing**: Uses Gemini's vision capabilities to parse PDF documents (diagnostics, PV d'AG, tax documents)
+- **Photo Redesign Studio**: AI-powered apartment photo redesign using Gemini image generation
 - **Comprehensive Logging**: Full logging support with file rotation and error tracking
 - **Fast Dependency Management**: Uses `uv` for lightning-fast package installation
 - **RESTful API**: FastAPI-based backend with automatic OpenAPI documentation
@@ -63,18 +63,13 @@ uvicorn app.main:app --reload
 Key environment variables (set in `.env`):
 
 - `DATABASE_URL`: PostgreSQL connection string
-- `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
+- `GOOGLE_CLOUD_API_KEY`: Your Google Cloud API key for Gemini
 - `SECRET_KEY`: Secret key for JWT token generation
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - `MINIO_ENDPOINT`: MinIO server endpoint (default: minio:9000)
 - `MINIO_ACCESS_KEY`: MinIO access key (default: minioadmin)
 - `MINIO_SECRET_KEY`: MinIO secret key (default: minioadmin)
 - `MINIO_BUCKET`: MinIO bucket name (default: documents)
-- `TEMPORAL_HOST`: Temporal server host (default: temporal)
-- `TEMPORAL_PORT`: Temporal server port (default: 7233)
-- `TEMPORAL_NAMESPACE`: Temporal namespace (default: default)
-- `TEMPORAL_TASK_QUEUE`: Temporal task queue (default: document-processing)
-- `ENABLE_TEMPORAL_WORKFLOWS`: Enable async workflows (default: false)
 
 ## Logging
 
@@ -84,35 +79,30 @@ Logs are stored in the `logs/` directory:
 
 ## Document Processing
 
-### Synchronous Processing (Default)
+### Single Document Upload
 
-The traditional endpoint for immediate processing:
+The endpoint for immediate processing:
 
 1. **Upload**: Documents are uploaded via `/api/documents/upload`
 2. **PDF to Images**: PDFs are converted to high-quality images
-3. **Multimodal Analysis**: Images are sent to Claude for analysis
+3. **Multimodal Analysis**: Images are sent to Gemini for analysis
 4. **Structured Extraction**: Results are parsed and stored in the database
 
-### Asynchronous Processing (New)
+### Bulk Upload (Recommended)
 
-For scalable background processing with Temporal workflows:
+For processing multiple documents with intelligent classification:
 
-1. **Upload**: Documents are uploaded via `/api/documents/upload-async`
+1. **Upload**: Multiple files uploaded via `/api/documents/bulk-upload`
 2. **MinIO Storage**: Files are stored in MinIO object storage
-3. **Workflow Start**: Temporal workflow is triggered for background processing
-4. **Status Tracking**: Monitor progress via `/api/documents/{id}/status`
-5. **Workflow Execution**:
-   - Download file from MinIO
-   - Convert PDF to images
-   - Analyze with LangChain + Claude
-   - Save results to database
-   - Update status (completed/failed)
+3. **Auto-Classification**: Gemini automatically classifies document types
+4. **Parallel Processing**: Documents processed concurrently
+5. **Synthesis**: Results aggregated into comprehensive property summary
+6. **Status Tracking**: Monitor progress via `/api/documents/bulk-status/{workflow_id}`
 
 **Architecture Benefits**:
-- **Scalability**: Process documents in background workers
-- **Fault Tolerance**: Automatic retries on failures
-- **Observability**: Track workflow status in Temporal UI
-- **Cost Tracking**: LangChain integration tracks tokens and costs
+- **Auto-Classification**: AI automatically determines document types
+- **Batch Processing**: Upload all property documents at once
+- **Synthesis**: Get comprehensive property analysis from all documents
 - **Deduplication**: SHA-256 file hashing prevents duplicate processing
 
 Supported document types:
