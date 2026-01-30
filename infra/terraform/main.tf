@@ -437,6 +437,8 @@ resource "google_secret_manager_secret" "google_api_key" {
 }
 
 # Logfire write token (set value manually or via variable)
+# If you created this secret manually in GCP Console, import it:
+#   terraform import google_secret_manager_secret.logfire_token projects/PROJECT_ID/secrets/logfire-token
 resource "google_secret_manager_secret" "logfire_token" {
   secret_id = "logfire-token"
 
