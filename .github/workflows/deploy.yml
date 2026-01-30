@@ -273,7 +273,7 @@ jobs:
 
       - name: Run Alembic migrations
         run: |
-          # Update or create migration job
+          # Deploy migration job using the debug script
           gcloud run jobs deploy db-migrate \
             --image ${{ env.ARTIFACT_REGISTRY }}/backend:${{ github.sha }} \
             --region ${{ env.GCP_REGION }} \
@@ -281,11 +281,11 @@ jobs:
             --memory 1Gi \
             --set-cloudsql-instances ${{ env.CLOUD_SQL_INSTANCE }} \
             --set-secrets "DATABASE_URL=database-url:latest" \
-            --command "alembic" \
-            --args "upgrade,head" \
+            --command "python" \
+            --args "scripts/run_migrations.py" \
             --service-account appartment-backend@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
           
-          # Execute
+          # Execute and wait
           gcloud run jobs execute db-migrate --region ${{ env.GCP_REGION }} --wait
           
           echo "## 🗄️ Migrations Complete" >> $GITHUB_STEP_SUMMARY
