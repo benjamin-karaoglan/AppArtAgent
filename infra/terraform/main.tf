@@ -660,6 +660,12 @@ resource "google_cloud_run_v2_job" "db_migrate" {
       timeout         = "600s"
       max_retries     = 1
 
+      # VPC access required for private Cloud SQL
+      vpc_access {
+        connector = google_vpc_access_connector.connector.id
+        egress    = "ALL_TRAFFIC"
+      }
+
       volumes {
         name = "cloudsql"
         cloud_sql_instance {
@@ -669,7 +675,7 @@ resource "google_cloud_run_v2_job" "db_migrate" {
 
       containers {
         image   = "${var.region}-docker.pkg.dev/${var.project_id}/appartment-agent/backend:latest"
-        command = ["alembic", "upgrade", "head"]
+        command = ["/app/.venv/bin/alembic", "upgrade", "head"]
 
         resources {
           limits = {
@@ -700,6 +706,7 @@ resource "google_cloud_run_v2_job" "db_migrate" {
     google_project_service.apis,
     google_secret_manager_secret_version.database_url,
     google_sql_database.database,
+    google_vpc_access_connector.connector,
   ]
 }
 

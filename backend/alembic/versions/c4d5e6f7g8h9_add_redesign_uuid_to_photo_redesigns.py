@@ -1,7 +1,7 @@
 """Add redesign_uuid to photo_redesigns.
 
 Revision ID: c4d5e6f7g8h9
-Revises: b2c3d4e5f6g7
+Revises: 19c3bf31bde4
 Create Date: 2026-01-10 20:00:00.000000
 """
 
@@ -12,7 +12,7 @@ import uuid
 
 # revision identifiers, used by Alembic.
 revision = "c4d5e6f7g8h9"
-down_revision = "b2c3d4e5f6g7"
+down_revision = "19c3bf31bde4"  # Must run AFTER photo tables are created
 branch_labels = None
 depends_on = None
 
