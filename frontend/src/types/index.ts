@@ -5,6 +5,17 @@ export interface User {
   is_active: boolean
 }
 
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface RegisterRequest {
+  email: string
+  password: string
+  full_name: string
+}
+
 export interface Property {
   id: number
   user_id: number
