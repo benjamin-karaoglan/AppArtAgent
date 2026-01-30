@@ -228,6 +228,7 @@ jobs:
         run: |
           gcloud run jobs update db-migrate \
             --image ${{ env.ARTIFACT_REGISTRY }}/backend:${{ github.sha }} \
+            --command "/app/.venv/bin/alembic,upgrade,head" \
             --region ${{ env.GCP_REGION }}
 
       - name: Run database migrations
