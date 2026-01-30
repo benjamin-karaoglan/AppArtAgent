@@ -30,6 +30,24 @@ services:
       timeout: 3s
       retries: 5
 
+  # Database Migrations (runs once then exits)
+  db-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      DATABASE_URL: postgresql://appartment:appartment@db:5432/appartment_agent
+    volumes:
+      - ./backend:/app
+      - backend_venv:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+    command: alembic upgrade head
+    profiles:
+      - migrate  # Only runs when explicitly called: docker compose --profile migrate up db-migrate
+
   # Backend API (using UV for 10x faster builds!)
   backend:
     build:
