@@ -273,16 +273,13 @@ jobs:
 
       - name: Run Alembic migrations
         run: |
-          # Delete old job if exists
-          gcloud run jobs delete db-migrate --region ${{ env.GCP_REGION }} --quiet || true
-          
-          # Create migration job
-          gcloud run jobs create db-migrate \
+          # Update or create migration job
+          gcloud run jobs deploy db-migrate \
             --image ${{ env.ARTIFACT_REGISTRY }}/backend:${{ github.sha }} \
             --region ${{ env.GCP_REGION }} \
             --task-timeout 600 \
             --memory 1Gi \
-            --add-cloudsql-instances ${{ env.CLOUD_SQL_INSTANCE }} \
+            --set-cloudsql-instances ${{ env.CLOUD_SQL_INSTANCE }} \
             --set-secrets "DATABASE_URL=database-url:latest" \
             --command "alembic" \
             --args "upgrade,head" \
