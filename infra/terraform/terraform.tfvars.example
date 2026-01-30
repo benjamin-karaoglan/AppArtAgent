@@ -1,28 +1,140 @@
 # =============================================================================
 # Terraform Variables - Copy to terraform.tfvars and customize
 # =============================================================================
+#
+# Quick start:
+#   cp terraform.tfvars.example terraform.tfvars
+#   # Edit terraform.tfvars with your values
+#   terraform init
+#   terraform plan
+#   terraform apply
+#
+# =============================================================================
 
-# Required: Your GCP Project ID
+# =============================================================================
+# REQUIRED VARIABLES
+# =============================================================================
+
+# Your GCP Project ID (required)
+# Find it: gcloud config get-value project
 project_id = "your-gcp-project-id"
 
-# GCP Region (europe-west1 = Belgium, us-central1 = Iowa)
+# =============================================================================
+# DEPLOYMENT CONFIGURATION
+# =============================================================================
+
+# GCP Region for all resources
+# Recommended regions:
+#   - europe-west1 (Belgium) - Low latency for EU users
+#   - europe-west9 (Paris)   - Data residency in France
+#   - us-central1 (Iowa)     - Low cost, good for US users
+#   - us-east1 (S. Carolina) - Low latency for US East
 region = "europe-west1"
 
-# Environment: staging or production
+# Environment name: "staging" or "production"
+# Affects:
+#   - staging: Deletion protection OFF, can be easily torn down
+#   - production: Deletion protection ON, backups enabled
 environment = "production"
 
-# Optional: Custom domain (leave empty to use Cloud Run URLs)
-domain = ""
+# =============================================================================
+# CLOUD RUN CONFIGURATION
+# =============================================================================
 
-# Database tier
-# Development: db-f1-micro (1 vCPU, 614 MB RAM) - ~$10/month
-# Production:  db-custom-2-4096 (2 vCPU, 4 GB RAM) - ~$50/month
+# Minimum instances for Cloud Run services
+# Options:
+#   0 = Scale-to-zero (cold starts ~2-5s, lowest cost)
+#   1 = Always-on (no cold starts, ~$50-100/month extra)
+#
+# Recommendation:
+#   - Development/staging: 0
+#   - Production with traffic: 1
+min_instances = 0
+
+# =============================================================================
+# DATABASE CONFIGURATION (Cloud SQL PostgreSQL)
+# =============================================================================
+
+# Cloud SQL instance tier
+# Development tiers (good for testing, low cost):
+#   - db-f1-micro     : Shared vCPU, 614 MB RAM  (~$10/month)
+#   - db-g1-small     : Shared vCPU, 1.7 GB RAM  (~$25/month)
+#
+# Production tiers (dedicated resources, better performance):
+#   - db-custom-1-3840: 1 vCPU, 3.75 GB RAM      (~$40/month)
+#   - db-custom-2-4096: 2 vCPU, 4 GB RAM         (~$70/month)
+#   - db-custom-4-8192: 4 vCPU, 8 GB RAM         (~$140/month)
+#
+# See: https://cloud.google.com/sql/docs/postgres/instance-settings
 db_tier = "db-f1-micro"
 
+# =============================================================================
+# REDIS CONFIGURATION (Memorystore)
+# =============================================================================
+
 # Redis tier
-# BASIC: Single zone, no HA - ~$35/month for 1GB
-# STANDARD_HA: Multi-zone, automatic failover - ~$70/month for 1GB
+# Options:
+#   - BASIC       : Single zone, no HA, lower cost (~$35/month for 1GB)
+#   - STANDARD_HA : Multi-zone, automatic failover (~$70/month for 1GB)
+#
+# Recommendation:
+#   - Development/staging: BASIC
+#   - Production: STANDARD_HA (if you need high availability)
 redis_tier = "BASIC"
 
-# Redis memory size in GB
+# Redis memory size in GB (1-300)
+# Recommendation:
+#   - Small apps: 1 GB
+#   - Medium apps: 2-5 GB
+#   - Large apps: 5+ GB
 redis_memory_size_gb = 1
+
+# =============================================================================
+# OPTIONAL: CUSTOM DOMAIN
+# =============================================================================
+
+# Custom domain for the application (leave empty to use Cloud Run URLs)
+# If set, you'll need to:
+#   1. Verify domain ownership in GCP
+#   2. Configure DNS to point to Cloud Run
+#   3. SSL certificates are automatically provisioned
+#
+# Example: "app.yourdomain.com"
+domain = ""
+
+# =============================================================================
+# OPTIONAL: OBSERVABILITY (Logfire)
+# =============================================================================
+
+# Logfire write token for observability (optional)
+# Get your token from: https://logfire.pydantic.dev/
+#
+# You can either:
+#   1. Set it here (will be stored in Terraform state)
+#   2. Set it manually after deployment:
+#      echo -n 'YOUR_TOKEN' | gcloud secrets versions add logfire-token --data-file=-
+#
+# Leave empty to skip (can be configured later)
+logfire_token = ""
+
+# =============================================================================
+# COST ESTIMATION (approximate monthly costs)
+# =============================================================================
+#
+# Minimal setup (development):
+#   - Cloud SQL db-f1-micro:     $10
+#   - Redis BASIC 1GB:           $35
+#   - Cloud Run (scale-to-zero): $0-5 (pay per request)
+#   - Storage (minimal):         $1
+#   - Networking:                $1
+#   Total: ~$50/month
+#
+# Production setup:
+#   - Cloud SQL db-custom-2-4096: $70
+#   - Redis STANDARD_HA 1GB:      $70
+#   - Cloud Run (min_instances=1): $50-100
+#   - Storage:                     $5
+#   - Networking:                  $5
+#   Total: ~$200-250/month
+#
+# =============================================================================

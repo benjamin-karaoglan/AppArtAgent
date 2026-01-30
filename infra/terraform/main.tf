@@ -87,6 +87,12 @@ variable "logfire_token" {
   sensitive   = true
 }
 
+variable "min_instances" {
+  description = "Minimum instances for Cloud Run services. Set to 1 for always-on (better latency, ~$50/month/service), 0 for scale-to-zero (cold starts, lower cost)"
+  type        = number
+  default     = 0
+}
+
 # =============================================================================
 # Provider Configuration
 # =============================================================================
@@ -508,7 +514,9 @@ resource "google_cloud_run_v2_service" "backend" {
     }
 
     scaling {
-      min_instance_count = var.environment == "production" ? 1 : 0
+      # Set to 1 for always-on (better latency, higher cost ~$50/month)
+      # Set to 0 for scale-to-zero (cold starts, lower cost)
+      min_instance_count = var.min_instances
       max_instance_count = 10
     }
 
@@ -671,6 +679,12 @@ resource "google_secret_manager_secret_version" "database_url" {
   secret_data = "postgresql://appartment:${random_password.db_password.result}@/appartment_agent?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
 
   depends_on = [google_sql_database_instance.postgres]
+
+  # IMPORTANT: Don't recreate if secret already exists with different value
+  # The password was set during initial bootstrap and changing it would break connectivity
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
 }
 
 # Allow unauthenticated access to backend (API handles its own auth)
@@ -759,7 +773,7 @@ resource "google_cloud_run_v2_service" "frontend" {
     service_account = google_service_account.frontend.email
 
     scaling {
-      min_instance_count = var.environment == "production" ? 1 : 0
+      min_instance_count = var.min_instances
       max_instance_count = 10
     }
 
