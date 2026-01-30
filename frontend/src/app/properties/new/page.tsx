@@ -204,7 +204,7 @@ function NewPropertyContent() {
                     )}
                     {showSuggestions && addressQuery.length >= 2 && suggestions.length === 0 && !loadingSuggestions && (
                       <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-3 px-4 text-sm text-gray-500">
-                        No addresses found in Paris. Try typing the street name (e.g., "notre dame des champs")
+                        No addresses found in Paris. Try typing the street name (e.g., &quot;notre dame des champs&quot;)
                       </div>
                     )}
                   </div>

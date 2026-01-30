@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, FileText, Image, TrendingUp, Shield, Calculator } from 'lucide-react'
+import { Home, FileText, Image as ImageIcon, TrendingUp, Shield, Calculator } from 'lucide-react'
 import Header from '@/components/Header'
 
 export default function HomePage() {
@@ -48,7 +48,7 @@ export default function HomePage() {
             description="Comprehensive annual cost estimates including charges, taxes, and upcoming works."
           />
           <FeatureCard
-            icon={<Image className="w-12 h-12 text-primary-600" />}
+            icon={<ImageIcon className="w-12 h-12 text-primary-600" />}
             title="Style Visualization"
             description="Upload photos and use AI to visualize renovation potential and style transformations."
           />

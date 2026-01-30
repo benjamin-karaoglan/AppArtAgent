@@ -464,7 +464,7 @@ function PhotosContent() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Tip: Describe the scene, don't just list keywords
+                        Tip: Describe the scene, don&apos;t just list keywords
                       </p>
                     </div>
 
@@ -550,7 +550,7 @@ function PhotosContent() {
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <h2 className="text-lg font-semibold text-gray-900">Delete photo</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Delete "{photoToDelete.filename}" and all its redesigns? This cannot be undone.
+              Delete &quot;{photoToDelete.filename}&quot; and all its redesigns? This cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
