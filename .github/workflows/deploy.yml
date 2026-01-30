@@ -49,9 +49,12 @@ jobs:
 
       - name: Check if GCP secrets are configured
         id: check_gcp
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: |
-          if [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+          if [ -n "$GCP_SA_KEY" ]; then
             echo "configured=true" >> $GITHUB_OUTPUT
+            echo "✅ GCP secrets configured - will deploy to cloud"
           else
             echo "configured=false" >> $GITHUB_OUTPUT
             echo "⚠️ GCP secrets not configured - skipping cloud deployment steps"
@@ -124,9 +127,12 @@ jobs:
 
       - name: Check if GCP secrets are configured
         id: check_gcp
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: |
-          if [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+          if [ -n "$GCP_SA_KEY" ]; then
             echo "configured=true" >> $GITHUB_OUTPUT
+            echo "✅ GCP secrets configured - will deploy to cloud"
           else
             echo "configured=false" >> $GITHUB_OUTPUT
             echo "⚠️ GCP secrets not configured - skipping cloud deployment steps"
