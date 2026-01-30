@@ -2,15 +2,22 @@
 # Production startup script - Run migrations then start server
 # Used by Cloud Run and production Docker deployments
 
-set -e  # Exit on error
-
 echo "=============================================="
 echo "PRODUCTION STARTUP"
 echo "=============================================="
+echo "Starting at $(date)"
 
-# Run database migrations
-echo "Running database migrations..."
-python -c "
+# Function to run migrations with retries
+run_migrations() {
+    local max_attempts=5
+    local attempt=1
+    local wait_time=5
+    
+    while [ $attempt -le $max_attempts ]; do
+        echo "Migration attempt $attempt of $max_attempts..."
+        
+        # Test database connection
+        python -c "
 import os
 import sys
 from sqlalchemy import create_engine, text
@@ -32,32 +39,47 @@ print(f'Database URL: {masked}')
 # Test connection
 print('Testing database connection...')
 try:
-    engine = create_engine(db_url)
+    engine = create_engine(db_url, connect_args={'connect_timeout': 10})
     with engine.connect() as conn:
         result = conn.execute(text('SELECT 1'))
-        print(f'Connection successful!')
+        print('Connection successful!')
 except Exception as e:
     print(f'ERROR: Database connection failed: {e}')
     sys.exit(1)
 "
+        
+        if [ $? -eq 0 ]; then
+            echo "Database connection successful, running migrations..."
+            alembic upgrade head
+            if [ $? -eq 0 ]; then
+                echo "Migrations completed successfully!"
+                return 0
+            else
+                echo "Alembic migrations failed"
+            fi
+        fi
+        
+        echo "Attempt $attempt failed, waiting ${wait_time}s before retry..."
+        sleep $wait_time
+        attempt=$((attempt + 1))
+        wait_time=$((wait_time * 2))  # Exponential backoff
+    done
+    
+    echo "ERROR: All migration attempts failed"
+    return 1
+}
 
-if [ $? -ne 0 ]; then
-    echo "ERROR: Database connection test failed"
-    exit 1
-fi
-
-# Run Alembic migrations
-echo "Running Alembic migrations..."
-alembic upgrade head
-
-if [ $? -ne 0 ]; then
-    echo "ERROR: Alembic migrations failed"
-    exit 1
+# Run migrations with retries (but don't exit on failure - let the server start)
+echo "Running database migrations..."
+if ! run_migrations; then
+    echo "WARNING: Migrations failed, but starting server anyway"
+    echo "The server will start but may have limited functionality"
 fi
 
 echo "=============================================="
-echo "Migrations complete, starting uvicorn..."
+echo "Starting uvicorn..."
 echo "=============================================="
 
 # Start uvicorn (exec replaces shell process)
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+# Using 2 workers instead of 4 to reduce memory and startup time
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2

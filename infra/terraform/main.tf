@@ -586,10 +586,10 @@ resource "google_cloud_run_v2_service" "backend" {
           path = "/health"
           port = 8000
         }
-        initial_delay_seconds = 30
+        initial_delay_seconds = 10
         period_seconds        = 10
         timeout_seconds       = 5
-        failure_threshold     = 20
+        failure_threshold     = 30
       }
 
       liveness_probe {
@@ -611,6 +611,10 @@ resource "google_cloud_run_v2_service" "backend" {
     google_project_service.apis,
     google_secret_manager_secret_version.db_password,
     google_secret_manager_secret_version.jwt_secret,
+    google_secret_manager_secret_version.database_url,
+    google_sql_database.database,
+    google_vpc_access_connector.connector,
+    google_redis_instance.cache,
   ]
 }
 
