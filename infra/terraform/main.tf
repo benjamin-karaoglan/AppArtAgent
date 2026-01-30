@@ -203,6 +203,7 @@ resource "google_project_iam_member" "backend_permissions" {
     "roles/storage.objectAdmin",
     "roles/aiplatform.user",
     "roles/redis.editor",
+    "roles/logging.logWriter",
   ])
 
   project = var.project_id
@@ -214,6 +215,7 @@ resource "google_project_iam_member" "backend_permissions" {
 resource "google_project_iam_member" "frontend_permissions" {
   for_each = toset([
     "roles/secretmanager.secretAccessor",
+    "roles/logging.logWriter",
   ])
 
   project = var.project_id
@@ -228,6 +230,7 @@ resource "google_project_iam_member" "cloudbuild_permissions" {
     "roles/iam.serviceAccountUser",
     "roles/artifactregistry.writer",
     "roles/secretmanager.secretAccessor",
+    "roles/logging.logWriter",
   ])
 
   project = var.project_id
