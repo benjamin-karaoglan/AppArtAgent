@@ -886,6 +886,22 @@ resource "google_dns_managed_zone" "main" {
   }
 }
 
+# =============================================================================
+# NOTE: If you purchased your domain via Cloud Domains, you need to manually
+# configure it to use this Cloud DNS zone's nameservers:
+#
+#   gcloud domains registrations configure dns YOUR_DOMAIN \
+#     --cloud-dns-zone=ZONE_NAME \
+#     --project=YOUR_PROJECT_ID
+#
+# Example:
+#   gcloud domains registrations configure dns appartagent.com \
+#     --cloud-dns-zone=appartagent-com \
+#     --project=benjamin-karaoglan-genai
+#
+# This only needs to be done once after initial setup.
+# =============================================================================
+
 # Cloud Run Domain Mapping - Frontend (apex domain, e.g., appartagent.com)
 resource "google_cloud_run_domain_mapping" "frontend_apex" {
   count    = var.domain != "" ? 1 : 0
@@ -937,8 +953,7 @@ resource "google_cloud_run_domain_mapping" "backend_api" {
   depends_on = [google_cloud_run_v2_service.backend]
 }
 
-# DNS A Records for apex domain (pointing to Cloud Run)
-# Cloud Run returns multiple IPs - we create A records for each
+# DNS A Records for apex domain (pointing to Cloud Run) - IPv4 only
 resource "google_dns_record_set" "frontend_apex" {
   count = var.domain != "" && var.create_dns_zone ? 1 : 0
 
@@ -947,7 +962,29 @@ resource "google_dns_record_set" "frontend_apex" {
   type         = "A"
   ttl          = 300
 
-  rrdatas = google_cloud_run_domain_mapping.frontend_apex[0].status[0].resource_records[*].rrdata
+  # Filter to only IPv4 addresses (exclude IPv6 which contain ":")
+  rrdatas = [
+    for ip in google_cloud_run_domain_mapping.frontend_apex[0].status[0].resource_records[*].rrdata :
+    ip if !can(regex(":", ip))
+  ]
+
+  depends_on = [google_cloud_run_domain_mapping.frontend_apex]
+}
+
+# DNS AAAA Records for apex domain (pointing to Cloud Run) - IPv6 only
+resource "google_dns_record_set" "frontend_apex_ipv6" {
+  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "${var.domain}."
+  type         = "AAAA"
+  ttl          = 300
+
+  # Filter to only IPv6 addresses (contain ":")
+  rrdatas = [
+    for ip in google_cloud_run_domain_mapping.frontend_apex[0].status[0].resource_records[*].rrdata :
+    ip if can(regex(":", ip))
+  ]
 
   depends_on = [google_cloud_run_domain_mapping.frontend_apex]
 }
