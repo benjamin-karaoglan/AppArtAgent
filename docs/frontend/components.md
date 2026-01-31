@@ -1,6 +1,6 @@
 # Components
 
-Reusable React components used throughout the Appartment Agent frontend.
+Reusable React components used throughout the Appart Agent frontend.
 
 ## Component Overview
 
@@ -47,7 +47,7 @@ export function Header() {
     <header className="bg-white shadow">
       <nav className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link href="/" className="text-xl font-bold text-indigo-600">
-          Appartment Agent
+          Appart Agent
         </Link>
         
         {user ? (

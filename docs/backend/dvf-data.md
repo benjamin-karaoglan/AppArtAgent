@@ -1,6 +1,6 @@
 # DVF Data
 
-DVF (Demandes de Valeurs Foncières) is France's open dataset of real estate transactions. Appartment Agent uses this data for price analysis and market trends.
+DVF (Demandes de Valeurs Foncières) is France's open dataset of real estate transactions. Appart Agent uses this data for price analysis and market trends.
 
 ## Overview
 
@@ -118,7 +118,7 @@ class DVFRecord(Base):
 ### View Import History
 
 ```bash
-docker-compose exec db psql -U appartment -d appartment_agent -c "
+docker-compose exec db psql -U appart -d appart_agent -c "
 SELECT 
     source_file,
     data_year,
@@ -136,7 +136,7 @@ LIMIT 10;
 ### Check Data by Year
 
 ```bash
-docker-compose exec db psql -U appartment -d appartment_agent -c "
+docker-compose exec db psql -U appart -d appart_agent -c "
 SELECT 
     data_year,
     COUNT(*) as records,
@@ -164,12 +164,12 @@ docker-compose exec backend python scripts/rollback_dvf_import.py <batch_id>
 
 ```bash
 # Total records
-docker-compose exec db psql -U appartment -d appartment_agent -c "
+docker-compose exec db psql -U appart -d appart_agent -c "
 SELECT COUNT(*) as total_records FROM dvf_records;
 "
 
 # Records per postal code (top 10)
-docker-compose exec db psql -U appartment -d appartment_agent -c "
+docker-compose exec db psql -U appart -d appart_agent -c "
 SELECT postal_code, COUNT(*) as count
 FROM dvf_records
 GROUP BY postal_code
@@ -275,7 +275,7 @@ def filter_outliers(prices: List[float]) -> List[float]:
 
 **Solution**: Verify data is imported:
 ```bash
-docker-compose exec db psql -U appartment -d appartment_agent -c "
+docker-compose exec db psql -U appart -d appart_agent -c "
 SELECT data_year, COUNT(*) FROM dvf_records 
 WHERE postal_code = '75006' 
 GROUP BY data_year;
@@ -288,7 +288,7 @@ GROUP BY data_year;
 
 **Solution**: Verify GIN index exists:
 ```bash
-docker-compose exec db psql -U appartment -d appartment_agent -c "
+docker-compose exec db psql -U appart -d appart_agent -c "
 SELECT indexname FROM pg_indexes 
 WHERE tablename = 'dvf_records' AND indexname LIKE '%gin%';
 "

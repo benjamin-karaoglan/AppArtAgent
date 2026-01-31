@@ -90,7 +90,7 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
 
 
 def setup_logfire(
-    service_name: str = "appartment-agent",
+    service_name: str = "appart-agent",
     environment: Optional[str] = None,
     enable_console: bool = True
 ) -> None:

@@ -14,7 +14,7 @@ export default function Header() {
           <div className="flex">
             <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center">
               <Home className="h-6 w-6 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">Appartment Agent</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">AppArt Agent</span>
             </Link>
 
             {isAuthenticated && (

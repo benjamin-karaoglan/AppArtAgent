@@ -12,16 +12,16 @@ echo ""
 # Database connection details
 DB_HOST="localhost"
 DB_PORT="5432"
-DB_NAME="appartment_agent"
-DB_USER="appartment"
-DB_PASSWORD="appartment"
+DB_NAME="appart_agent"
+DB_USER="appart"
+DB_PASSWORD="appart"
 
 # PostgreSQL connection string
 export PGPASSWORD="$DB_PASSWORD"
 PSQL="psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME"
 
 # Data directory (adjust if needed)
-DATA_DIR="/Users/carrefour/appartment-agent/data/dvf"
+DATA_DIR="/Users/carrefour/appart-agent/data/dvf"
 
 # Script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

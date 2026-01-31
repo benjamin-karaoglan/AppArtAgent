@@ -1,6 +1,6 @@
 # Configuration
 
-Appartment Agent uses environment variables for configuration. This guide covers all available settings.
+Appart Agent uses environment variables for configuration. This guide covers all available settings.
 
 ## Environment Files
 
@@ -39,7 +39,7 @@ ENVIRONMENT=development                        # development | production
 LOG_LEVEL=INFO                                 # DEBUG | INFO | WARNING | ERROR
 
 # Database
-DATABASE_URL=postgresql://appartment:appartment@db:5432/appartment_agent
+DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
 
 # Security
 SECRET_KEY=your-secret-key-at-least-32-chars

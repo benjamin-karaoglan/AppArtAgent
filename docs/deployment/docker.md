@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Deploy Appartment Agent locally using Docker Compose.
+Deploy Appart Agent locally using Docker Compose.
 
 ## Overview
 
@@ -21,8 +21,8 @@ The Docker Compose configuration provides a complete local development and testi
 
 ```bash
 # Clone repository
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 
 # Configure environment
 cp .env.example .env
@@ -52,7 +52,7 @@ services:
       dockerfile: Dockerfile
       target: dev              # Use dev target for hot-reload
     environment:
-      DATABASE_URL: postgresql://appartment:appartment@db:5432/appartment_agent
+      DATABASE_URL: postgresql://appart:appart@db:5432/appart_agent
       GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY}
       MINIO_ENDPOINT: minio:9000
     volumes:
@@ -179,20 +179,20 @@ docker-compose exec backend alembic upgrade head
 
 ```bash
 # psql shell
-docker-compose exec db psql -U appartment -d appartment_agent
+docker-compose exec db psql -U appart -d appart_agent
 
 # Run SQL command
-docker-compose exec db psql -U appartment -d appartment_agent -c "SELECT COUNT(*) FROM dvf_records;"
+docker-compose exec db psql -U appart -d appart_agent -c "SELECT COUNT(*) FROM dvf_records;"
 ```
 
 ### Backup Database
 
 ```bash
 # Create backup
-docker-compose exec db pg_dump -U appartment appartment_agent > backup.sql
+docker-compose exec db pg_dump -U appart appart_agent > backup.sql
 
 # Restore backup
-docker-compose exec -T db psql -U appartment appartment_agent < backup.sql
+docker-compose exec -T db psql -U appart appart_agent < backup.sql
 ```
 
 ## Object Storage (MinIO)
@@ -288,7 +288,7 @@ docker-compose logs backend
 docker-compose ps
 
 # Inspect container
-docker inspect appartment-agent-backend-1
+docker inspect appart-agent-backend-1
 ```
 
 ### Database Connection Failed
@@ -301,7 +301,7 @@ docker-compose ps db
 docker-compose logs db
 
 # Test connection
-docker-compose exec db pg_isready -U appartment
+docker-compose exec db pg_isready -U appart
 ```
 
 ### Port Already in Use

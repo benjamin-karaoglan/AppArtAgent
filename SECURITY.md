@@ -45,7 +45,7 @@ Please include the following information in your report:
 
 ## Security Best Practices
 
-When deploying Appartment Agent:
+When deploying Appart Agent:
 
 ### Environment Variables
 
@@ -84,6 +84,6 @@ Security updates will be released as patch versions. We recommend:
 
 ## Acknowledgments
 
-We appreciate the security research community's efforts in helping keep Appartment Agent secure. Responsible disclosure helps protect our users.
+We appreciate the security research community's efforts in helping keep Appart Agent secure. Responsible disclosure helps protect our users.
 
-Thank you for helping make Appartment Agent more secure!
+Thank you for helping make Appart Agent more secure!

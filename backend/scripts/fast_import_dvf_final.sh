@@ -12,10 +12,10 @@ echo "=================================================="
 echo ""
 
 # Configuration
-DB_CONTAINER="appartment-agent-db-1"
-DB_NAME="appartment_agent"
-DB_USER="appartment"
-DATA_DIR="/Users/carrefour/appartment-agent/data/dvf"
+DB_CONTAINER="appart-agent-db-1"
+DB_NAME="appart_agent"
+DB_USER="appart"
+DATA_DIR="/Users/carrefour/appart-agent/data/dvf"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Configuration:"

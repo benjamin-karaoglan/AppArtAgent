@@ -1,10 +1,10 @@
 # Getting Started
 
-This section covers everything you need to get Appartment Agent running on your machine.
+This section covers everything you need to get Appart Agent running on your machine.
 
 ## Overview
 
-Appartment Agent can be run in two ways:
+Appart Agent can be run in two ways:
 
 1. **Docker (Recommended)**: Full stack with all services pre-configured
 2. **Local Development**: Individual services for development and debugging

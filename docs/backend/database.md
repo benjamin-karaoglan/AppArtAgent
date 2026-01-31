@@ -1,6 +1,6 @@
 # Database & Models
 
-Appartment Agent uses PostgreSQL with SQLAlchemy ORM for data persistence.
+Appart Agent uses PostgreSQL with SQLAlchemy ORM for data persistence.
 
 ## Database Connection
 
@@ -361,10 +361,10 @@ def get_price_stats(db: Session, postal_code: str, year: int):
 
 ```bash
 # Create backup
-docker-compose exec db pg_dump -U appartment appartment_agent > backup.sql
+docker-compose exec db pg_dump -U appart appart_agent > backup.sql
 
 # Restore backup
-docker-compose exec -T db psql -U appartment appartment_agent < backup.sql
+docker-compose exec -T db psql -U appart appart_agent < backup.sql
 ```
 
 ### Query Stats

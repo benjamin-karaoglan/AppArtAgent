@@ -1,6 +1,6 @@
 # Backend
 
-The Appartment Agent backend is a FastAPI application providing REST APIs for property analysis, document processing, and AI services.
+The Appart Agent backend is a FastAPI application providing REST APIs for property analysis, document processing, and AI services.
 
 ## Overview
 

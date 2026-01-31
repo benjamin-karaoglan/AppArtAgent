@@ -35,10 +35,10 @@ on:
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: ${{ secrets.GCP_REGION || 'europe-west1' }}
-  ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION || 'europe-west1' }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/appartment-agent
-  CLOUD_SQL_INSTANCE: ${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION || 'europe-west1' }}:appartment-agent-db
+  ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION || 'europe-west1' }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/appart-agent
+  CLOUD_SQL_INSTANCE: ${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION || 'europe-west1' }}:appart-agent-db
   # Cloud Run URL is STABLE - it never changes after service creation
-  BACKEND_URL: https://appartment-backend-rujxdolp6a-ew.a.run.app
+  BACKEND_URL: https://appart-backend-rujxdolp6a-ew.a.run.app
 
 jobs:
   # ===========================================================================
@@ -259,7 +259,7 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run services update appartment-backend \
+          gcloud run services update appart-backend \
             --image ${{ env.ARTIFACT_REGISTRY }}/backend:${{ github.sha }} \
             --region ${{ env.GCP_REGION }}
           echo "✅ Backend deployed: ${{ env.BACKEND_URL }}"
@@ -284,13 +284,13 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run services update appartment-frontend \
+          gcloud run services update appart-frontend \
             --image ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ github.sha }} \
             --region ${{ env.GCP_REGION }}
 
       - name: Output URLs
         run: |
-          FRONTEND_URL=$(gcloud run services describe appartment-frontend --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          FRONTEND_URL=$(gcloud run services describe appart-frontend --region ${{ env.GCP_REGION }} --format 'value(status.url)')
           echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "| Service | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY

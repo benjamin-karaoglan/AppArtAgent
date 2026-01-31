@@ -3,11 +3,11 @@ set -e
 
 echo "Importing 2021 data only..."
 
-DB_CONTAINER="appartment-agent-db-1"
-DB_NAME="appartment_agent"
-DB_USER="appartment"
+DB_CONTAINER="appart-agent-db-1"
+DB_NAME="appart_agent"
+DB_USER="appart"
 FILE="ValeursFoncieres-2021.txt"
-DATA_DIR="/Users/carrefour/appartment-agent/data/dvf"
+DATA_DIR="/Users/carrefour/appart-agent/data/dvf"
 
 # Copy file
 docker cp "$DATA_DIR/$FILE" "$DB_CONTAINER:/tmp/$FILE"

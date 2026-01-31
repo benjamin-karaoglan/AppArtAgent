@@ -3,7 +3,7 @@
 # Script to reimport DVF data for 2023-2025
 # This will clear existing data and reimport with the fixed import script
 
-cd /Users/carrefour/appartment-agent/backend
+cd /Users/carrefour/appart-agent/backend
 
 echo "Activating virtual environment..."
 source venv/bin/activate

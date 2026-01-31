@@ -1,6 +1,6 @@
 # Contributing
 
-Guidelines for contributing to Appartment Agent.
+Guidelines for contributing to Appart Agent.
 
 ## Getting Started
 
@@ -15,11 +15,11 @@ Guidelines for contributing to Appartment Agent.
 
 ```bash
 # Clone your fork
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 
 # Add upstream remote
-git remote add upstream https://github.com/ORIGINAL_OWNER/appartment-agent.git
+git remote add upstream https://github.com/ORIGINAL_OWNER/appart-agent.git
 
 # Start development environment
 docker-compose up -d

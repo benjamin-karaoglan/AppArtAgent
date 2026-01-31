@@ -1,6 +1,6 @@
 # Pages & Routes
 
-Appartment Agent uses Next.js 14 App Router for file-based routing.
+Appart Agent uses Next.js 14 App Router for file-based routing.
 
 ## Route Structure
 
@@ -309,7 +309,7 @@ export async function generateMetadata({
   const property = await fetchProperty(params.id);
   
   return {
-    title: `${property.address} | Appartment Agent`,
+    title: `${property.address} | Appart Agent`,
     description: `Property analysis for ${property.address}, ${property.city}`,
   };
 }

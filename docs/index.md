@@ -1,8 +1,8 @@
-# Appartment Agent
+# Appart Agent
 
 **AI-powered apartment purchasing decision platform for France**
 
-Appartment Agent helps buyers make informed real estate decisions by combining French property transaction data (DVF) with AI-powered document analysis and visualization tools.
+Appart Agent helps buyers make informed real estate decisions by combining French property transaction data (DVF) with AI-powered document analysis and visualization tools.
 
 ## Features at a Glance
 
@@ -34,8 +34,8 @@ Comprehensive cost breakdown, investment analysis, and risk assessment scoring.
 
 ```bash
 # Clone and setup
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 cp .env.example .env
 # Add your GOOGLE_CLOUD_API_KEY to .env
 

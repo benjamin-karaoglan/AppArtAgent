@@ -1,5 +1,5 @@
 """
-Main FastAPI application entry point for Appartment Agent.
+Main FastAPI application entry point for AppArt Agent.
 """
 
 from fastapi import FastAPI
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 # Initialize Logfire tracing
 setup_logfire(
-    service_name="appartment-agent-backend",
+    service_name="appart-agent-backend",
     environment=settings.ENVIRONMENT,
     enable_console=True
 )
 
 # Create FastAPI app
 app = FastAPI(
-    title="Appartment Agent API",
+    title="AppArt Agent API",
     description="AI-powered apartment purchasing decision platform for France",
     version="2.0.0",
     docs_url="/docs",
@@ -87,7 +87,7 @@ app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 async def root():
     """Root endpoint - API health check."""
     return {
-        "message": "Welcome to Appartment Agent API",
+        "message": "Welcome to AppArt Agent API",
         "version": "1.0.0",
         "status": "active",
     }

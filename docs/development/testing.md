@@ -1,6 +1,6 @@
 # Testing
 
-Guide to running and writing tests for Appartment Agent.
+Guide to running and writing tests for Appart Agent.
 
 ## Overview
 
@@ -210,7 +210,7 @@ import { Header } from '@/components/Header';
 describe('Header', () => {
   it('renders logo', () => {
     render(<Header />);
-    expect(screen.getByText('Appartment Agent')).toBeInTheDocument();
+    expect(screen.getByText('Appart Agent')).toBeInTheDocument();
   });
 
   it('shows login when not authenticated', () => {

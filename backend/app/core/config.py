@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # Application
-    PROJECT_NAME: str = "Appartment Agent"
+    PROJECT_NAME: str = "AppArt Agent"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://appartment:appartment@localhost:5432/appartment_agent"
+        "postgresql://appart:appart@localhost:5432/appart_agent"
     )
 
     # Google Cloud / Gemini (Primary LLM Provider)

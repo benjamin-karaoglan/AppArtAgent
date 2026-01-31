@@ -1,6 +1,6 @@
 # AI Services
 
-Appartment Agent uses Google Gemini for document analysis, classification, and image generation.
+Appart Agent uses Google Gemini for document analysis, classification, and image generation.
 
 ## Overview
 

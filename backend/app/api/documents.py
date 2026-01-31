@@ -45,14 +45,28 @@ def get_doc_parser():
     return _doc_parser
 
 
-def extract_text_from_pdf(file_path: str) -> str:
-    """Extract text from PDF file."""
+def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucket: str = None) -> str:
+    """
+    Extract text from PDF file.
+    
+    Can read from local file path or from storage service if storage_key is provided.
+    """
+    from io import BytesIO
+    
     text = ""
     try:
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page in pdf_reader.pages:
-                text += page.extract_text()
+        if storage_key:
+            # Read from storage service
+            storage = get_storage_service()
+            file_data = storage.download_file(storage_key, storage_bucket)
+            pdf_reader = PyPDF2.PdfReader(BytesIO(file_data))
+        else:
+            # Read from local file path (legacy support)
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+        
+        for page in pdf_reader.pages:
+            text += page.extract_text()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -92,47 +106,68 @@ async def upload_document(
             detail=f"File type {file_ext} not allowed"
         )
 
-    # Generate unique filename
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
-    logger.debug(f"Saving file to: {file_path}")
-
-    # Save file
+    # Read file content
     try:
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
+        content = await file.read()
         file_size = len(content)
-        logger.info(f"File saved successfully: {unique_filename}, size: {file_size} bytes")
+        logger.info(f"File read successfully: {file.filename}, size: {file_size} bytes")
     except Exception as e:
-        logger.error(f"Failed to save file {file.filename}: {e}", exc_info=True)
+        logger.error(f"Failed to read file {file.filename}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save file: {str(e)}"
+            detail=f"Failed to read file: {str(e)}"
         )
 
-    # Create document record
+    # Calculate file hash for deduplication
+    file_hash = hashlib.sha256(content).hexdigest()
+
+    # Create document record first (to get ID for storage path)
     try:
         document = Document(
             user_id=int(current_user),
             property_id=property_id,
             filename=file.filename,
-            file_path=file_path,
+            file_path="",  # Will be updated after storage upload
             file_type=file_ext,
             document_category=document_category,
             document_subcategory=document_subcategory,
-            file_size=file_size
+            file_size=file_size,
+            file_hash=file_hash
         )
 
         db.add(document)
+        db.flush()  # Get the document ID
+        document_id = document.id
+        logger.info(f"Document record created with ID: {document_id}")
+
+        # Upload to storage service
+        storage_service = get_storage_service()
+        storage_key = f"documents/{document_id}/{file.filename}"
+        
+        storage_service.upload_file(
+            file_data=content,
+            filename=storage_key,
+            content_type=file.content_type or "application/octet-stream",
+            metadata={
+                "document_id": str(document_id),
+                "user_id": str(current_user),
+                "category": document_category,
+                "subcategory": document_subcategory or ""
+            }
+        )
+        logger.info(f"File uploaded to storage: {storage_key}")
+
+        # Update document with storage info
+        document.storage_key = storage_key
+        document.storage_bucket = storage_service.bucket
+        document.file_path = f"storage://{storage_service.bucket}/{storage_key}"
+
         db.commit()
         db.refresh(document)
-        logger.info(f"Document record created with ID: {document.id}")
+
     except Exception as e:
         logger.error(f"Failed to create document record: {e}", exc_info=True)
-        # Clean up file if database insert fails
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create document record: {str(e)}"
@@ -221,7 +256,11 @@ async def analyze_pvag(
 
     # Extract text from document
     if document.file_type == ".pdf":
-        document_text = extract_text_from_pdf(document.file_path)
+        document_text = extract_text_from_pdf(
+            document.file_path,
+            storage_key=document.storage_key,
+            storage_bucket=document.storage_bucket
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -281,7 +320,11 @@ async def analyze_diagnostic(
 
     # Extract text
     if document.file_type == ".pdf":
-        document_text = extract_text_from_pdf(document.file_path)
+        document_text = extract_text_from_pdf(
+            document.file_path,
+            storage_key=document.storage_key,
+            storage_bucket=document.storage_bucket
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -327,7 +370,11 @@ async def analyze_tax_charges(
 
     # Extract text
     if document.file_type == ".pdf":
-        document_text = extract_text_from_pdf(document.file_path)
+        document_text = extract_text_from_pdf(
+            document.file_path,
+            storage_key=document.storage_key,
+            storage_bucket=document.storage_bucket
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -373,8 +420,16 @@ async def delete_document(
             detail="Document not found"
         )
 
-    # Delete file from disk
-    if os.path.exists(document.file_path):
+    # Delete file from storage service
+    if document.storage_key:
+        try:
+            storage_service = get_storage_service()
+            storage_service.delete_file(document.storage_key, document.storage_bucket)
+            logger.info(f"Deleted file from storage: {document.storage_key}")
+        except Exception as e:
+            logger.warning(f"Failed to delete file from storage: {e}")
+    # Legacy: Delete from local disk if exists
+    elif document.file_path and os.path.exists(document.file_path):
         os.remove(document.file_path)
 
     db.delete(document)
@@ -650,10 +705,10 @@ async def upload_document_async(
 
         logger.info(f"File uploaded to MinIO: {minio_key}")
 
-        # Update document with MinIO info
-        document.minio_key = minio_key
-        document.minio_bucket = settings.MINIO_BUCKET
-        document.file_path = f"minio://{settings.MINIO_BUCKET}/{minio_key}"
+        # Update document with storage info
+        document.storage_key = minio_key
+        document.storage_bucket = settings.MINIO_BUCKET
+        document.file_path = f"storage://{settings.MINIO_BUCKET}/{minio_key}"
 
         # Document will be processed via async_processor for bulk uploads
         # or synchronously via doc_parser for single uploads
@@ -827,9 +882,9 @@ async def bulk_upload_documents(
             )
 
             # Update document
-            document.minio_key = minio_key
-            document.minio_bucket = settings.MINIO_BUCKET
-            document.file_path = f"minio://{settings.MINIO_BUCKET}/{minio_key}"
+            document.storage_key = minio_key
+            document.storage_bucket = settings.MINIO_BUCKET
+            document.file_path = f"storage://{settings.MINIO_BUCKET}/{minio_key}"
 
             uploaded_documents.append(document)
             document_uploads_info.append({

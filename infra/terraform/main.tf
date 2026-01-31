@@ -1,5 +1,5 @@
 # =============================================================================
-# Appartment Agent - GCP Infrastructure
+# AppArt Agent - GCP Infrastructure
 # =============================================================================
 # 
 # This Terraform configuration deploys:
@@ -30,7 +30,7 @@ terraform {
   # Backend configuration for state storage
   # Uncomment and configure for team usage
   # backend "gcs" {
-  #   bucket = "appartment-agent-tfstate"
+  #   bucket = "appart-agent-tfstate"
   #   prefix = "terraform/state"
   # }
 }
@@ -60,6 +60,18 @@ variable "domain" {
   description = "Custom domain for the application (optional)"
   type        = string
   default     = ""
+}
+
+variable "create_dns_zone" {
+  description = "Whether to create a Cloud DNS managed zone for the domain. Set to false if DNS is managed externally."
+  type        = bool
+  default     = true
+}
+
+variable "api_subdomain" {
+  description = "Subdomain for the API (backend). e.g., 'api' results in api.yourdomain.com"
+  type        = string
+  default     = "api"
 }
 
 variable "db_tier" {
@@ -123,6 +135,7 @@ resource "google_project_service" "apis" {
     "servicenetworking.googleapis.com",
     "compute.googleapis.com",
     "aiplatform.googleapis.com",
+    "dns.googleapis.com",
   ])
 
   service            = each.key
@@ -134,13 +147,13 @@ resource "google_project_service" "apis" {
 # =============================================================================
 
 resource "google_compute_network" "vpc" {
-  name                    = "appartment-agent-vpc"
+  name                    = "appart-agent-vpc"
   auto_create_subnetworks = false
   depends_on              = [google_project_service.apis]
 }
 
 resource "google_compute_subnetwork" "subnet" {
-  name          = "appartment-agent-subnet"
+  name          = "appart-agent-subnet"
   ip_cidr_range = "10.0.0.0/24"
   region        = var.region
   network       = google_compute_network.vpc.id
@@ -181,26 +194,26 @@ resource "google_vpc_access_connector" "connector" {
 
 # Backend Service Account
 resource "google_service_account" "backend" {
-  account_id   = "appartment-backend"
-  display_name = "Appartment Agent Backend Service"
+  account_id   = "appart-backend"
+  display_name = "Appart Agent Backend Service"
 }
 
 # Frontend Service Account
 resource "google_service_account" "frontend" {
-  account_id   = "appartment-frontend"
-  display_name = "Appartment Agent Frontend Service"
+  account_id   = "appart-frontend"
+  display_name = "Appart Agent Frontend Service"
 }
 
 # Cloud Build Service Account
 resource "google_service_account" "cloudbuild" {
-  account_id   = "appartment-cloudbuild"
-  display_name = "Appartment Agent Cloud Build"
+  account_id   = "appart-cloudbuild"
+  display_name = "Appart Agent Cloud Build"
 }
 
 # GitHub Actions Deployer Service Account
 resource "google_service_account" "deployer" {
-  account_id   = "appartment-deployer"
-  display_name = "Appartment Agent GitHub Actions Deployer"
+  account_id   = "appart-deployer"
+  display_name = "Appart Agent GitHub Actions Deployer"
 }
 
 # =============================================================================
@@ -271,11 +284,11 @@ resource "google_project_iam_member" "deployer_permissions" {
 # =============================================================================
 
 # Import existing repository if it was created by bootstrap script:
-# terraform import google_artifact_registry_repository.docker projects/PROJECT_ID/locations/REGION/repositories/appartment-agent
+# terraform import google_artifact_registry_repository.docker projects/PROJECT_ID/locations/REGION/repositories/appart-agent
 resource "google_artifact_registry_repository" "docker" {
   location      = var.region
-  repository_id = "appartment-agent"
-  description   = "Docker images for Appartment Agent"
+  repository_id = "appart-agent"
+  description   = "Docker images for Appart Agent"
   format        = "DOCKER"
 
   depends_on = [google_project_service.apis]
@@ -291,7 +304,7 @@ resource "google_artifact_registry_repository" "docker" {
 # =============================================================================
 
 resource "google_sql_database_instance" "postgres" {
-  name             = "appartment-agent-db"
+  name             = "appart-agent-db"
   database_version = "POSTGRES_15"
   region           = var.region
 
@@ -326,12 +339,12 @@ resource "google_sql_database_instance" "postgres" {
 }
 
 resource "google_sql_database" "database" {
-  name     = "appartment_agent"
+  name     = "appart_agent"
   instance = google_sql_database_instance.postgres.name
 }
 
 resource "google_sql_user" "user" {
-  name     = "appartment"
+  name     = "appart"
   instance = google_sql_database_instance.postgres.name
   password = random_password.db_password.result
 }
@@ -346,7 +359,7 @@ resource "random_password" "db_password" {
 # =============================================================================
 
 resource "google_redis_instance" "cache" {
-  name           = "appartment-agent-cache"
+  name           = "appart-agent-cache"
   tier           = var.redis_tier
   memory_size_gb = var.redis_memory_size_gb
   region         = var.region
@@ -366,6 +379,17 @@ resource "google_redis_instance" "cache" {
 # Cloud Storage Buckets
 # =============================================================================
 
+locals {
+  # CORS origins - include custom domain if configured
+  # Note: We use the known domain patterns rather than referencing the frontend
+  # resource to avoid circular dependencies (backend -> buckets -> frontend -> backend)
+  cors_origins = var.domain != "" ? [
+    "https://${var.domain}",
+    "https://www.${var.domain}",
+    "http://localhost:3000", # Local development
+  ] : ["*"]
+}
+
 resource "google_storage_bucket" "documents" {
   name     = "${var.project_id}-documents"
   location = var.region
@@ -373,7 +397,7 @@ resource "google_storage_bucket" "documents" {
   uniform_bucket_level_access = true
 
   cors {
-    origin          = ["*"]
+    origin          = local.cors_origins
     method          = ["GET", "HEAD", "PUT", "POST", "DELETE"]
     response_header = ["*"]
     max_age_seconds = 3600
@@ -397,7 +421,7 @@ resource "google_storage_bucket" "photos" {
   uniform_bucket_level_access = true
 
   cors {
-    origin          = ["*"]
+    origin          = local.cors_origins
     method          = ["GET", "HEAD", "PUT", "POST", "DELETE"]
     response_header = ["*"]
     max_age_seconds = 3600
@@ -493,7 +517,7 @@ resource "google_secret_manager_secret_version" "logfire_token" {
 # =============================================================================
 
 resource "google_cloud_run_v2_service" "backend" {
-  name     = "appartment-backend"
+  name     = "appart-backend"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
@@ -521,7 +545,7 @@ resource "google_cloud_run_v2_service" "backend" {
     }
 
     containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/appartment-agent/backend:latest"
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/backend:latest"
 
       ports {
         container_port = 8000
@@ -674,9 +698,9 @@ resource "google_secret_manager_secret" "database_url" {
 }
 
 resource "google_secret_manager_secret_version" "database_url" {
-  secret      = google_secret_manager_secret.database_url.id
+  secret = google_secret_manager_secret.database_url.id
   # Use Unix socket format for Cloud SQL connection (required for Cloud Run)
-  secret_data = "postgresql://appartment:${random_password.db_password.result}@/appartment_agent?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
+  secret_data = "postgresql://appart:${random_password.db_password.result}@/appart_agent?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
 
   depends_on = [google_sql_database_instance.postgres]
 
@@ -724,7 +748,7 @@ resource "google_cloud_run_v2_job" "db_migrate" {
       }
 
       containers {
-        image   = "${var.region}-docker.pkg.dev/${var.project_id}/appartment-agent/backend:latest"
+        image   = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/backend:latest"
         command = ["/app/.venv/bin/alembic", "upgrade", "head"]
 
         resources {
@@ -765,7 +789,7 @@ resource "google_cloud_run_v2_job" "db_migrate" {
 # =============================================================================
 
 resource "google_cloud_run_v2_service" "frontend" {
-  name     = "appartment-frontend"
+  name     = "appart-frontend"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
@@ -778,7 +802,7 @@ resource "google_cloud_run_v2_service" "frontend" {
     }
 
     containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/appartment-agent/frontend:latest"
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/frontend:latest"
 
       ports {
         container_port = 3000
@@ -793,7 +817,7 @@ resource "google_cloud_run_v2_service" "frontend" {
 
       env {
         name  = "NEXT_PUBLIC_API_URL"
-        value = google_cloud_run_v2_service.backend.uri
+        value = var.domain != "" ? "https://${var.api_subdomain}.${var.domain}" : google_cloud_run_v2_service.backend.uri
       }
 
       env {
@@ -812,6 +836,129 @@ resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
   name     = google_cloud_run_v2_service.frontend.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# =============================================================================
+# Custom Domain Configuration
+# =============================================================================
+# 
+# This section configures:
+# 1. Cloud DNS managed zone for the domain
+# 2. Cloud Run domain mappings for frontend (apex + www) and backend (api subdomain)
+# 3. DNS records pointing to Cloud Run
+#
+# After applying, you need to update your domain registrar's nameservers
+# to point to the Google Cloud DNS nameservers (output: dns_nameservers)
+#
+# =============================================================================
+
+# Cloud DNS Managed Zone
+resource "google_dns_managed_zone" "main" {
+  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+
+  name        = "appartagent-zone"
+  dns_name    = "${var.domain}."
+  description = "DNS zone for ${var.domain}"
+
+  dnssec_config {
+    state = "on"
+  }
+
+  depends_on = [google_project_service.apis]
+}
+
+# Cloud Run Domain Mapping - Frontend (apex domain, e.g., appartagent.com)
+resource "google_cloud_run_domain_mapping" "frontend_apex" {
+  count    = var.domain != "" ? 1 : 0
+  location = var.region
+  name     = var.domain
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.frontend.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.frontend]
+}
+
+# Cloud Run Domain Mapping - Frontend (www subdomain, e.g., www.appartagent.com)
+resource "google_cloud_run_domain_mapping" "frontend_www" {
+  count    = var.domain != "" ? 1 : 0
+  location = var.region
+  name     = "www.${var.domain}"
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.frontend.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.frontend]
+}
+
+# Cloud Run Domain Mapping - Backend API (e.g., api.appartagent.com)
+resource "google_cloud_run_domain_mapping" "backend_api" {
+  count    = var.domain != "" ? 1 : 0
+  location = var.region
+  name     = "${var.api_subdomain}.${var.domain}"
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.backend.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.backend]
+}
+
+# DNS A Records for apex domain (pointing to Cloud Run)
+# Cloud Run returns multiple IPs - we create A records for each
+resource "google_dns_record_set" "frontend_apex" {
+  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "${var.domain}."
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = google_cloud_run_domain_mapping.frontend_apex[0].status[0].resource_records[*].rrdata
+
+  depends_on = [google_cloud_run_domain_mapping.frontend_apex]
+}
+
+# DNS CNAME Record for www subdomain
+resource "google_dns_record_set" "frontend_www" {
+  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "www.${var.domain}."
+  type         = "CNAME"
+  ttl          = 300
+
+  rrdatas = ["ghs.googlehosted.com."]
+
+  depends_on = [google_cloud_run_domain_mapping.frontend_www]
+}
+
+# DNS CNAME Record for API subdomain
+resource "google_dns_record_set" "backend_api" {
+  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "${var.api_subdomain}.${var.domain}."
+  type         = "CNAME"
+  ttl          = 300
+
+  rrdatas = ["ghs.googlehosted.com."]
+
+  depends_on = [google_cloud_run_domain_mapping.backend_api]
 }
 
 # =============================================================================
@@ -871,4 +1018,50 @@ output "migration_job" {
 output "deployer_service_account" {
   description = "GitHub Actions deployer service account email"
   value       = google_service_account.deployer.email
+}
+
+# =============================================================================
+# Custom Domain Outputs
+# =============================================================================
+
+output "custom_domain" {
+  description = "Custom domain configured for the application"
+  value       = var.domain != "" ? var.domain : "Not configured"
+}
+
+output "frontend_custom_url" {
+  description = "Frontend URL (custom domain or Cloud Run URL)"
+  value       = var.domain != "" ? "https://${var.domain}" : google_cloud_run_v2_service.frontend.uri
+}
+
+output "backend_custom_url" {
+  description = "Backend API URL (custom domain or Cloud Run URL)"
+  value       = var.domain != "" ? "https://${var.api_subdomain}.${var.domain}" : google_cloud_run_v2_service.backend.uri
+}
+
+output "dns_nameservers" {
+  description = "Cloud DNS nameservers - configure these at your domain registrar"
+  value       = var.domain != "" && var.create_dns_zone ? google_dns_managed_zone.main[0].name_servers : []
+}
+
+output "dns_records_required" {
+  description = "DNS records to configure (if not using Cloud DNS)"
+  value = var.domain != "" ? {
+    apex_domain = {
+      type  = "A"
+      name  = var.domain
+      value = "See domain mapping status for IP addresses"
+      note  = "Run: gcloud run domain-mappings describe --domain=${var.domain} --region=${var.region}"
+    }
+    www = {
+      type  = "CNAME"
+      name  = "www.${var.domain}"
+      value = "ghs.googlehosted.com."
+    }
+    api = {
+      type  = "CNAME"
+      name  = "${var.api_subdomain}.${var.domain}"
+      value = "ghs.googlehosted.com."
+    }
+  } : null
 }

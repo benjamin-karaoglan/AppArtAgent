@@ -1,6 +1,6 @@
 # Frontend
 
-The Appartment Agent frontend is a Next.js 14 application using the App Router.
+The Appart Agent frontend is a Next.js 14 application using the App Router.
 
 ## Overview
 

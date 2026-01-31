@@ -1,8 +1,8 @@
-site_name: Appartment Agent
+site_name: AppArt Agent
 site_description: AI-powered apartment purchasing decision platform for France
-site_url: https://benjamin-karaoglan.github.io/appartment-agent
-repo_url: https://github.com/benjamin-karaoglan/appartment-agent
-repo_name: benjamin-karaoglan/appartment-agent
+site_url: https://benjamin-karaoglan.github.io/appart-agent
+repo_url: https://github.com/benjamin-karaoglan/appart-agent
+repo_name: benjamin-karaoglan/appart-agent
 
 theme:
   name: material
@@ -86,9 +86,9 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/benjamin-karaoglan/appartment-agent
+      link: https://github.com/benjamin-karaoglan/appart-agent
   generator: false
 
 copyright: |
   Copyright &copy; 2026 Benjamin Karaoglan – 
-  <a href="https://github.com/benjamin-karaoglan/appartment-agent/blob/main/LICENSE">Custom Non-Commercial License</a>
+  <a href="https://github.com/benjamin-karaoglan/appart-agent/blob/main/LICENSE">Custom Non-Commercial License</a>

@@ -1,5 +1,6 @@
 """Document model for uploaded files."""
 
+import uuid as uuid_lib
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Float, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -12,6 +13,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4()))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     property_id = Column(Integer, ForeignKey("properties.id"), nullable=True)
 
@@ -43,9 +45,10 @@ class Document(Base):
     parsed_at = Column(DateTime, nullable=True)
     file_size = Column(Integer)  # in bytes
 
-    # MinIO storage
-    minio_key = Column(String, nullable=True, index=True)  # Object key in MinIO
-    minio_bucket = Column(String, nullable=True)  # Bucket name
+    # Object storage (storage-agnostic: works with MinIO, GCS, S3)
+    # Column names kept as minio_* for backward compatibility until migration
+    storage_key = Column("minio_key", String, nullable=True, index=True)  # Object key in storage
+    storage_bucket = Column("minio_bucket", String, nullable=True)  # Bucket name
     file_hash = Column(String(64), nullable=True, index=True)  # SHA-256 hash for deduplication
 
     # Temporal workflow tracking
@@ -63,7 +66,7 @@ class Document(Base):
 
     # Relationships
     user = relationship("User", back_populates="documents")
-    property = relationship("Property", back_populates="documents")
+    related_property = relationship("Property", back_populates="documents")
 
 
 class DocumentSummary(Base):

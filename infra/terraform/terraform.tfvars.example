@@ -94,13 +94,26 @@ redis_memory_size_gb = 1
 # =============================================================================
 
 # Custom domain for the application (leave empty to use Cloud Run URLs)
-# If set, you'll need to:
-#   1. Verify domain ownership in GCP
-#   2. Configure DNS to point to Cloud Run
-#   3. SSL certificates are automatically provisioned
+# 
+# When configured, Terraform will:
+#   1. Create Cloud Run domain mappings for:
+#      - appartagent.com (frontend)
+#      - www.appartagent.com (frontend)
+#      - api.appartagent.com (backend)
+#   2. Optionally create a Cloud DNS managed zone with DNS records
+#   3. SSL certificates are automatically provisioned by Google
 #
-# Example: "app.yourdomain.com"
-domain = ""
+# Example: "appartagent.com"
+domain = "appartagent.com"
+
+# Whether to create a Cloud DNS managed zone
+# Set to true: Terraform manages DNS (you need to update nameservers at registrar)
+# Set to false: You manage DNS externally (Terraform outputs required DNS records)
+create_dns_zone = true
+
+# Subdomain for the backend API (default: "api")
+# Results in: api.appartagent.com
+api_subdomain = "api"
 
 # =============================================================================
 # OPTIONAL: OBSERVABILITY (Logfire)

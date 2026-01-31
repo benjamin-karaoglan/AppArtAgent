@@ -10,7 +10,7 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Appartment Agent
+            AppArt Agent
           </h1>
           <p className="text-xl text-gray-600 mb-8">
             Make smarter apartment purchasing decisions with AI-powered insights
@@ -83,7 +83,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8 mt-16">
         <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2025 Appartment Agent. All rights reserved.</p>
+          <p>&copy; 2025 AppArt Agent. All rights reserved.</p>
           <p className="text-gray-400 mt-2">Helping you make informed property decisions in France</p>
         </div>
       </footer>

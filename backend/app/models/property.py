@@ -1,5 +1,6 @@
 """Property and DVF record models."""
 
+import uuid as uuid_lib
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, Text, Index, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -12,6 +13,7 @@ class Property(Base):
     __tablename__ = "properties"
 
     id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4()))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # Address information
@@ -40,7 +42,7 @@ class Property(Base):
 
     # Relationships
     user = relationship("User", back_populates="properties")
-    documents = relationship("Document", back_populates="property", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="related_property", cascade="all, delete-orphan")
     analyses = relationship("Analysis", back_populates="property", cascade="all, delete-orphan")
 
 

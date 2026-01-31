@@ -29,7 +29,7 @@ wheels = [
 ]
 
 [[package]]
-name = "appartment-agent"
+name = "appart-agent"
 version = "1.0.0"
 source = { virtual = "." }
 dependencies = [

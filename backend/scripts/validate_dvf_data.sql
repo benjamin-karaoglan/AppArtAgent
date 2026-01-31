@@ -1,6 +1,6 @@
 -- DVF Data Quality Validation Script
 -- Run this after import to check data quality
--- Usage: docker exec -i appartment-agent-db-1 psql -U appartment -d appartment_agent < validate_dvf_data.sql
+-- Usage: docker exec -i appart-agent-db-1 psql -U appart -d appart_agent < validate_dvf_data.sql
 
 \echo ''
 \echo '=================================================='

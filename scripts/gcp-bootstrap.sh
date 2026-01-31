@@ -2,7 +2,7 @@
 # =============================================================================
 # GCP Bootstrap Script
 # =============================================================================
-# This script sets up the initial GCP infrastructure for Appartment Agent.
+# This script sets up the initial GCP infrastructure for AppArt Agent.
 # Run this once to prepare your GCP project for deployment.
 # =============================================================================
 
@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}======================================${NC}"
-echo -e "${GREEN}  Appartment Agent - GCP Bootstrap   ${NC}"
+echo -e "${GREEN}  AppArt Agent - GCP Bootstrap   ${NC}"
 echo -e "${GREEN}======================================${NC}"
 echo ""
 
@@ -67,19 +67,19 @@ gcloud services enable \
 
 echo ""
 echo -e "${GREEN}Step 2: Creating Artifact Registry repository...${NC}"
-gcloud artifacts repositories create appartment-agent \
+gcloud artifacts repositories create appart-agent \
     --repository-format=docker \
     --location="$REGION" \
-    --description="Docker images for Appartment Agent" \
+    --description="Docker images for AppArt Agent" \
     --project "$PROJECT_ID" 2>/dev/null || echo "Repository already exists"
 
 echo ""
 echo -e "${GREEN}Step 3: Creating deployment service account...${NC}"
-SA_NAME="appartment-deployer"
+SA_NAME="appart-deployer"
 SA_EMAIL="$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 
 gcloud iam service-accounts create "$SA_NAME" \
-    --display-name="Appartment Agent Deployer" \
+    --display-name="AppArt Agent Deployer" \
     --project "$PROJECT_ID" 2>/dev/null || echo "Service account already exists"
 
 # Grant permissions

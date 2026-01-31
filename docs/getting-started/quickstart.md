@@ -1,6 +1,6 @@
 # Quick Start
 
-Get Appartment Agent running in 5 minutes using Docker.
+Get Appart Agent running in 5 minutes using Docker.
 
 ## Prerequisites
 
@@ -17,8 +17,8 @@ Get Appartment Agent running in 5 minutes using Docker.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 ```
 
 ### 2. Configure Environment

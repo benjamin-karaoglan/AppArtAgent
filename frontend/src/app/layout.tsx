@@ -6,7 +6,7 @@ import { Providers } from '@/components/Providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Appartment Agent - Smart Property Decisions',
+  title: 'AppArt Agent - Smart Property Decisions',
   description: 'AI-powered platform to help you make informed apartment purchasing decisions in France',
 }
 

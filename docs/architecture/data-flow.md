@@ -1,6 +1,6 @@
 # Data Flow
 
-This document describes how data flows through the Appartment Agent system for key operations.
+This document describes how data flows through the Appart Agent system for key operations.
 
 ## Document Upload and Analysis
 

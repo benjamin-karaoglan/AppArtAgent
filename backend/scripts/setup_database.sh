@@ -8,7 +8,7 @@ echo ""
 
 # Step 1: Wait for database to be ready
 echo "Step 1: Waiting for database to be ready..."
-until PGPASSWORD=appartment psql -h localhost -U appartment -d appartment_agent -c '\q' 2>/dev/null; do
+until PGPASSWORD=appart psql -h localhost -U appart -d appart_agent -c '\q' 2>/dev/null; do
   echo "Waiting for PostgreSQL..."
   sleep 2
 done

@@ -1,16 +1,16 @@
 <p align="center">
-  <h1 align="center">Appartment Agent</h1>
+  <h1 align="center">AppArt Agent</h1>
   <p align="center">
     AI-powered apartment purchasing decision platform for the French real estate market
   </p>
 </p>
 
 <p align="center">
-  <a href="https://github.com/benjamin-karaoglan/appartment-agent/actions/workflows/deploy.yml">
-    <img src="https://github.com/benjamin-karaoglan/appartment-agent/actions/workflows/deploy.yml/badge.svg" alt="Build Status">
+  <a href="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/deploy.yml">
+    <img src="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/deploy.yml/badge.svg" alt="Build Status">
   </a>
-  <a href="https://github.com/benjamin-karaoglan/appartment-agent/actions/workflows/docs.yml">
-    <img src="https://github.com/benjamin-karaoglan/appartment-agent/actions/workflows/docs.yml/badge.svg" alt="Documentation">
+  <a href="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/docs.yml">
+    <img src="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/docs.yml/badge.svg" alt="Documentation">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Custom%20NC-blue.svg" alt="License">
@@ -31,7 +31,7 @@
 
 ## Overview
 
-Appartment Agent helps buyers make informed real estate decisions by combining:
+AppArt Agent helps buyers make informed real estate decisions by combining:
 
 - **5.4M+ French property transactions** from DVF (Demandes de Valeurs Foncières) data
 - **AI-powered document analysis** using Google Gemini for PV d'AG, diagnostics, taxes, and charges
@@ -68,8 +68,8 @@ Appartment Agent helps buyers make informed real estate decisions by combining:
 
 ```bash
 # Clone the repository
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 
 # Configure environment
 cp .env.example .env
@@ -104,7 +104,7 @@ docker-compose exec backend alembic upgrade head
 ## Project Structure
 
 ```
-appartment-agent/
+appart-agent/
 ├── backend/                 # FastAPI backend
 │   ├── app/
 │   │   ├── api/            # REST API endpoints
@@ -127,7 +127,7 @@ appartment-agent/
 
 ## Documentation
 
-Full documentation is available at **[benjamin-karaoglan.github.io/appartment-agent](https://benjamin-karaoglan.github.io/appartment-agent)** or locally in the `docs/` directory.
+Full documentation is available at **[benjamin-karaoglan.github.io/appart-agent](https://benjamin-karaoglan.github.io/appart-agent)** or locally in the `docs/` directory.
 
 | Section | Description |
 |---------|-------------|
@@ -189,7 +189,7 @@ pnpm dev
 <summary><b>Backend (.env)</b></summary>
 
 ```bash
-DATABASE_URL=postgresql://appartment:appartment@db:5432/appartment_agent
+DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
 GOOGLE_CLOUD_API_KEY=your_google_api_key
 SECRET_KEY=your-secret-key-at-least-32-characters
 MINIO_ENDPOINT=minio:9000

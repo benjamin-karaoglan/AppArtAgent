@@ -3,15 +3,15 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: appartment
-      POSTGRES_PASSWORD: appartment
-      POSTGRES_DB: appartment_agent
+      POSTGRES_USER: appart
+      POSTGRES_PASSWORD: appart
+      POSTGRES_DB: appart_agent
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U appartment -d appartment_agent" ]
+      test: [ "CMD-SHELL", "pg_isready -U appart -d appart_agent" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
       target: dev
     environment:
-      DATABASE_URL: postgresql://appartment:appartment@db:5432/appartment_agent
+      DATABASE_URL: postgresql://appart:appart@db:5432/appart_agent
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv
@@ -55,7 +55,7 @@ services:
       dockerfile: Dockerfile
       target: dev
     environment:
-      DATABASE_URL: postgresql://appartment:appartment@db:5432/appartment_agent
+      DATABASE_URL: postgresql://appart:appart@db:5432/appart_agent
       REDIS_HOST: redis
       REDIS_PORT: 6379
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}

@@ -22,11 +22,12 @@ class PhotoUpdate(BaseModel):
 class PhotoResponse(BaseModel):
     """Schema for photo response."""
     id: int
+    uuid: Optional[str] = None
     user_id: int
     property_id: Optional[int]
     filename: str
-    minio_key: str
-    minio_bucket: str
+    storage_key: str
+    storage_bucket: str
     file_size: Optional[int]
     mime_type: Optional[str]
     room_type: Optional[str]
@@ -63,8 +64,8 @@ class RedesignResponse(BaseModel):
     id: int
     redesign_uuid: str
     photo_id: int
-    minio_key: str
-    minio_bucket: str
+    storage_key: str
+    storage_bucket: str
     file_size: Optional[int]
     style_preset: Optional[str]
     prompt: str

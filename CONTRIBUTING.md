@@ -1,12 +1,12 @@
-# Contributing to Appartment Agent
+# Contributing to Appart Agent
 
-Thank you for your interest in contributing to Appartment Agent! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Appart Agent! This document provides guidelines and information for contributors.
 
 ## Quick Links
 
 - 📖 [Full Contributing Guide](./docs/development/contributing.md)
-- 🐛 [Issue Tracker](https://github.com/benjamin-karaoglan/appartment-agent/issues)
-- 💬 [Discussions](https://github.com/benjamin-karaoglan/appartment-agent/discussions)
+- 🐛 [Issue Tracker](https://github.com/benjamin-karaoglan/appart-agent/issues)
+- 💬 [Discussions](https://github.com/benjamin-karaoglan/appart-agent/discussions)
 
 ## Ways to Contribute
 
@@ -29,8 +29,8 @@ Thank you for your interest in contributing to Appartment Agent! This document p
 
 ```bash
 # Clone your fork
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 
 # Start development environment
 docker-compose up -d
@@ -59,7 +59,7 @@ By contributing, you agree that your contributions will be licensed under the pr
 ## Questions?
 
 - Check the [Documentation](./docs/)
-- Open a [Discussion](https://github.com/benjamin-karaoglan/appartment-agent/discussions)
+- Open a [Discussion](https://github.com/benjamin-karaoglan/appart-agent/discussions)
 - Contact maintainers
 
 Thank you for contributing! 🎉

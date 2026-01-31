@@ -1,32 +1,51 @@
 # GCP Deployment Guide
 
-This guide covers deploying Appartment Agent to Google Cloud Platform.
+This guide covers deploying Appart Agent to Google Cloud Platform.
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Google Cloud Platform                              │
-│                                                                             │
-│  ┌─────────────┐     ┌─────────────┐                                       │
-│  │   Cloud     │     │   Cloud     │                                       │
-│  │   Run       │────▶│   Run       │                                       │
-│  │  Frontend   │     │  Backend    │                                       │
-│  └─────────────┘     └──────┬──────┘                                       │
-│                             │                                               │
-│         ┌───────────────────┼───────────────────┐                          │
-│         │                   │                   │                          │
-│         ▼                   ▼                   ▼                          │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                  │
-│  │   Cloud     │     │  Cloud SQL  │     │ Memorystore │                  │
-│  │  Storage    │     │ PostgreSQL  │     │   Redis     │                  │
-│  │  (GCS)      │     │             │     │             │                  │
-│  └─────────────┘     └─────────────┘     └─────────────┘                  │
+                            ┌──────────────────────────┐
+                            │   appartagent.com (DNS)  │
+                            │   ├── appartagent.com    │──┐
+                            │   ├── www.appartagent.com│──┤
+                            │   └── api.appartagent.com│──┼───┐
+                            └──────────────────────────┘  │   │
+                                                          │   │
+┌─────────────────────────────────────────────────────────┼───┼───────────────┐
+│                           Google Cloud Platform         │   │               │
+│                                                         │   │               │
+│  ┌─────────────────────────────────────────────────────┼───┼─────────────┐ │
+│  │                    Cloud Run Domain Mapping          │   │             │ │
+│  │                    (Managed SSL Certificates)        │   │             │ │
+│  └─────────────────────────────────────────────────────┼───┼─────────────┘ │
+│                                                         │   │               │
+│  ┌─────────────┐                               ┌───────┴───┴─────┐         │
+│  │   Cloud     │◀──────────────────────────────│     Cloud       │         │
+│  │   Run       │                               │     Run         │         │
+│  │  Frontend   │──────────────────────────────▶│    Backend      │         │
+│  └─────────────┘                               └───────┬─────────┘         │
+│                                                        │                    │
+│         ┌──────────────────────────────────────────────┤                   │
+│         │                    │                         │                    │
+│         ▼                    ▼                         ▼                    │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────────────┐          │
+│  │   Cloud     │     │  Cloud SQL  │     │ Memorystore Redis   │          │
+│  │  Storage    │     │ PostgreSQL  │     │                     │          │
+│  │  (GCS)      │     │             │     │                     │          │
+│  └─────────────┘     └─────────────┘     └─────────────────────┘          │
 │                                                                             │
 │  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                  │
 │  │  Secret     │     │  Artifact   │     │  Vertex AI  │                  │
 │  │  Manager    │     │  Registry   │     │   (Gemini)  │                  │
 │  └─────────────┘     └─────────────┘     └─────────────┘                  │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────┐          │
+│  │  Cloud DNS (Optional - can use external DNS)                 │          │
+│  │  ├── A record: appartagent.com → Cloud Run IPs               │          │
+│  │  ├── CNAME: www.appartagent.com → ghs.googlehosted.com       │          │
+│  │  └── CNAME: api.appartagent.com → ghs.googlehosted.com       │          │
+│  └─────────────────────────────────────────────────────────────┘          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -57,7 +76,7 @@ This guide covers deploying Appartment Agent to Google Cloud Platform.
 
 ```bash
 # Clone and navigate
-cd appartment-agent
+cd appart-agent
 
 # Set your GCP project
 export PROJECT_ID="your-project-id"
@@ -81,40 +100,41 @@ gcloud services enable \
   vpcaccess.googleapis.com \
   servicenetworking.googleapis.com \
   compute.googleapis.com \
-  aiplatform.googleapis.com
+  aiplatform.googleapis.com \
+  dns.googleapis.com
 ```
 
 ### 3. Create Service Account for CI/CD
 
 ```bash
 # Create service account
-gcloud iam service-accounts create appartment-deployer \
-  --display-name="Appartment Agent Deployer"
+gcloud iam service-accounts create appart-deployer \
+  --display-name="Appart Agent Deployer"
 
 # Grant permissions
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:appartment-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:appart-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/run.admin"
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:appartment-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:appart-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/iam.serviceAccountUser"
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:appartment-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:appart-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/artifactregistry.writer"
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:appartment-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:appart-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:appartment-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:appart-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/storage.admin"
 
 # Create and download key
 gcloud iam service-accounts keys create deployer-key.json \
-  --iam-account=appartment-deployer@$PROJECT_ID.iam.gserviceaccount.com
+  --iam-account=appart-deployer@$PROJECT_ID.iam.gserviceaccount.com
 
 echo "Add this as GCP_SA_KEY secret in GitHub"
 cat deployer-key.json | base64
@@ -180,25 +200,25 @@ If not using GitHub Actions:
 ```bash
 # Build and push backend
 cd backend
-docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/backend:latest \
+docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/backend:latest \
   --target production .
-docker push $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/backend:latest
+docker push $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/backend:latest
 
 # Build and push frontend
 cd ../frontend
-docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/frontend:latest \
+docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/frontend:latest \
   --target production -f Dockerfile.pnpm .
-docker push $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/frontend:latest
+docker push $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/frontend:latest
 
 # Deploy to Cloud Run
-gcloud run deploy appartment-backend \
-  --image $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/backend:latest \
+gcloud run deploy appart-backend \
+  --image $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/backend:latest \
   --region $REGION \
   --platform managed \
   --allow-unauthenticated
 
-gcloud run deploy appartment-frontend \
-  --image $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/frontend:latest \
+gcloud run deploy appart-frontend \
+  --image $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/frontend:latest \
   --region $REGION \
   --platform managed \
   --allow-unauthenticated
@@ -211,7 +231,7 @@ Run migrations after deployment:
 ```bash
 # Connect to Cloud SQL via Cloud Run job
 gcloud run jobs create db-migrate \
-  --image $REGION-docker.pkg.dev/$PROJECT_ID/appartment-agent/backend:latest \
+  --image $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/backend:latest \
   --region $REGION \
   --memory 1Gi \
   --command "alembic" \
@@ -247,20 +267,160 @@ gcloud run jobs execute db-migrate --region $REGION --wait
 
 ## Custom Domain Setup
 
-1. **Verify domain** in GCP:
-   ```bash
-   gcloud domains verify your-domain.com
-   ```
+The infrastructure supports custom domain configuration via Terraform. This sets up:
+- `appartagent.com` → Frontend
+- `www.appartagent.com` → Frontend
+- `api.appartagent.com` → Backend API
 
-2. **Map domain** to Cloud Run:
-   ```bash
-   gcloud run domain-mappings create \
-     --service appartment-frontend \
-     --domain app.your-domain.com \
-     --region $REGION
-   ```
+### Option 1: Using Terraform (Recommended)
 
-3. **Update DNS** with the provided records
+#### Step 1: Verify Domain Ownership
+
+Before Cloud Run can serve your domain, you must verify ownership:
+
+```bash
+# Option A: Using gcloud (opens browser for verification)
+gcloud domains verify appartagent.com
+
+# Option B: Via Google Search Console
+# Visit: https://search.google.com/search-console
+# Add property → Domain → appartagent.com
+# Follow DNS TXT record verification
+```
+
+#### Step 2: Configure Terraform Variables
+
+Update your `terraform.tfvars`:
+
+```hcl
+# Custom domain configuration
+domain = "appartagent.com"
+create_dns_zone = true  # Terraform manages DNS
+api_subdomain = "api"   # Results in api.appartagent.com
+```
+
+#### Step 3: Apply Infrastructure
+
+```bash
+cd infra/terraform
+terraform plan   # Review changes
+terraform apply  # Apply changes
+```
+
+#### Step 4: Update Domain Registrar Nameservers
+
+After applying, Terraform outputs the Cloud DNS nameservers. Update your domain registrar (where you bought appartagent.com) to use these nameservers:
+
+```bash
+# Get the nameservers
+terraform output dns_nameservers
+```
+
+You'll see output like:
+```
+dns_nameservers = [
+  "ns-cloud-a1.googledomains.com.",
+  "ns-cloud-a2.googledomains.com.",
+  "ns-cloud-a3.googledomains.com.",
+  "ns-cloud-a4.googledomains.com.",
+]
+```
+
+Go to your domain registrar and set these as the authoritative nameservers.
+
+#### Step 5: Wait for DNS Propagation & SSL
+
+- DNS propagation: 5 minutes to 48 hours (usually ~1 hour)
+- SSL certificate provisioning: 15-60 minutes after DNS is verified
+
+Check domain mapping status:
+```bash
+gcloud run domain-mappings describe \
+  --domain appartagent.com \
+  --region europe-west1
+```
+
+### Option 2: External DNS (Managing DNS Outside GCP)
+
+If you prefer to manage DNS at your registrar (e.g., Cloudflare, Namecheap):
+
+```hcl
+# terraform.tfvars
+domain = "appartagent.com"
+create_dns_zone = false  # Don't create Cloud DNS zone
+```
+
+Then configure these DNS records at your registrar:
+
+| Type | Name | Value |
+|------|------|-------|
+| A | appartagent.com | (see domain mapping for IP) |
+| CNAME | www | ghs.googlehosted.com. |
+| CNAME | api | ghs.googlehosted.com. |
+
+Get the required A record IP addresses:
+```bash
+gcloud run domain-mappings describe \
+  --domain appartagent.com \
+  --region europe-west1 \
+  --format='value(status.resourceRecords)'
+```
+
+### Manual Domain Setup (Without Terraform)
+
+If you need to set up domains manually:
+
+```bash
+# Verify domain
+gcloud domains verify appartagent.com
+
+# Create domain mappings
+gcloud run domain-mappings create \
+  --service appart-frontend \
+  --domain appartagent.com \
+  --region europe-west1
+
+gcloud run domain-mappings create \
+  --service appart-frontend \
+  --domain www.appartagent.com \
+  --region europe-west1
+
+gcloud run domain-mappings create \
+  --service appart-backend \
+  --domain api.appartagent.com \
+  --region europe-west1
+
+# List domain mappings to get DNS records
+gcloud run domain-mappings list --region europe-west1
+```
+
+### Troubleshooting Custom Domain
+
+**Domain mapping stuck in "pending":**
+```bash
+# Check status
+gcloud run domain-mappings describe --domain appartagent.com --region europe-west1
+
+# Common issues:
+# - Domain not verified: Run `gcloud domains verify appartagent.com`
+# - DNS not propagated: Wait and check with `dig appartagent.com`
+# - Wrong DNS records: Verify A/CNAME records are correct
+```
+
+**SSL certificate not provisioning:**
+- Ensure DNS records are correctly pointing to Cloud Run
+- Check certificate status in Cloud Console → Cloud Run → Domain mappings
+- Can take up to 24 hours in some cases
+
+**Test DNS propagation:**
+```bash
+# Check A record
+dig appartagent.com A
+
+# Check CNAME
+dig www.appartagent.com CNAME
+dig api.appartagent.com CNAME
+```
 
 ## Monitoring & Logging
 
@@ -268,13 +428,13 @@ gcloud run jobs execute db-migrate --region $REGION --wait
 
 ```bash
 # Backend logs
-gcloud run services logs read appartment-backend --region $REGION
+gcloud run services logs read appart-backend --region $REGION
 
 # Frontend logs
-gcloud run services logs read appartment-frontend --region $REGION
+gcloud run services logs read appart-frontend --region $REGION
 
 # Real-time logs
-gcloud run services logs tail appartment-backend --region $REGION
+gcloud run services logs tail appart-backend --region $REGION
 ```
 
 ### Cloud Monitoring
@@ -317,7 +477,7 @@ scaling {
 
 Check logs:
 ```bash
-gcloud run services logs read appartment-backend --region $REGION --limit 100
+gcloud run services logs read appart-backend --region $REGION --limit 100
 ```
 
 ### Database connection issues
@@ -325,14 +485,14 @@ gcloud run services logs read appartment-backend --region $REGION --limit 100
 Verify VPC connector is working:
 ```bash
 gcloud compute networks vpc-access connectors describe \
-  appartment-agent-connector --region $REGION
+  appart-agent-connector --region $REGION
 ```
 
 ### Redis connection issues
 
 Check Redis instance is running:
 ```bash
-gcloud redis instances describe appartment-agent-cache --region $REGION
+gcloud redis instances describe appart-agent-cache --region $REGION
 ```
 
 ## Cleanup

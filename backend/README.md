@@ -1,4 +1,4 @@
-# Appartment Agent Backend
+# Appart Agent Backend
 
 AI-powered apartment purchasing decision platform for France - Backend API
 
@@ -167,7 +167,7 @@ docker-compose exec backend python scripts/rollback_dvf_import.py --list
 docker-compose exec backend python scripts/rollback_dvf_import.py <batch_id>
 
 # Check database status
-docker-compose exec db psql -U appartment -d appartment_agent -c \
+docker-compose exec db psql -U appart -d appart_agent -c \
   "SELECT data_year, COUNT(*) as records FROM dvf_records GROUP BY data_year ORDER BY data_year;"
 ```
 

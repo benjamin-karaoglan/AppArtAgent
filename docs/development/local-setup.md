@@ -1,6 +1,6 @@
 # Local Setup
 
-Set up a local development environment for Appartment Agent.
+Set up a local development environment for Appart Agent.
 
 ## Option 1: Docker (Recommended)
 
@@ -15,8 +15,8 @@ Docker provides the easiest setup with all services configured.
 
 ```bash
 # Clone repository
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/appart-agent.git
+cd appart-agent
 
 # Configure environment
 cp .env.example .env
@@ -83,10 +83,10 @@ uv pip install -e ".[dev]"
 # Configure environment
 cp .env.example .env
 # Edit .env with local database URL:
-# DATABASE_URL=postgresql://localhost:5432/appartment_agent
+# DATABASE_URL=postgresql://localhost:5432/appart_agent
 
 # Create database
-createdb appartment_agent
+createdb appart_agent
 
 # Run migrations
 alembic upgrade head
@@ -188,10 +188,10 @@ alembic current
 
 ```bash
 # Connect to database
-psql appartment_agent
+psql appart_agent
 
 # Or with Docker
-docker-compose exec db psql -U appartment -d appartment_agent
+docker-compose exec db psql -U appart -d appart_agent
 ```
 
 ## Environment Variables
@@ -200,7 +200,7 @@ docker-compose exec db psql -U appartment -d appartment_agent
 
 ```bash
 # Database
-DATABASE_URL=postgresql://localhost:5432/appartment_agent
+DATABASE_URL=postgresql://localhost:5432/appart_agent
 
 # AI
 GOOGLE_CLOUD_API_KEY=your_api_key
@@ -248,7 +248,7 @@ uv pip install -e ".[dev]"
 pg_isready
 
 # Verify database exists
-psql -l | grep appartment_agent
+psql -l | grep appart_agent
 ```
 
 ### Port Already in Use

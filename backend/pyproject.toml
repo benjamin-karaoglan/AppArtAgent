@@ -1,11 +1,11 @@
 [project]
-name = "appartment-agent-backend"
+name = "appart-agent-backend"
 version = "2.0.0"
 description = "AI-powered apartment purchasing decision platform with LangGraph agent"
 requires-python = "==3.10.*"
 license = {text = "MIT"}
 authors = [
-    {name = "Appartment Agent Team"}
+    {name = "AppArt Agent Team"}
 ]
 
 dependencies = [

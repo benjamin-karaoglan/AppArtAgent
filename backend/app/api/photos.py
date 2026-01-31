@@ -97,8 +97,8 @@ async def upload_photo(
             user_id=int(current_user),
             property_id=property_id,
             filename=file.filename,
-            minio_key=minio_key,
-            minio_bucket="photos",
+            storage_key=minio_key,
+            storage_bucket="photos",
             file_size=file_size,
             mime_type=file.content_type,
             room_type=room_type,
@@ -111,7 +111,7 @@ async def upload_photo(
 
         # Generate presigned URL
         presigned_url = get_storage_service().get_presigned_url(
-            minio_key=minio_key,
+            minio_key=photo.storage_key,
             bucket_name="photos",
             expiry=timedelta(hours=1)
         )
@@ -120,11 +120,12 @@ async def upload_photo(
 
         return PhotoResponse(
             id=photo.id,
+            uuid=photo.uuid,
             user_id=photo.user_id,
             property_id=photo.property_id,
             filename=photo.filename,
-            minio_key=photo.minio_key,
-            minio_bucket=photo.minio_bucket,
+            storage_key=photo.storage_key,
+            storage_bucket=photo.storage_bucket,
             file_size=photo.file_size,
             mime_type=photo.mime_type,
             room_type=photo.room_type,
@@ -181,10 +182,10 @@ async def create_redesign(
     try:
         start_time = time.time()
 
-        # Get original image from MinIO
+        # Get original image from storage
         original_image_data = get_storage_service().get_file(
-            minio_key=photo.minio_key,
-            bucket_name=photo.minio_bucket
+            minio_key=photo.storage_key,
+            bucket_name=photo.storage_bucket
         )
 
         # Build prompt
@@ -252,8 +253,8 @@ async def create_redesign(
         redesign = PhotoRedesign(
             photo_id=photo_id,
             redesign_uuid=redesign_uuid,
-            minio_key=redesign_minio_key,
-            minio_bucket="photos",
+            storage_key=redesign_minio_key,
+            storage_bucket="photos",
             file_size=len(result["image_data"]),
             style_preset=request.style_preset,
             prompt=prompt,
@@ -271,7 +272,7 @@ async def create_redesign(
 
         # Generate presigned URL
         presigned_url = get_storage_service().get_presigned_url(
-            minio_key=redesign_minio_key,
+            minio_key=redesign.storage_key,
             bucket_name="photos",
             expiry=timedelta(hours=1)
         )
@@ -282,8 +283,8 @@ async def create_redesign(
             id=redesign.id,
             redesign_uuid=redesign.redesign_uuid,
             photo_id=redesign.photo_id,
-            minio_key=redesign.minio_key,
-            minio_bucket=redesign.minio_bucket,
+            storage_key=redesign.storage_key,
+            storage_bucket=redesign.storage_bucket,
             file_size=redesign.file_size,
             style_preset=redesign.style_preset,
             prompt=redesign.prompt,
@@ -333,8 +334,8 @@ async def list_photos(
     photo_responses = []
     for photo in photos:
         presigned_url = get_storage_service().get_presigned_url(
-            minio_key=photo.minio_key,
-            bucket_name=photo.minio_bucket,
+            minio_key=photo.storage_key,
+            bucket_name=photo.storage_bucket,
             expiry=timedelta(hours=1)
         )
 
@@ -344,11 +345,12 @@ async def list_photos(
 
         photo_responses.append(PhotoResponse(
             id=photo.id,
+            uuid=photo.uuid,
             user_id=photo.user_id,
             property_id=photo.property_id,
             filename=photo.filename,
-            minio_key=photo.minio_key,
-            minio_bucket=photo.minio_bucket,
+            storage_key=photo.storage_key,
+            storage_bucket=photo.storage_bucket,
             file_size=photo.file_size,
             mime_type=photo.mime_type,
             room_type=photo.room_type,
@@ -399,8 +401,8 @@ async def list_redesigns(
     redesign_responses = []
     for redesign in redesigns:
         presigned_url = get_storage_service().get_presigned_url(
-            minio_key=redesign.minio_key,
-            bucket_name=redesign.minio_bucket,
+            minio_key=redesign.storage_key,
+            bucket_name=redesign.storage_bucket,
             expiry=timedelta(hours=1)
         )
 
@@ -408,8 +410,8 @@ async def list_redesigns(
             id=redesign.id,
             redesign_uuid=redesign.redesign_uuid,
             photo_id=redesign.photo_id,
-            minio_key=redesign.minio_key,
-            minio_bucket=redesign.minio_bucket,
+            storage_key=redesign.storage_key,
+            storage_bucket=redesign.storage_bucket,
             file_size=redesign.file_size,
             style_preset=redesign.style_preset,
             prompt=redesign.prompt,
@@ -458,21 +460,21 @@ async def delete_photo(
         )
 
     try:
-        # Delete from MinIO (original photo)
+        # Delete from storage (original photo)
         get_storage_service().delete_file(
-            minio_key=photo.minio_key,
-            bucket_name=photo.minio_bucket
+            object_name=photo.storage_key,
+            bucket_name=photo.storage_bucket
         )
 
-        # Delete all redesigns from MinIO
+        # Delete all redesigns from storage
         redesigns = db.query(PhotoRedesign).filter(
             PhotoRedesign.photo_id == photo_id
         ).all()
 
         for redesign in redesigns:
             get_storage_service().delete_file(
-                minio_key=redesign.minio_key,
-                bucket_name=redesign.minio_bucket
+                object_name=redesign.storage_key,
+                bucket_name=redesign.storage_bucket
             )
 
         # Database cascade will delete redesigns
@@ -521,8 +523,8 @@ async def update_photo(
     db.refresh(photo)
 
     presigned_url = get_storage_service().get_presigned_url(
-        minio_key=photo.minio_key,
-        bucket_name=photo.minio_bucket,
+        minio_key=photo.storage_key,
+        bucket_name=photo.storage_bucket,
         expiry=timedelta(hours=1)
     )
 
@@ -532,11 +534,12 @@ async def update_photo(
 
     return PhotoResponse(
         id=photo.id,
+        uuid=photo.uuid,
         user_id=photo.user_id,
         property_id=photo.property_id,
         filename=photo.filename,
-        minio_key=photo.minio_key,
-        minio_bucket=photo.minio_bucket,
+        storage_key=photo.storage_key,
+        storage_bucket=photo.storage_bucket,
         file_size=photo.file_size,
         mime_type=photo.mime_type,
         room_type=photo.room_type,

@@ -246,12 +246,42 @@ class GCSBackend(StorageBackend):
     def __init__(self):
         """Initialize GCS client."""
         from google.cloud import storage
-
+        from google.auth import default
+        
+        # Get default credentials to determine the service account email
+        self._credentials, self._project = default()
+        
         self.client = storage.Client(project=settings.GOOGLE_CLOUD_PROJECT)
         self.documents_bucket = settings.GCS_DOCUMENTS_BUCKET or f"{settings.GOOGLE_CLOUD_PROJECT}-documents"
         self.photos_bucket = settings.GCS_PHOTOS_BUCKET or f"{settings.GOOGLE_CLOUD_PROJECT}-photos"
+        
+        # Get service account email for signing URLs
+        self._service_account_email = self._get_service_account_email()
 
         logger.info(f"GCS backend initialized: documents={self.documents_bucket}, photos={self.photos_bucket}")
+        logger.info(f"GCS service account for signing: {self._service_account_email}")
+    
+    def _get_service_account_email(self) -> str:
+        """Get the service account email for URL signing."""
+        # Try to get service account email from credentials
+        if hasattr(self._credentials, 'service_account_email'):
+            return self._credentials.service_account_email
+        
+        # For compute engine credentials, fetch from metadata server
+        try:
+            import requests
+            response = requests.get(
+                'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email',
+                headers={'Metadata-Flavor': 'Google'},
+                timeout=5
+            )
+            if response.status_code == 200:
+                return response.text
+        except Exception as e:
+            logger.warning(f"Could not fetch service account email from metadata: {e}")
+        
+        # Fallback to default compute engine service account pattern
+        return f"{settings.GOOGLE_CLOUD_PROJECT}@appspot.gserviceaccount.com"
 
     def _get_bucket(self, bucket_name: Optional[str] = None):
         """Get the appropriate bucket."""
@@ -322,6 +352,15 @@ class GCSBackend(StorageBackend):
         bucket_name: Optional[str] = None,
         expiry=None
     ) -> str:
+        """
+        Generate a signed URL for file access.
+        
+        Uses IAM signBlob API when running with Application Default Credentials
+        (e.g., on Cloud Run) since compute engine credentials don't have private keys.
+        """
+        from google.auth import compute_engine
+        from google.auth.transport import requests as google_requests
+        
         bucket = self._get_bucket(bucket_name)
 
         if expiry is None:
@@ -333,11 +372,40 @@ class GCSBackend(StorageBackend):
 
         try:
             blob = bucket.blob(object_name)
-            url = blob.generate_signed_url(
-                version="v4",
-                expiration=expires,
-                method="GET"
-            )
+            
+            # Check if we're using compute engine credentials (ADC without private key)
+            if isinstance(self._credentials, compute_engine.Credentials):
+                # Use IAM signBlob API for signing
+                # This requires the service account to have the iam.serviceAccounts.signBlob permission
+                from google.auth.iam import Signer
+                
+                # Refresh credentials to ensure we have a valid token
+                auth_request = google_requests.Request()
+                self._credentials.refresh(auth_request)
+                
+                # Create IAM-based signer
+                signer = Signer(
+                    request=auth_request,
+                    credentials=self._credentials,
+                    service_account_email=self._service_account_email
+                )
+                
+                # Generate signed URL using the IAM signer
+                url = blob.generate_signed_url(
+                    version="v4",
+                    expiration=expires,
+                    method="GET",
+                    service_account_email=self._service_account_email,
+                    access_token=self._credentials.token
+                )
+            else:
+                # Standard signed URL generation with service account key
+                url = blob.generate_signed_url(
+                    version="v4",
+                    expiration=expires,
+                    method="GET"
+                )
+            
             return url
         except Exception as e:
             logger.error(f"GCS URL generation failed: {e}")
@@ -398,9 +466,10 @@ class StorageService:
         """Download a file from storage."""
         return self._backend.download_file(object_name, bucket_name)
 
-    def get_file(self, minio_key: str, bucket_name: Optional[str] = None) -> bytes:
+    def get_file(self, minio_key: str = None, bucket_name: Optional[str] = None, storage_key: str = None) -> bytes:
         """Alias for download_file (backward compatibility)."""
-        return self.download_file(minio_key, bucket_name)
+        key = storage_key or minio_key
+        return self.download_file(key, bucket_name)
 
     def delete_file(self, object_name: str, bucket_name: Optional[str] = None) -> bool:
         """Delete a file from storage."""

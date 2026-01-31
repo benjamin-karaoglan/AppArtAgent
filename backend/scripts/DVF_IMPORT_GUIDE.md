@@ -43,7 +43,7 @@ docker-compose up -d
 ### 2. Run Full Import (All Years)
 
 ```bash
-cd /Users/carrefour/appartment-agent/backend
+cd /Users/carrefour/appart-agent/backend
 ./scripts/fast_import_all_dvf_v2.sh
 ```
 
@@ -59,13 +59,13 @@ This will:
 Run the comprehensive validation report:
 
 ```bash
-docker exec -i appartment-agent-db-1 psql -U appartment -d appartment_agent < scripts/validate_dvf_data.sql
+docker exec -i appart-agent-db-1 psql -U appart -d appart_agent < scripts/validate_dvf_data.sql
 ```
 
 Or quick check:
 
 ```bash
-docker exec appartment-agent-db-1 psql -U appartment -d appartment_agent -c "
+docker exec appart-agent-db-1 psql -U appart -d appart_agent -c "
 SELECT data_year, COUNT(*) FROM dvf_records GROUP BY data_year ORDER BY data_year;
 "
 ```
@@ -227,7 +227,7 @@ TOTAL: 4,700,283 records (~4.2 GB database size)
 ### Issue: Container Not Running
 
 ```bash
-ERROR: Database container 'appartment-agent-db-1' is not running!
+ERROR: Database container 'appart-agent-db-1' is not running!
 ```
 
 **Solution**:
@@ -238,10 +238,10 @@ docker-compose up -d
 ### Issue: File Not Found
 
 ```bash
-WARNING: File not found: /Users/carrefour/appartment-agent/data/dvf/ValeursFoncieres-2023.txt
+WARNING: File not found: /Users/carrefour/appart-agent/data/dvf/ValeursFoncieres-2023.txt
 ```
 
-**Solution**: Ensure DVF files are in `/Users/carrefour/appartment-agent/data/dvf/`
+**Solution**: Ensure DVF files are in `/Users/carrefour/appart-agent/data/dvf/`
 
 ### Issue: Duplicate Records
 
@@ -258,8 +258,8 @@ If you run the import twice, duplicates are automatically skipped due to the `ON
 
 ## Files Location
 
-- DVF data: `/Users/carrefour/appartment-agent/data/dvf/`
-- Scripts: `/Users/carrefour/appartment-agent/backend/scripts/`
+- DVF data: `/Users/carrefour/appart-agent/data/dvf/`
+- Scripts: `/Users/carrefour/appart-agent/backend/scripts/`
 
 ## Advanced Usage
 
@@ -272,7 +272,7 @@ If you run the import twice, duplicates are automatically skipped due to the `ON
 ### Delete All Records Only
 
 ```bash
-docker exec -i appartment-agent-db-1 psql -U appartment -d appartment_agent < scripts/delete_all_dvf.sql
+docker exec -i appart-agent-db-1 psql -U appart -d appart_agent < scripts/delete_all_dvf.sql
 ```
 
 ### Check Import Progress
@@ -280,7 +280,7 @@ docker exec -i appartment-agent-db-1 psql -U appartment -d appartment_agent < sc
 While import is running, check record counts:
 
 ```bash
-docker exec appartment-agent-db-1 psql -U appartment -d appartment_agent -c "
+docker exec appart-agent-db-1 psql -U appart -d appart_agent -c "
 SELECT data_year, COUNT(*) FROM dvf_records GROUP BY data_year ORDER BY data_year;
 "
 ```
@@ -559,7 +559,7 @@ Validate against domain knowledge:
 
 1. **Create a Jupyter notebook** for exploratory data analysis:
    ```bash
-   /Users/carrefour/appartment-agent/backend/notebooks/dvf_eda.ipynb
+   /Users/carrefour/appart-agent/backend/notebooks/dvf_eda.ipynb
    ```
 
 2. **Generate automated data quality report** using libraries like:
