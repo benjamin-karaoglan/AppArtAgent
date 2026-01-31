@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.property import Property, DVFRecord, DVFGroupedTransaction
+from app.models.property import Property, DVFRecord, DVFGroupedTransaction, DVFStats
 from app.schemas.property import (
     PropertyCreate,
     PropertyUpdate,
@@ -29,6 +29,52 @@ class AddressSearchResult(BaseModel):
     city: str
     property_type: str
     count: int  # Number of sales at this address
+
+
+class DVFStatsResponse(BaseModel):
+    """DVF statistics response."""
+    total_records: int
+    total_imports: int
+    last_updated: str | None
+    formatted_count: str  # Human-readable format like "1.36M"
+
+
+@router.get("/dvf-stats", response_model=DVFStatsResponse)
+async def get_dvf_stats(
+    db: Session = Depends(get_db),
+):
+    """
+    Get DVF database statistics.
+    Returns total records count and last update time.
+    Public endpoint - no authentication required for dashboard stats.
+    """
+    # Get stats from dvf_stats table
+    stats = db.query(DVFStats).filter(DVFStats.id == 1).first()
+    
+    if stats:
+        total = stats.total_records
+        last_updated = stats.last_updated.isoformat() if stats.last_updated else None
+        total_imports = stats.total_imports
+    else:
+        # Fallback: count directly from dvf_records (slower for large datasets)
+        total = db.query(func.count(DVFRecord.id)).scalar() or 0
+        last_updated = None
+        total_imports = 0
+    
+    # Format the count for display
+    if total >= 1_000_000:
+        formatted = f"{total / 1_000_000:.2f}M"
+    elif total >= 1_000:
+        formatted = f"{total / 1_000:.1f}K"
+    else:
+        formatted = str(total)
+    
+    return DVFStatsResponse(
+        total_records=total,
+        total_imports=total_imports,
+        last_updated=last_updated,
+        formatted_count=formatted
+    )
 
 
 @router.get("/search-addresses", response_model=List[AddressSearchResult])

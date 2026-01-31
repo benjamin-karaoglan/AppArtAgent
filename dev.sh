@@ -47,6 +47,89 @@ start() {
         print_success "Backend running at http://localhost:8000"
         print_info "  API Docs: http://localhost:8000/docs"
         print_info "  Hot-reload: Enabled (Uvicorn --reload)"
+        print_info "  Storage: MinIO (local)"
+    else
+        print_error "Backend failed to start"
+    fi
+
+    if check_running "frontend"; then
+        print_success "Frontend running at http://localhost:3000"
+        print_info "  Hot-reload: Enabled (Next.js Fast Refresh)"
+    else
+        print_error "Frontend failed to start"
+    fi
+
+    if check_running "db"; then
+        print_success "PostgreSQL running at localhost:5432"
+    else
+        print_error "Database failed to start"
+    fi
+
+    if check_running "redis"; then
+        print_success "Redis running at localhost:6379"
+    else
+        print_error "Redis failed to start"
+    fi
+
+    if check_running "minio"; then
+        print_success "MinIO running at localhost:9000"
+        print_info "  Console: http://localhost:9001"
+    else
+        print_error "MinIO failed to start"
+    fi
+
+    echo ""
+    print_header "Hot-Reload is Active!"
+    echo "Edit your code and watch it reload automatically:"
+    echo "  • Backend (Python): ~1 second restart"
+    echo "  • Frontend (React): Instant HMR"
+    echo ""
+    echo "View logs with: ./dev.sh logs"
+}
+
+# Function to start services with GCS (Google Cloud Storage) instead of MinIO
+start_gcs() {
+    print_header "Starting Development Environment with GCS"
+
+    # Check required environment variables
+    if [ -z "$GOOGLE_CLOUD_PROJECT" ]; then
+        print_error "GOOGLE_CLOUD_PROJECT environment variable is required"
+        echo "  export GOOGLE_CLOUD_PROJECT=your-project-id"
+        exit 1
+    fi
+
+    if [ -z "$GCS_DOCUMENTS_BUCKET" ]; then
+        print_info "GCS_DOCUMENTS_BUCKET not set, will use default: \${GOOGLE_CLOUD_PROJECT}-documents"
+    fi
+
+    # Check for Google Cloud credentials
+    if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+        if [ -f "$HOME/.config/gcloud/application_default_credentials.json" ]; then
+            export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+            print_info "Using ADC from: $GOOGLE_APPLICATION_CREDENTIALS"
+        else
+            print_error "Google Cloud credentials not found"
+            echo "  Run: gcloud auth application-default login"
+            echo "  Or set: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json"
+            exit 1
+        fi
+    else
+        print_info "Using credentials from: $GOOGLE_APPLICATION_CREDENTIALS"
+    fi
+
+    print_info "Starting services with GCS backend..."
+    docker-compose -f docker-compose.yml -f docker-compose.gcs.yml up -d backend frontend db redis
+
+    print_info "Waiting for services to be healthy..."
+    sleep 5
+
+    if check_running "backend"; then
+        print_success "Backend running at http://localhost:8000"
+        print_info "  API Docs: http://localhost:8000/docs"
+        print_info "  Hot-reload: Enabled (Uvicorn --reload)"
+        print_info "  Storage: Google Cloud Storage"
+        print_info "  Documents bucket: ${GCS_DOCUMENTS_BUCKET:-${GOOGLE_CLOUD_PROJECT}-documents}"
+        print_info "  Photos bucket: ${GCS_PHOTOS_BUCKET:-${GOOGLE_CLOUD_PROJECT}-photos}"
     else
         print_error "Backend failed to start"
     fi
@@ -71,7 +154,8 @@ start() {
     fi
 
     echo ""
-    print_header "Hot-Reload is Active!"
+    print_header "Hot-Reload with GCS is Active!"
+    echo "Using Google Cloud Storage instead of MinIO"
     echo "Edit your code and watch it reload automatically:"
     echo "  • Backend (Python): ~1 second restart"
     echo "  • Frontend (React): Instant HMR"
@@ -171,7 +255,8 @@ Development Helper Script for AppArt Agent
 Usage: ./dev.sh [command] [options]
 
 Commands:
-    start               Start all services with hot-reload
+    start               Start all services with hot-reload (uses MinIO)
+    start-gcs           Start services using GCS instead of MinIO
     stop                Stop all services
     restart [service]   Restart a specific service (backend, frontend, db, redis)
     rebuild [service]   Rebuild and restart service(s)
@@ -182,11 +267,18 @@ Commands:
     help                Show this help message
 
 Examples:
-    ./dev.sh start                  # Start everything
+    ./dev.sh start                  # Start with MinIO (default)
+    ./dev.sh start-gcs              # Start with Google Cloud Storage
     ./dev.sh logs backend           # Follow backend logs
     ./dev.sh restart frontend       # Restart just frontend
     ./dev.sh rebuild backend        # Rebuild backend image
     ./dev.sh shell backend          # Open backend shell
+
+GCS Mode Requirements:
+    export GOOGLE_CLOUD_PROJECT=your-project-id
+    export GCS_DOCUMENTS_BUCKET=your-documents-bucket  # Optional
+    export GCS_PHOTOS_BUCKET=your-photos-bucket        # Optional
+    gcloud auth application-default login              # For credentials
 
 Hot-Reload Info:
     • Backend: Uvicorn --reload monitors .py files
@@ -200,6 +292,9 @@ EOF
 case "${1:-help}" in
     start)
         start
+        ;;
+    start-gcs)
+        start_gcs
         ;;
     stop)
         stop

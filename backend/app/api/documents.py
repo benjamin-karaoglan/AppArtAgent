@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.config import settings
 from app.models.document import Document
+from app.models.user import User
 from app.schemas.document import (
     DocumentResponse,
     PVAGAnalysisResponse,
@@ -142,7 +143,8 @@ async def upload_document(
 
         # Upload to storage service
         storage_service = get_storage_service()
-        storage_key = f"documents/{document_id}/{file.filename}"
+        # Include user_id in path for proper organization: user_id/documents/doc_id/filename
+        storage_key = f"{current_user}/documents/{document_id}/{file.filename}"
         
         storage_service.upload_file(
             file_data=content,
@@ -277,6 +279,11 @@ async def analyze_pvag(
     document.analysis_summary = analysis.get("summary", "")
     document.extracted_data = json.dumps(analysis)
 
+    # Increment user's documents analyzed count
+    user = db.query(User).filter(User.id == int(current_user)).first()
+    if user:
+        user.documents_analyzed_count = (user.documents_analyzed_count or 0) + 1
+
     db.commit()
 
     # Calculate total estimated costs
@@ -342,6 +349,11 @@ async def analyze_diagnostic(
     document.extracted_data = json.dumps(analysis)
     document.risk_flags = json.dumps(analysis.get("risk_flags", []))
 
+    # Increment user's documents analyzed count
+    user = db.query(User).filter(User.id == int(current_user)).first()
+    if user:
+        user.documents_analyzed_count = (user.documents_analyzed_count or 0) + 1
+
     db.commit()
 
     return DiagnosticAnalysisResponse(
@@ -393,6 +405,11 @@ async def analyze_tax_charges(
     document.is_analyzed = True
     document.analysis_summary = analysis.get("summary", "")
     document.extracted_data = json.dumps(analysis)
+
+    # Increment user's documents analyzed count
+    user = db.query(User).filter(User.id == int(current_user)).first()
+    if user:
+        user.documents_analyzed_count = (user.documents_analyzed_count or 0) + 1
 
     db.commit()
 
@@ -689,7 +706,8 @@ async def upload_document_async(
 
         # Upload to MinIO
         minio_service = get_minio_service()
-        minio_key = f"documents/{document_id}/{file.filename}"
+        # Include user_id in path for proper organization: user_id/documents/doc_id/filename
+        minio_key = f"{current_user}/documents/{document_id}/{file.filename}"
 
         minio_service.upload_file(
             file_data=content,
@@ -869,7 +887,8 @@ async def bulk_upload_documents(
             db.flush()  # Get document ID
 
             # Upload to MinIO
-            minio_key = f"documents/{document.id}/{file.filename}"
+            # Include user_id in path for proper organization: user_id/documents/doc_id/filename
+            minio_key = f"{current_user}/documents/{document.id}/{file.filename}"
             minio_service.upload_file(
                 file_data=content,
                 object_name=minio_key,

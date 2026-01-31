@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.document import Document, DocumentSummary
+from app.models.user import User
+from app.services.storage import get_storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +73,43 @@ class DocumentParser:
                 return response_text[json_start:json_end + 1].strip()
         return response_text
 
-    def pdf_to_images_base64(self, pdf_path: str, max_pages: int = 20) -> List[Dict[str, str]]:
-        """Convert PDF pages to base64 images."""
+    def pdf_to_images_base64(self, pdf_path: str, max_pages: int = 20, storage_key: str = None, storage_bucket: str = None) -> List[Dict[str, str]]:
+        """
+        Convert PDF pages to base64 images.
+        
+        Args:
+            pdf_path: Local file path OR storage URI (storage://bucket/key)
+            max_pages: Maximum number of pages to convert
+            storage_key: Optional storage key for cloud storage
+            storage_bucket: Optional storage bucket name
+        """
         try:
-            doc = fitz.open(pdf_path)
+            # Check if we need to download from storage
+            if storage_key or (pdf_path and pdf_path.startswith("storage://")):
+                logger.info(f"Downloading PDF from storage: {storage_key or pdf_path}")
+                storage = get_storage_service()
+                
+                # Use storage_key if provided, otherwise extract from path
+                key = storage_key
+                bucket = storage_bucket
+                
+                if not key and pdf_path.startswith("storage://"):
+                    # Parse storage://bucket/key format
+                    parts = pdf_path.replace("storage://", "").split("/", 1)
+                    if len(parts) == 2:
+                        bucket = parts[0] if not bucket else bucket
+                        key = parts[1]
+                    else:
+                        raise ValueError(f"Invalid storage path format: {pdf_path}")
+                
+                # Download file bytes from storage
+                pdf_bytes = storage.download_file(key, bucket)
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                logger.info(f"Downloaded and opened PDF from storage: {key}")
+            else:
+                # Local file path
+                doc = fitz.open(pdf_path)
+            
             images = []
 
             for page_num in range(min(len(doc), max_pages)):
@@ -87,7 +122,7 @@ class DocumentParser:
                 })
 
             doc.close()
-            logger.info(f"Converted {len(images)} pages from {pdf_path}")
+            logger.info(f"Converted {len(images)} pages from {pdf_path or storage_key}")
             return images
 
         except Exception as e:
@@ -110,10 +145,10 @@ class DocumentParser:
 
         return json.loads(self._extract_json(self._extract_text(response)))
 
-    async def parse_pv_ag_multimodal(self, pdf_path: str) -> Dict[str, Any]:
+    async def parse_pv_ag_multimodal(self, pdf_path: str, storage_key: str = None, storage_bucket: str = None) -> Dict[str, Any]:
         """Parse PV d'AG using multimodal approach."""
-        logger.info(f"Parsing PV d'AG: {pdf_path}")
-        images = self.pdf_to_images_base64(pdf_path, max_pages=15)
+        logger.info(f"Parsing PV d'AG: {pdf_path}, storage_key: {storage_key}")
+        images = self.pdf_to_images_base64(pdf_path, max_pages=15, storage_key=storage_key, storage_bucket=storage_bucket)
         if not images:
             return {"error": "Could not extract images", "summary": "Failed to parse"}
 
@@ -133,10 +168,10 @@ class DocumentParser:
             logger.error(f"PV d'AG parsing error: {e}")
             return {"error": str(e), "summary": "Failed to parse", "key_insights": []}
 
-    async def parse_diagnostic_multimodal(self, pdf_path: str, subcategory: str) -> Dict[str, Any]:
+    async def parse_diagnostic_multimodal(self, pdf_path: str, subcategory: str, storage_key: str = None, storage_bucket: str = None) -> Dict[str, Any]:
         """Parse diagnostic document."""
-        logger.info(f"Parsing diagnostic ({subcategory}): {pdf_path}")
-        images = self.pdf_to_images_base64(pdf_path, max_pages=10)
+        logger.info(f"Parsing diagnostic ({subcategory}): {pdf_path}, storage_key: {storage_key}")
+        images = self.pdf_to_images_base64(pdf_path, max_pages=10, storage_key=storage_key, storage_bucket=storage_bucket)
         if not images:
             return {"error": "Could not extract images", "summary": "Failed to parse"}
 
@@ -157,10 +192,10 @@ class DocumentParser:
             logger.error(f"Diagnostic parsing error: {e}")
             return {"error": str(e), "summary": "Failed to parse", "key_insights": []}
 
-    async def parse_tax_charges_multimodal(self, pdf_path: str, category: str) -> Dict[str, Any]:
+    async def parse_tax_charges_multimodal(self, pdf_path: str, category: str, storage_key: str = None, storage_bucket: str = None) -> Dict[str, Any]:
         """Parse tax or charges document."""
-        logger.info(f"Parsing {category}: {pdf_path}")
-        images = self.pdf_to_images_base64(pdf_path, max_pages=5)
+        logger.info(f"Parsing {category}: {pdf_path}, storage_key: {storage_key}")
+        images = self.pdf_to_images_base64(pdf_path, max_pages=5, storage_key=storage_key, storage_bucket=storage_bucket)
         if not images:
             return {"error": "Could not extract images", "summary": "Failed to parse"}
 
@@ -181,17 +216,33 @@ class DocumentParser:
 
     async def parse_document(self, document: Document, db: Session) -> Document:
         """Parse a document and update the database record."""
-        logger.info(f"Parsing document ID {document.id}, category: {document.document_category}")
+        logger.info(f"Parsing document ID {document.id}, category: {document.document_category}, storage_key: {document.storage_key}")
 
         parsed_data = None
+        # Pass storage_key and storage_bucket for cloud storage support
+        storage_key = document.storage_key
+        storage_bucket = document.storage_bucket
+        
         if document.document_category == "pv_ag":
-            parsed_data = await self.parse_pv_ag_multimodal(document.file_path)
+            parsed_data = await self.parse_pv_ag_multimodal(
+                document.file_path, 
+                storage_key=storage_key, 
+                storage_bucket=storage_bucket
+            )
         elif document.document_category == "diags":
             parsed_data = await self.parse_diagnostic_multimodal(
-                document.file_path, document.document_subcategory or "general"
+                document.file_path, 
+                document.document_subcategory or "general",
+                storage_key=storage_key,
+                storage_bucket=storage_bucket
             )
         elif document.document_category in ["taxe_fonciere", "charges"]:
-            parsed_data = await self.parse_tax_charges_multimodal(document.file_path, document.document_category)
+            parsed_data = await self.parse_tax_charges_multimodal(
+                document.file_path, 
+                document.document_category,
+                storage_key=storage_key,
+                storage_bucket=storage_bucket
+            )
 
         if parsed_data and "error" not in parsed_data:
             document.is_analyzed = True
@@ -210,6 +261,12 @@ class DocumentParser:
                         break
                     except:
                         pass
+
+            # Increment user's documents analyzed count
+            if document.user_id:
+                user = db.query(User).filter(User.id == document.user_id).first()
+                if user:
+                    user.documents_analyzed_count = (user.documents_analyzed_count or 0) + 1
 
             db.commit()
             db.refresh(document)

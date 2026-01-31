@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.models.document import Document, DocumentSummary
+from app.models.user import User
 from app.services.storage import get_storage_service
 from app.services.ai.document_processor import get_document_processor
 
@@ -172,6 +173,12 @@ class BulkProcessor:
 
         doc.processing_status = "completed"
         doc.parsed_at = datetime.utcnow()
+
+        # Increment user's documents analyzed count
+        if doc.user_id:
+            user = db.query(User).filter(User.id == doc.user_id).first()
+            if user:
+                user.documents_analyzed_count = (user.documents_analyzed_count or 0) + 1
 
         db.commit()
         logger.info(f"Saved document {doc_id}: {result.get('filename')}")

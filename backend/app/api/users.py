@@ -14,6 +14,7 @@ from app.core.security import (
 )
 from app.core.config import settings
 from app.models.user import User
+from app.models.property import Property
 
 router = APIRouter()
 
@@ -45,9 +46,16 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     is_active: bool
+    documents_analyzed_count: int = 0
 
     class Config:
         from_attributes = True
+
+
+class UserStatsResponse(BaseModel):
+    """User statistics response schema."""
+    documents_analyzed_count: int
+    total_properties: int
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -133,3 +141,28 @@ async def get_current_user_info(
         )
 
     return user
+
+
+@router.get("/stats", response_model=UserStatsResponse)
+async def get_user_stats(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Get current user statistics."""
+    user = db.query(User).filter(User.id == int(current_user)).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Count properties
+    property_count = db.query(Property).filter(
+        Property.user_id == int(current_user)
+    ).count()
+
+    return UserStatsResponse(
+        documents_analyzed_count=user.documents_analyzed_count or 0,
+        total_properties=property_count
+    )

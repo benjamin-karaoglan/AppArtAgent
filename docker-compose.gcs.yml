@@ -1,0 +1,42 @@
+# Docker Compose override for using Google Cloud Storage instead of MinIO
+# 
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.gcs.yml up -d backend frontend db redis
+#   OR
+#   ./dev.sh start-gcs
+#
+# Requirements:
+#   1. Set GCS_DOCUMENTS_BUCKET and GCS_PHOTOS_BUCKET environment variables
+#   2. Mount your Google Cloud credentials (Application Default Credentials)
+#
+# Example:
+#   export GCS_DOCUMENTS_BUCKET=my-project-documents
+#   export GCS_PHOTOS_BUCKET=my-project-photos
+#   export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
+#   ./dev.sh start-gcs
+
+services:
+  backend:
+    environment:
+      # Switch storage backend to GCS
+      STORAGE_BACKEND: gcs
+      
+      # GCS bucket configuration (set these in your .env or export them)
+      GCS_DOCUMENTS_BUCKET: ${GCS_DOCUMENTS_BUCKET:-}
+      GCS_PHOTOS_BUCKET: ${GCS_PHOTOS_BUCKET:-}
+      
+      # Google Cloud configuration
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT}
+      GOOGLE_APPLICATION_CREDENTIALS: /app/.secrets/adc.json
+    
+    volumes:
+      # Mount Google Cloud credentials
+      # Option 1: Use ADC from gcloud auth application-default login
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/app/.secrets/adc.json:ro
+    
+    # Override depends_on to remove minio dependency
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

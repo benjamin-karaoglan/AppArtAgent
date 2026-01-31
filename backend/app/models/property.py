@@ -144,6 +144,23 @@ class DVFImport(Base):
     )
 
 
+class DVFStats(Base):
+    """
+    Aggregate statistics for DVF records.
+    
+    Single row table that tracks overall DVF data metrics.
+    Updated after DVF imports complete.
+    """
+
+    __tablename__ = "dvf_stats"
+
+    id = Column(Integer, primary_key=True)
+    total_records = Column(Integer, default=0)
+    total_imports = Column(Integer, default=0)
+    last_import_date = Column(DateTime)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class DVFGroupedTransaction(Base):
     """
     Materialized view of grouped DVF transactions.

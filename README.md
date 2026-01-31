@@ -68,8 +68,8 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 
 ```bash
 # Clone the repository
-git clone https://github.com/benjamin-karaoglan/appartment-agent.git
-cd appartment-agent
+git clone https://github.com/benjamin-karaoglan/AppArtAgent.git
+cd AppArtAgent
 
 # Configure environment
 cp .env.example .env
@@ -104,7 +104,7 @@ docker-compose exec backend alembic upgrade head
 ## Project Structure
 
 ```
-appartment-agent/
+AppArtAgent/
 ├── backend/                 # FastAPI backend
 │   ├── app/
 │   │   ├── api/            # REST API endpoints
@@ -127,7 +127,7 @@ appartment-agent/
 
 ## Documentation
 
-Full documentation is available at **[benjamin-karaoglan.github.io/appartment-agent](https://benjamin-karaoglan.github.io/appartment-agent)** or locally in the `docs/` directory.
+Full documentation is available at **[benjamin-karaoglan.github.io/AppArtAgent](https://benjamin-karaoglan.github.io/AppArtAgent)** or locally in the `docs/` directory.
 
 | Section | Description |
 |---------|-------------|

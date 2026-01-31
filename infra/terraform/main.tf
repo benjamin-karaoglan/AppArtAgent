@@ -111,6 +111,12 @@ variable "min_instances" {
   default     = 0
 }
 
+variable "use_load_balancer" {
+  description = "Use Cloud Load Balancer with Certificate Manager instead of Cloud Run domain mappings. Recommended for production - more reliable SSL certificate provisioning."
+  type        = bool
+  default     = true
+}
+
 # =============================================================================
 # Provider Configuration
 # =============================================================================
@@ -142,6 +148,7 @@ resource "google_project_service" "apis" {
     "compute.googleapis.com",
     "aiplatform.googleapis.com",
     "dns.googleapis.com",
+    "certificatemanager.googleapis.com",
   ])
 
   service            = each.key
@@ -903,8 +910,9 @@ resource "google_dns_managed_zone" "main" {
 # =============================================================================
 
 # Cloud Run Domain Mapping - Frontend (apex domain, e.g., appartagent.com)
+# Only used when NOT using load balancer
 resource "google_cloud_run_domain_mapping" "frontend_apex" {
-  count    = var.domain != "" ? 1 : 0
+  count    = var.domain != "" && !var.use_load_balancer ? 1 : 0
   location = var.region
   name     = var.domain
 
@@ -920,8 +928,9 @@ resource "google_cloud_run_domain_mapping" "frontend_apex" {
 }
 
 # Cloud Run Domain Mapping - Frontend (www subdomain, e.g., www.appartagent.com)
+# Only used when NOT using load balancer
 resource "google_cloud_run_domain_mapping" "frontend_www" {
-  count    = var.domain != "" ? 1 : 0
+  count    = var.domain != "" && !var.use_load_balancer ? 1 : 0
   location = var.region
   name     = "www.${var.domain}"
 
@@ -937,8 +946,9 @@ resource "google_cloud_run_domain_mapping" "frontend_www" {
 }
 
 # Cloud Run Domain Mapping - Backend API (e.g., api.appartagent.com)
+# Only used when NOT using load balancer
 resource "google_cloud_run_domain_mapping" "backend_api" {
-  count    = var.domain != "" ? 1 : 0
+  count    = var.domain != "" && !var.use_load_balancer ? 1 : 0
   location = var.region
   name     = "${var.api_subdomain}.${var.domain}"
 
@@ -953,9 +963,13 @@ resource "google_cloud_run_domain_mapping" "backend_api" {
   depends_on = [google_cloud_run_v2_service.backend]
 }
 
+# =============================================================================
+# DNS Records for Cloud Run Domain Mapping (when NOT using load balancer)
+# =============================================================================
+
 # DNS A Records for apex domain (pointing to Cloud Run) - IPv4 only
 resource "google_dns_record_set" "frontend_apex" {
-  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+  count = var.domain != "" && var.create_dns_zone && !var.use_load_balancer ? 1 : 0
 
   managed_zone = google_dns_managed_zone.main[0].name
   name         = "${var.domain}."
@@ -973,7 +987,7 @@ resource "google_dns_record_set" "frontend_apex" {
 
 # DNS AAAA Records for apex domain (pointing to Cloud Run) - IPv6 only
 resource "google_dns_record_set" "frontend_apex_ipv6" {
-  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+  count = var.domain != "" && var.create_dns_zone && !var.use_load_balancer ? 1 : 0
 
   managed_zone = google_dns_managed_zone.main[0].name
   name         = "${var.domain}."
@@ -991,7 +1005,7 @@ resource "google_dns_record_set" "frontend_apex_ipv6" {
 
 # DNS CNAME Record for www subdomain
 resource "google_dns_record_set" "frontend_www" {
-  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+  count = var.domain != "" && var.create_dns_zone && !var.use_load_balancer ? 1 : 0
 
   managed_zone = google_dns_managed_zone.main[0].name
   name         = "www.${var.domain}."
@@ -1003,9 +1017,9 @@ resource "google_dns_record_set" "frontend_www" {
   depends_on = [google_cloud_run_domain_mapping.frontend_www]
 }
 
-# DNS CNAME Record for API subdomain
+# DNS CNAME Record for API subdomain (when NOT using load balancer)
 resource "google_dns_record_set" "backend_api" {
-  count = var.domain != "" && var.create_dns_zone ? 1 : 0
+  count = var.domain != "" && var.create_dns_zone && !var.use_load_balancer ? 1 : 0
 
   managed_zone = google_dns_managed_zone.main[0].name
   name         = "${var.api_subdomain}.${var.domain}."
@@ -1015,6 +1029,357 @@ resource "google_dns_record_set" "backend_api" {
   rrdatas = ["ghs.googlehosted.com."]
 
   depends_on = [google_cloud_run_domain_mapping.backend_api]
+}
+
+# =============================================================================
+# Cloud Load Balancer Configuration (when use_load_balancer = true)
+# =============================================================================
+# 
+# This provides more reliable SSL certificate provisioning than Cloud Run
+# domain mappings. It uses:
+# - Global external Application Load Balancer
+# - Serverless NEGs pointing to Cloud Run services
+# - Certificate Manager for SSL certificates
+# - URL map for routing (api.domain -> backend, else -> frontend)
+#
+# =============================================================================
+
+# Static IP address for the load balancer
+resource "google_compute_global_address" "lb_ip" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name         = "appart-agent-lb-ip"
+  description  = "Static IP for AppArt Agent load balancer"
+  address_type = "EXTERNAL"
+
+  depends_on = [google_project_service.apis]
+}
+
+# Serverless NEG for Frontend Cloud Run service
+resource "google_compute_region_network_endpoint_group" "frontend_neg" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name                  = "appart-frontend-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+
+  cloud_run {
+    service = google_cloud_run_v2_service.frontend.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.frontend]
+}
+
+# Serverless NEG for Backend Cloud Run service
+resource "google_compute_region_network_endpoint_group" "backend_neg" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name                  = "appart-backend-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+
+  cloud_run {
+    service = google_cloud_run_v2_service.backend.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.backend]
+}
+
+# Backend service for Frontend
+resource "google_compute_backend_service" "frontend" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name                  = "appart-frontend-backend"
+  protocol              = "HTTPS"
+  port_name             = "http"
+  timeout_sec           = 30
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.frontend_neg[0].id
+  }
+
+  # Enable Cloud CDN for better performance (optional)
+  enable_cdn = false
+
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
+}
+
+# Backend service for Backend API
+resource "google_compute_backend_service" "backend" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name                  = "appart-backend-backend"
+  protocol              = "HTTPS"
+  port_name             = "http"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  # Note: timeout_sec is not supported for serverless NEGs
+
+  backend {
+    group = google_compute_region_network_endpoint_group.backend_neg[0].id
+  }
+
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
+}
+
+# URL Map - Routes traffic based on hostname
+resource "google_compute_url_map" "main" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name            = "appart-agent-url-map"
+  default_service = google_compute_backend_service.frontend[0].id
+
+  # Route api.domain.com to backend
+  host_rule {
+    hosts        = ["${var.api_subdomain}.${var.domain}"]
+    path_matcher = "api"
+  }
+
+  path_matcher {
+    name            = "api"
+    default_service = google_compute_backend_service.backend[0].id
+  }
+
+  # Route apex and www to frontend (default)
+  host_rule {
+    hosts        = [var.domain, "www.${var.domain}"]
+    path_matcher = "frontend"
+  }
+
+  path_matcher {
+    name            = "frontend"
+    default_service = google_compute_backend_service.frontend[0].id
+  }
+}
+
+# URL Map for HTTP to HTTPS redirect
+resource "google_compute_url_map" "http_redirect" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name = "appart-agent-http-redirect"
+
+  default_url_redirect {
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = false
+  }
+}
+
+# Certificate Manager DNS Authorization
+resource "google_certificate_manager_dns_authorization" "main" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name        = "appart-agent-dns-auth"
+  description = "DNS authorization for ${var.domain}"
+  domain      = var.domain
+
+  depends_on = [google_project_service.apis]
+}
+
+# Certificate Manager DNS Authorization for www
+resource "google_certificate_manager_dns_authorization" "www" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name        = "appart-agent-dns-auth-www"
+  description = "DNS authorization for www.${var.domain}"
+  domain      = "www.${var.domain}"
+
+  depends_on = [google_project_service.apis]
+}
+
+# Certificate Manager DNS Authorization for API
+resource "google_certificate_manager_dns_authorization" "api" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name        = "appart-agent-dns-auth-api"
+  description = "DNS authorization for ${var.api_subdomain}.${var.domain}"
+  domain      = "${var.api_subdomain}.${var.domain}"
+
+  depends_on = [google_project_service.apis]
+}
+
+# DNS records for certificate validation
+resource "google_dns_record_set" "cert_validation" {
+  count = var.domain != "" && var.use_load_balancer && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = google_certificate_manager_dns_authorization.main[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.main[0].dns_resource_record[0].type
+  ttl          = 300
+  rrdatas      = [google_certificate_manager_dns_authorization.main[0].dns_resource_record[0].data]
+}
+
+resource "google_dns_record_set" "cert_validation_www" {
+  count = var.domain != "" && var.use_load_balancer && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = google_certificate_manager_dns_authorization.www[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.www[0].dns_resource_record[0].type
+  ttl          = 300
+  rrdatas      = [google_certificate_manager_dns_authorization.www[0].dns_resource_record[0].data]
+}
+
+resource "google_dns_record_set" "cert_validation_api" {
+  count = var.domain != "" && var.use_load_balancer && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = google_certificate_manager_dns_authorization.api[0].dns_resource_record[0].name
+  type         = google_certificate_manager_dns_authorization.api[0].dns_resource_record[0].type
+  ttl          = 300
+  rrdatas      = [google_certificate_manager_dns_authorization.api[0].dns_resource_record[0].data]
+}
+
+# Google-managed SSL Certificate via Certificate Manager
+resource "google_certificate_manager_certificate" "main" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name        = "appart-agent-cert"
+  description = "SSL certificate for ${var.domain}"
+
+  managed {
+    domains = [
+      var.domain,
+      "www.${var.domain}",
+      "${var.api_subdomain}.${var.domain}",
+    ]
+    dns_authorizations = [
+      google_certificate_manager_dns_authorization.main[0].id,
+      google_certificate_manager_dns_authorization.www[0].id,
+      google_certificate_manager_dns_authorization.api[0].id,
+    ]
+  }
+
+  depends_on = [
+    google_dns_record_set.cert_validation,
+    google_dns_record_set.cert_validation_www,
+    google_dns_record_set.cert_validation_api,
+  ]
+}
+
+# Certificate Map
+resource "google_certificate_manager_certificate_map" "main" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name        = "appart-agent-cert-map"
+  description = "Certificate map for ${var.domain}"
+
+  depends_on = [google_project_service.apis]
+}
+
+# Certificate Map Entries
+resource "google_certificate_manager_certificate_map_entry" "apex" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name         = "appart-agent-cert-entry-apex"
+  map          = google_certificate_manager_certificate_map.main[0].name
+  certificates = [google_certificate_manager_certificate.main[0].id]
+  hostname     = var.domain
+}
+
+resource "google_certificate_manager_certificate_map_entry" "www" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name         = "appart-agent-cert-entry-www"
+  map          = google_certificate_manager_certificate_map.main[0].name
+  certificates = [google_certificate_manager_certificate.main[0].id]
+  hostname     = "www.${var.domain}"
+}
+
+resource "google_certificate_manager_certificate_map_entry" "api" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name         = "appart-agent-cert-entry-api"
+  map          = google_certificate_manager_certificate_map.main[0].name
+  certificates = [google_certificate_manager_certificate.main[0].id]
+  hostname     = "${var.api_subdomain}.${var.domain}"
+}
+
+# Target HTTPS Proxy
+resource "google_compute_target_https_proxy" "main" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name             = "appart-agent-https-proxy"
+  url_map          = google_compute_url_map.main[0].id
+  certificate_map  = "//certificatemanager.googleapis.com/${google_certificate_manager_certificate_map.main[0].id}"
+
+  depends_on = [
+    google_certificate_manager_certificate_map_entry.apex,
+    google_certificate_manager_certificate_map_entry.www,
+    google_certificate_manager_certificate_map_entry.api,
+  ]
+}
+
+# Target HTTP Proxy (for redirect)
+resource "google_compute_target_http_proxy" "redirect" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name    = "appart-agent-http-proxy"
+  url_map = google_compute_url_map.http_redirect[0].id
+}
+
+# Global Forwarding Rule for HTTPS
+resource "google_compute_global_forwarding_rule" "https" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name                  = "appart-agent-https-rule"
+  target                = google_compute_target_https_proxy.main[0].id
+  port_range            = "443"
+  ip_address            = google_compute_global_address.lb_ip[0].address
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+}
+
+# Global Forwarding Rule for HTTP (redirect to HTTPS)
+resource "google_compute_global_forwarding_rule" "http" {
+  count = var.domain != "" && var.use_load_balancer ? 1 : 0
+
+  name                  = "appart-agent-http-rule"
+  target                = google_compute_target_http_proxy.redirect[0].id
+  port_range            = "80"
+  ip_address            = google_compute_global_address.lb_ip[0].address
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+}
+
+# =============================================================================
+# DNS Records for Load Balancer
+# =============================================================================
+
+# DNS A Record for apex domain (pointing to load balancer IP)
+resource "google_dns_record_set" "lb_apex" {
+  count = var.domain != "" && var.use_load_balancer && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "${var.domain}."
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_global_address.lb_ip[0].address]
+}
+
+# DNS A Record for www subdomain (pointing to load balancer IP)
+resource "google_dns_record_set" "lb_www" {
+  count = var.domain != "" && var.use_load_balancer && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "www.${var.domain}."
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_global_address.lb_ip[0].address]
+}
+
+# DNS A Record for API subdomain (pointing to load balancer IP)
+resource "google_dns_record_set" "lb_api" {
+  count = var.domain != "" && var.use_load_balancer && var.create_dns_zone ? 1 : 0
+
+  managed_zone = google_dns_managed_zone.main[0].name
+  name         = "${var.api_subdomain}.${var.domain}."
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_global_address.lb_ip[0].address]
 }
 
 # =============================================================================
@@ -1111,18 +1476,37 @@ output "dns_records_required" {
     apex_domain = {
       type  = "A"
       name  = var.domain
-      value = "See domain mapping status for IP addresses"
-      note  = "Run: gcloud run domain-mappings describe --domain=${var.domain} --region=${var.region}"
+      value = var.use_load_balancer ? "Load balancer IP (see lb_ip output)" : "See domain mapping status for IP addresses"
+      note  = var.use_load_balancer ? "Using load balancer" : "Run: gcloud run domain-mappings describe --domain=${var.domain} --region=${var.region}"
     }
     www = {
-      type  = "CNAME"
+      type  = "A"
       name  = "www.${var.domain}"
-      value = "ghs.googlehosted.com."
+      value = var.use_load_balancer ? "Load balancer IP (see lb_ip output)" : "ghs.googlehosted.com."
     }
     api = {
-      type  = "CNAME"
+      type  = "A"
       name  = "${var.api_subdomain}.${var.domain}"
-      value = "ghs.googlehosted.com."
+      value = var.use_load_balancer ? "Load balancer IP (see lb_ip output)" : "ghs.googlehosted.com."
     }
   } : null
+}
+
+# =============================================================================
+# Load Balancer Outputs
+# =============================================================================
+
+output "use_load_balancer" {
+  description = "Whether using Cloud Load Balancer (true) or Cloud Run domain mappings (false)"
+  value       = var.use_load_balancer
+}
+
+output "lb_ip" {
+  description = "Load balancer static IP address"
+  value       = var.domain != "" && var.use_load_balancer ? google_compute_global_address.lb_ip[0].address : "Not using load balancer"
+}
+
+output "certificate_status" {
+  description = "SSL certificate status check command"
+  value       = var.domain != "" && var.use_load_balancer ? "gcloud certificate-manager certificates describe appart-agent-cert --location=global" : "Not using Certificate Manager"
 }

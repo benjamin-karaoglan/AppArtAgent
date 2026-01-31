@@ -168,7 +168,7 @@ function NewPropertyContent() {
                         }}
                         onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                         className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="Start typing address... (e.g., 56 notre dame)"
+                        placeholder="Start typing address..."
                         autoComplete="off"
                       />
                       <input type="hidden" {...register('address', { required: 'Address is required' })} />
@@ -204,7 +204,7 @@ function NewPropertyContent() {
                     )}
                     {showSuggestions && addressQuery.length >= 2 && suggestions.length === 0 && !loadingSuggestions && (
                       <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-3 px-4 text-sm text-gray-500">
-                        No addresses found in Paris. Try typing the street name (e.g., &quot;notre dame des champs&quot;)
+                        No addresses found. Please try a different search term.
                       </div>
                     )}
                   </div>

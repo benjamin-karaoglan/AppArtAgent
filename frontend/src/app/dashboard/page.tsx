@@ -9,6 +9,18 @@ import { api } from '@/lib/api';
 import { Plus, Home, FileText, TrendingUp, Trash2 } from 'lucide-react';
 import type { Property } from '@/types';
 
+interface UserStats {
+  documents_analyzed_count: number;
+  total_properties: number;
+}
+
+interface DVFStats {
+  total_records: number;
+  formatted_count: string;
+  total_imports: number;
+  last_updated: string | null;
+}
+
 function DashboardContent() {
   const { user } = useAuth();
   const router = useRouter();
@@ -16,9 +28,13 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [deletePropertyId, setDeletePropertyId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [dvfStats, setDvfStats] = useState<DVFStats | null>(null);
 
   useEffect(() => {
     loadProperties();
+    loadUserStats();
+    loadDvfStats();
   }, []);
 
   const loadProperties = async () => {
@@ -29,6 +45,24 @@ function DashboardContent() {
       console.error('Failed to load properties:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserStats = async () => {
+    try {
+      const response = await api.get('/api/users/stats');
+      setUserStats(response.data);
+    } catch (error) {
+      console.error('Failed to load user stats:', error);
+    }
+  };
+
+  const loadDvfStats = async () => {
+    try {
+      const response = await api.get('/api/properties/dvf-stats');
+      setDvfStats(response.data);
+    } catch (error) {
+      console.error('Failed to load DVF stats:', error);
     }
   };
 
@@ -109,7 +143,9 @@ function DashboardContent() {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         Documents Analyzed
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">0</dd>
+                      <dd className="text-3xl font-semibold text-gray-900">
+                        {userStats?.documents_analyzed_count ?? 0}
+                      </dd>
                     </dl>
                   </div>
                 </div>
@@ -127,7 +163,9 @@ function DashboardContent() {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         DVF Records Available
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">1.36M</dd>
+                      <dd className="text-3xl font-semibold text-gray-900">
+                        {dvfStats?.formatted_count ?? '0'}
+                      </dd>
                     </dl>
                   </div>
                 </div>

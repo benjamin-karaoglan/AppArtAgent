@@ -439,8 +439,16 @@ class StorageService:
         backend_type = settings.STORAGE_BACKEND.lower()
 
         if backend_type == "gcs":
-            self._backend = GCSBackend()
-            logger.info("Using GCS storage backend")
+            try:
+                self._backend = GCSBackend()
+                logger.info("Using GCS storage backend")
+            except ImportError as e:
+                logger.warning(
+                    f"GCS storage requested but google-cloud-storage not available: {e}. "
+                    "Falling back to MinIO. To use GCS, install google-cloud-storage package."
+                )
+                self._backend = MinIOBackend()
+                logger.info("Using MinIO storage backend (fallback from GCS)")
         else:
             self._backend = MinIOBackend()
             logger.info("Using MinIO storage backend")

@@ -19,6 +19,7 @@ class User(Base):
     full_name = Column(String)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    documents_analyzed_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
