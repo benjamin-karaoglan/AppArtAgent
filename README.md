@@ -6,11 +6,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/deploy.yml">
-    <img src="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/deploy.yml/badge.svg" alt="Build Status">
+  <a href="https://github.com/benjamin-karaoglan/AppArtAgent/actions/workflows/deploy.yml">
+    <img src="https://github.com/benjamin-karaoglan/AppArtAgent/actions/workflows/deploy.yml/badge.svg" alt="Build Status">
   </a>
-  <a href="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/docs.yml">
-    <img src="https://github.com/benjamin-karaoglan/appart-agent/actions/workflows/docs.yml/badge.svg" alt="Documentation">
+  <a href="https://github.com/benjamin-karaoglan/AppArtAgent/actions/workflows/docs.yml">
+    <img src="https://github.com/benjamin-karaoglan/AppArtAgent/actions/workflows/docs.yml/badge.svg" alt="Documentation">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Custom%20NC-blue.svg" alt="License">
@@ -68,8 +68,8 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 
 ```bash
 # Clone the repository
-git clone https://github.com/benjamin-karaoglan/appart-agent.git
-cd appart-agent
+git clone https://github.com/benjamin-karaoglan/appartment-agent.git
+cd appartment-agent
 
 # Configure environment
 cp .env.example .env
@@ -104,7 +104,7 @@ docker-compose exec backend alembic upgrade head
 ## Project Structure
 
 ```
-appart-agent/
+appartment-agent/
 ├── backend/                 # FastAPI backend
 │   ├── app/
 │   │   ├── api/            # REST API endpoints
@@ -127,7 +127,7 @@ appart-agent/
 
 ## Documentation
 
-Full documentation is available at **[benjamin-karaoglan.github.io/appart-agent](https://benjamin-karaoglan.github.io/appart-agent)** or locally in the `docs/` directory.
+Full documentation is available at **[benjamin-karaoglan.github.io/appartment-agent](https://benjamin-karaoglan.github.io/appartment-agent)** or locally in the `docs/` directory.
 
 | Section | Description |
 |---------|-------------|
