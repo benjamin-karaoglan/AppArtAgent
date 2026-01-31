@@ -1,6 +1,6 @@
 # Database & Models
 
-Appart Agent uses PostgreSQL with SQLAlchemy ORM for data persistence.
+AppArt Agent uses PostgreSQL with SQLAlchemy ORM for data persistence.
 
 ## Database Connection
 

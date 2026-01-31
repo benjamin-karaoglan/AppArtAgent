@@ -1,6 +1,6 @@
 # DVF Data
 
-DVF (Demandes de Valeurs Foncières) is France's open dataset of real estate transactions. Appart Agent uses this data for price analysis and market trends.
+DVF (Demandes de Valeurs Foncières) is France's open dataset of real estate transactions. AppArt Agent uses this data for price analysis and market trends.
 
 ## Overview
 

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#ffffff"/>
+  
+  <!-- House outline (centered) -->
+  <g transform="translate(480, 120)">
+    <path d="M120 0L0 100h30v130h180V100h30L120 0z" stroke="#3B82F6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Door -->
+    <path d="M80 230V165h80v65" stroke="#3B82F6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  
+  <!-- App name -->
+  <text x="600" y="470" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#1E293B" text-anchor="middle">AppArt Agent</text>
+  
+  <!-- Tagline -->
+  <text x="600" y="540" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#64748B" text-anchor="middle">Smart Property Decisions</text>
+</svg>

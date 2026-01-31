@@ -1,5 +1,5 @@
 """
-Prompts management module for the Appart Agent.
+Prompts management module for the AppArt Agent.
 
 This module provides versioned prompts for all LLM interactions.
 Each prompt is stored as a markdown file for better readability and maintainability.

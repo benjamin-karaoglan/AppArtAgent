@@ -1,10 +1,10 @@
 # Getting Started
 
-This section covers everything you need to get Appart Agent running on your machine.
+This section covers everything you need to get AppArt Agent running on your machine.
 
 ## Overview
 
-Appart Agent can be run in two ways:
+AppArt Agent can be run in two ways:
 
 1. **Docker (Recommended)**: Full stack with all services pre-configured
 2. **Local Development**: Individual services for development and debugging

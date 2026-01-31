@@ -1,4 +1,4 @@
-# Appart Agent Backend
+# AppArt Agent Backend
 
 AI-powered apartment purchasing decision platform for France - Backend API
 

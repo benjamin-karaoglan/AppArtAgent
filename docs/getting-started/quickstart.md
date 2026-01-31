@@ -1,6 +1,6 @@
 # Quick Start
 
-Get Appart Agent running in 5 minutes using Docker.
+Get AppArt Agent running in 5 minutes using Docker.
 
 ## Prerequisites
 

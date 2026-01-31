@@ -1,6 +1,6 @@
 # Deployment
 
-This section covers deploying Appart Agent to various environments.
+This section covers deploying AppArt Agent to various environments.
 
 ## Deployment Options
 

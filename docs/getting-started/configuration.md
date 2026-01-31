@@ -1,6 +1,6 @@
 # Configuration
 
-Appart Agent uses environment variables for configuration. This guide covers all available settings.
+AppArt Agent uses environment variables for configuration. This guide covers all available settings.
 
 ## Environment Files
 

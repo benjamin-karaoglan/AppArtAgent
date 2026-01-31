@@ -1,6 +1,6 @@
 # Local Setup
 
-Set up a local development environment for Appart Agent.
+Set up a local development environment for AppArt Agent.
 
 ## Option 1: Docker (Recommended)
 

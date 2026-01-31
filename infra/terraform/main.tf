@@ -63,9 +63,15 @@ variable "domain" {
 }
 
 variable "create_dns_zone" {
-  description = "Whether to create a Cloud DNS managed zone for the domain. Set to false if DNS is managed externally."
+  description = "Whether to create/manage a Cloud DNS zone. Set to false if using external DNS (Cloudflare, etc)."
   type        = bool
   default     = true
+}
+
+variable "dns_zone_name" {
+  description = "Name of the Cloud DNS zone. If purchased via Cloud Domains, check: gcloud dns managed-zones list"
+  type        = string
+  default     = "" # Auto-generates from domain if empty (e.g., appartagent-com)
 }
 
 variable "api_subdomain" {
@@ -195,25 +201,25 @@ resource "google_vpc_access_connector" "connector" {
 # Backend Service Account
 resource "google_service_account" "backend" {
   account_id   = "appart-backend"
-  display_name = "Appart Agent Backend Service"
+  display_name = "AppArt Agent Backend Service"
 }
 
 # Frontend Service Account
 resource "google_service_account" "frontend" {
   account_id   = "appart-frontend"
-  display_name = "Appart Agent Frontend Service"
+  display_name = "AppArt Agent Frontend Service"
 }
 
 # Cloud Build Service Account
 resource "google_service_account" "cloudbuild" {
   account_id   = "appart-cloudbuild"
-  display_name = "Appart Agent Cloud Build"
+  display_name = "AppArt Agent Cloud Build"
 }
 
 # GitHub Actions Deployer Service Account
 resource "google_service_account" "deployer" {
   account_id   = "appart-deployer"
-  display_name = "Appart Agent GitHub Actions Deployer"
+  display_name = "AppArt Agent GitHub Actions Deployer"
 }
 
 # =============================================================================
@@ -288,7 +294,7 @@ resource "google_project_iam_member" "deployer_permissions" {
 resource "google_artifact_registry_repository" "docker" {
   location      = var.region
   repository_id = "appart-agent"
-  description   = "Docker images for Appart Agent"
+  description   = "Docker images for AppArt Agent"
   format        = "DOCKER"
 
   depends_on = [google_project_service.apis]
@@ -388,6 +394,9 @@ locals {
     "https://www.${var.domain}",
     "http://localhost:3000", # Local development
   ] : ["*"]
+
+  # DNS zone name - use provided name or derive from domain (appartagent.com -> appartagent-com)
+  dns_zone_name = var.dns_zone_name != "" ? var.dns_zone_name : replace(var.domain, ".", "-")
 }
 
 resource "google_storage_bucket" "documents" {
@@ -395,6 +404,7 @@ resource "google_storage_bucket" "documents" {
   location = var.region
 
   uniform_bucket_level_access = true
+  force_destroy               = true # Allow deletion even with objects
 
   cors {
     origin          = local.cors_origins
@@ -419,6 +429,7 @@ resource "google_storage_bucket" "photos" {
   location = var.region
 
   uniform_bucket_level_access = true
+  force_destroy               = true # Allow deletion even with objects
 
   cors {
     origin          = local.cors_origins
@@ -853,10 +864,13 @@ resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
 # =============================================================================
 
 # Cloud DNS Managed Zone
+# If you purchased the domain via Cloud Domains, a zone already exists.
+# Import it with: terraform import 'google_dns_managed_zone.main[0]' projects/PROJECT_ID/managedZones/ZONE_NAME
+# Find zone name: gcloud dns managed-zones list
 resource "google_dns_managed_zone" "main" {
   count = var.domain != "" && var.create_dns_zone ? 1 : 0
 
-  name        = "appartagent-zone"
+  name        = local.dns_zone_name
   dns_name    = "${var.domain}."
   description = "DNS zone for ${var.domain}"
 
@@ -865,6 +879,11 @@ resource "google_dns_managed_zone" "main" {
   }
 
   depends_on = [google_project_service.apis]
+
+  lifecycle {
+    # Prevent recreation if zone was created by Cloud Domains
+    ignore_changes = [description, dnssec_config]
+  }
 }
 
 # Cloud Run Domain Mapping - Frontend (apex domain, e.g., appartagent.com)
@@ -1039,8 +1058,13 @@ output "backend_custom_url" {
   value       = var.domain != "" ? "https://${var.api_subdomain}.${var.domain}" : google_cloud_run_v2_service.backend.uri
 }
 
+output "dns_zone_name" {
+  description = "Cloud DNS zone name (for importing existing zones)"
+  value       = var.domain != "" && var.create_dns_zone ? local.dns_zone_name : "Not managed by Terraform"
+}
+
 output "dns_nameservers" {
-  description = "Cloud DNS nameservers - configure these at your domain registrar"
+  description = "Cloud DNS nameservers (already configured if purchased via Cloud Domains)"
   value       = var.domain != "" && var.create_dns_zone ? google_dns_managed_zone.main[0].name_servers : []
 }
 

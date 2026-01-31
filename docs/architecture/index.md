@@ -1,10 +1,10 @@
 # Architecture
 
-This section covers the system design and architecture of Appart Agent.
+This section covers the system design and architecture of AppArt Agent.
 
 ## Overview
 
-Appart Agent follows a modern microservices architecture with clear separation of concerns:
+AppArt Agent follows a modern microservices architecture with clear separation of concerns:
 
 - **Frontend**: Next.js 14 with App Router
 - **Backend**: FastAPI with async processing

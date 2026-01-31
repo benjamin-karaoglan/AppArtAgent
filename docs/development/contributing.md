@@ -1,6 +1,6 @@
 # Contributing
 
-Guidelines for contributing to Appart Agent.
+Guidelines for contributing to AppArt Agent.
 
 ## Getting Started
 

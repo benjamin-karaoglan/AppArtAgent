@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Home, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
+import AppArtLogo from './AppArtLogo';
 
 export default function Header() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -13,7 +14,7 @@ export default function Header() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center">
-              <Home className="h-6 w-6 text-blue-600" />
+              <AppArtLogo size={36} className="text-blue-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">AppArt Agent</span>
             </Link>
 

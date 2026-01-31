@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { Home, FileText, Image as ImageIcon, TrendingUp, Shield, Calculator } from 'lucide-react'
+import { FileText, Image as ImageIcon, TrendingUp, Shield, Calculator } from 'lucide-react'
 import Header from '@/components/Header'
+import AppArtLogo from '@/components/AppArtLogo'
 
 export default function HomePage() {
   return (
@@ -53,7 +54,7 @@ export default function HomePage() {
             description="Upload photos and use AI to visualize renovation potential and style transformations."
           />
           <FeatureCard
-            icon={<Home className="w-12 h-12 text-primary-600" />}
+            icon={<AppArtLogo size={48} className="text-primary-600" />}
             title="Investment Score"
             description="Get a comprehensive investment score and data-driven recommendations for each property."
           />

@@ -1,6 +1,6 @@
 # Testing
 
-Guide to running and writing tests for Appart Agent.
+Guide to running and writing tests for AppArt Agent.
 
 ## Overview
 
@@ -210,7 +210,7 @@ import { Header } from '@/components/Header';
 describe('Header', () => {
   it('renders logo', () => {
     render(<Header />);
-    expect(screen.getByText('Appart Agent')).toBeInTheDocument();
+    expect(screen.getByText('AppArt Agent')).toBeInTheDocument();
   });
 
   it('shows login when not authenticated', () => {

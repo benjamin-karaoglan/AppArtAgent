@@ -166,7 +166,7 @@ test_reload() {
 # Function to show help
 help() {
     cat << EOF
-Development Helper Script for Appart Agent
+Development Helper Script for AppArt Agent
 
 Usage: ./dev.sh [command] [options]
 

@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Deploy Appart Agent locally using Docker Compose.
+Deploy AppArt Agent locally using Docker Compose.
 
 ## Overview
 

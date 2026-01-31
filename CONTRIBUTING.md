@@ -1,6 +1,6 @@
-# Contributing to Appart Agent
+# Contributing to AppArt Agent
 
-Thank you for your interest in contributing to Appart Agent! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to AppArt Agent! This document provides guidelines and information for contributors.
 
 ## Quick Links
 

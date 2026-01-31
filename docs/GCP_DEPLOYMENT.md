@@ -1,6 +1,6 @@
 # GCP Deployment Guide
 
-This guide covers deploying Appart Agent to Google Cloud Platform.
+This guide covers deploying AppArt Agent to Google Cloud Platform.
 
 ## Architecture Overview
 
@@ -109,7 +109,7 @@ gcloud services enable \
 ```bash
 # Create service account
 gcloud iam service-accounts create appart-deployer \
-  --display-name="Appart Agent Deployer"
+  --display-name="AppArt Agent Deployer"
 
 # Grant permissions
 gcloud projects add-iam-policy-binding $PROJECT_ID \

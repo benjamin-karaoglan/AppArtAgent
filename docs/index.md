@@ -1,8 +1,8 @@
-# Appart Agent
+# AppArt Agent
 
 **AI-powered apartment purchasing decision platform for France**
 
-Appart Agent helps buyers make informed real estate decisions by combining French property transaction data (DVF) with AI-powered document analysis and visualization tools.
+AppArt Agent helps buyers make informed real estate decisions by combining French property transaction data (DVF) with AI-powered document analysis and visualization tools.
 
 ## Features at a Glance
 
