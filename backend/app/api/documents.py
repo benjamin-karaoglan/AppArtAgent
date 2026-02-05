@@ -122,9 +122,19 @@ async def upload_document(
     # Calculate file hash for deduplication
     file_hash = hashlib.sha256(content).hexdigest()
 
-    # Create document record first (to get ID for storage path)
+    # Get user UUID for path structure
+    user = db.query(User).filter(User.id == int(current_user)).first()
+    if not user or not user.uuid:
+        raise HTTPException(status_code=500, detail="User UUID not found")
+    user_uuid = user.uuid
+
+    # Create document record first (to get UUID for storage path)
     try:
+        # Generate UUID for document path
+        doc_uuid = str(uuid.uuid4())
+
         document = Document(
+            uuid=doc_uuid,
             user_id=int(current_user),
             property_id=property_id,
             filename=file.filename,
@@ -139,20 +149,20 @@ async def upload_document(
         db.add(document)
         db.flush()  # Get the document ID
         document_id = document.id
-        logger.info(f"Document record created with ID: {document_id}")
+        logger.info(f"Document record created with ID: {document_id}, UUID: {doc_uuid}")
 
         # Upload to storage service
         storage_service = get_storage_service()
-        # Include user_id in path for proper organization: user_id/documents/doc_id/filename
-        storage_key = f"{current_user}/documents/{document_id}/{file.filename}"
-        
+        # Use UUIDs in path: {user_uuid}/documents/{doc_uuid}/{filename}
+        storage_key = f"{user_uuid}/documents/{doc_uuid}/{file.filename}"
+
         storage_service.upload_file(
             file_data=content,
             filename=storage_key,
             content_type=file.content_type or "application/octet-stream",
             metadata={
-                "document_id": str(document_id),
-                "user_id": str(current_user),
+                "document_uuid": doc_uuid,
+                "user_uuid": user_uuid,
                 "category": document_category,
                 "subcategory": document_subcategory or ""
             }
@@ -684,13 +694,23 @@ async def upload_document_async(
     # Calculate file hash
     file_hash = hashlib.sha256(content).hexdigest()
 
-    # Create document record first (to get ID)
+    # Get user UUID for path structure
+    user = db.query(User).filter(User.id == int(current_user)).first()
+    if not user or not user.uuid:
+        raise HTTPException(status_code=500, detail="User UUID not found")
+    user_uuid = user.uuid
+
+    # Create document record first (to get UUID)
     try:
+        # Generate UUID for document path
+        doc_uuid = str(uuid.uuid4())
+
         document = Document(
+            uuid=doc_uuid,
             user_id=int(current_user),
             property_id=property_id,
             filename=file.filename,
-            file_path="",  # Will be updated after MinIO upload
+            file_path="",  # Will be updated after storage upload
             file_type=file_ext,
             document_category=document_category,
             document_subcategory=document_subcategory,
@@ -702,31 +722,31 @@ async def upload_document_async(
         db.flush()  # Get the document ID
         document_id = document.id
 
-        logger.info(f"Document record created with ID: {document_id}")
+        logger.info(f"Document record created with ID: {document_id}, UUID: {doc_uuid}")
 
-        # Upload to MinIO
-        minio_service = get_minio_service()
-        # Include user_id in path for proper organization: user_id/documents/doc_id/filename
-        minio_key = f"{current_user}/documents/{document_id}/{file.filename}"
+        # Upload to storage
+        storage_service = get_storage_service()
+        # Use UUIDs in path: {user_uuid}/documents/{doc_uuid}/{filename}
+        storage_key = f"{user_uuid}/documents/{doc_uuid}/{file.filename}"
 
-        minio_service.upload_file(
+        storage_service.upload_file(
             file_data=content,
-            object_name=minio_key,
+            filename=storage_key,
             content_type=file.content_type or "application/octet-stream",
             metadata={
-                "document_id": str(document_id),
-                "user_id": str(current_user),
+                "document_uuid": doc_uuid,
+                "user_uuid": user_uuid,
                 "category": document_category,
                 "subcategory": document_subcategory or ""
             }
         )
 
-        logger.info(f"File uploaded to MinIO: {minio_key}")
+        logger.info(f"File uploaded to storage: {storage_key}")
 
         # Update document with storage info
-        document.storage_key = minio_key
-        document.storage_bucket = settings.MINIO_BUCKET
-        document.file_path = f"storage://{settings.MINIO_BUCKET}/{minio_key}"
+        document.storage_key = storage_key
+        document.storage_bucket = storage_service.bucket
+        document.file_path = f"storage://{storage_service.bucket}/{storage_key}"
 
         # Document will be processed via async_processor for bulk uploads
         # or synchronously via doc_parser for single uploads
@@ -852,12 +872,18 @@ async def bulk_upload_documents(
             detail="Property not found"
         )
 
+    # Get user UUID for path structure
+    user = db.query(User).filter(User.id == int(current_user)).first()
+    if not user or not user.uuid:
+        raise HTTPException(status_code=500, detail="User UUID not found")
+    user_uuid = user.uuid
+
     uploaded_documents = []
     document_uploads_info = []
 
     try:
-        # Step 1: Upload all files to MinIO and create document records
-        minio_service = get_minio_service()
+        # Step 1: Upload all files to storage and create document records
+        storage_service = get_storage_service()
 
         for file in files:
             # Validate file
@@ -871,8 +897,12 @@ async def bulk_upload_documents(
             file_size = len(content)
             file_hash = hashlib.sha256(content).hexdigest()
 
+            # Generate UUID for document path
+            doc_uuid = str(uuid.uuid4())
+
             # Create document record
             document = Document(
+                uuid=doc_uuid,
                 user_id=int(current_user),
                 property_id=property_id,
                 filename=file.filename,
@@ -886,33 +916,33 @@ async def bulk_upload_documents(
             db.add(document)
             db.flush()  # Get document ID
 
-            # Upload to MinIO
-            # Include user_id in path for proper organization: user_id/documents/doc_id/filename
-            minio_key = f"{current_user}/documents/{document.id}/{file.filename}"
-            minio_service.upload_file(
+            # Upload to storage with UUIDs in path: {user_uuid}/documents/{doc_uuid}/{filename}
+            storage_key = f"{user_uuid}/documents/{doc_uuid}/{file.filename}"
+            storage_service.upload_file(
                 file_data=content,
-                object_name=minio_key,
+                filename=storage_key,
                 content_type=file.content_type or "application/octet-stream",
                 metadata={
-                    "document_id": str(document.id),
-                    "user_id": str(current_user),
+                    "document_uuid": doc_uuid,
+                    "user_uuid": user_uuid,
                     "property_id": str(property_id)
                 }
             )
 
             # Update document
-            document.storage_key = minio_key
-            document.storage_bucket = settings.MINIO_BUCKET
-            document.file_path = f"storage://{settings.MINIO_BUCKET}/{minio_key}"
+            document.storage_key = storage_key
+            document.storage_bucket = storage_service.bucket
+            document.file_path = f"storage://{storage_service.bucket}/{storage_key}"
 
             uploaded_documents.append(document)
             document_uploads_info.append({
                 "document_id": document.id,
-                "minio_key": minio_key,
+                "document_uuid": doc_uuid,
+                "storage_key": storage_key,
                 "filename": file.filename
             })
 
-            logger.info(f"Uploaded {file.filename} to MinIO: {minio_key}")
+            logger.info(f"Uploaded {file.filename} to storage: {storage_key}")
 
         db.commit()
 
@@ -920,7 +950,6 @@ async def bulk_upload_documents(
         if len(uploaded_documents) > 0:
             try:
                 from app.services.documents import get_bulk_processor
-                import uuid
 
                 # Generate workflow ID
                 workflow_id = f"bulk-{property_id}-{int(datetime.now().timestamp())}-{uuid.uuid4().hex[:8]}"
