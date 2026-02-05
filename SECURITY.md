@@ -17,7 +17,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 
 Instead, please email us at:
 
-📧 **benkaraoglan2@gmail.com**
+📧 **benjamin.karaoglan@appartagent.com**
 
 ### What to Include
 

@@ -265,7 +265,7 @@ We welcome contributions! Please see our [Contributing Guide](./docs/development
 
 ## Security
 
-If you discover a security vulnerability, please email [benkaraoglan2@gmail.com](mailto:benkaraoglan2@gmail.com) instead of opening a public issue.
+If you discover a security vulnerability, please email [benjamin.karaoglan@appartagent.com](mailto:benjamin.karaoglan@appartagent.com) instead of opening a public issue.
 
 ## License
 
@@ -282,7 +282,7 @@ This project is licensed under a **Custom Non-Commercial License**.
 
 For commercial use, enterprise deployments, or SaaS applications, please contact for a commercial license:
 
-📧 **[benkaraoglan2@gmail.com](mailto:benkaraoglan2@gmail.com)**
+📧 **[benjamin.karaoglan@appartagent.com](mailto:benjamin.karaoglan@appartagent.com)**
 
 Commercial licenses include:
 - Full commercial usage rights
