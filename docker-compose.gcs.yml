@@ -1,18 +1,36 @@
 # Docker Compose override for using Google Cloud Storage instead of MinIO
-# 
+#
 # Usage:
 #   docker-compose -f docker-compose.yml -f docker-compose.gcs.yml up -d backend frontend db redis
 #   OR
 #   ./dev.sh start-gcs
 #
 # Requirements:
-#   1. Set GCS_DOCUMENTS_BUCKET and GCS_PHOTOS_BUCKET environment variables
-#   2. Mount your Google Cloud credentials (Application Default Credentials)
+#   1. Set GCS_DOCUMENTS_BUCKET and GCS_PHOTOS_BUCKET in your .env
+#   2. Setup Application Default Credentials (ADC)
 #
-# Example:
-#   export GCS_DOCUMENTS_BUCKET=my-project-documents
-#   export GCS_PHOTOS_BUCKET=my-project-photos
-#   export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
+# Recommended: Use Service Account Impersonation
+# =============================================
+# This approach gives you the same permissions as the production service account
+# without needing to download key files.
+#
+#   # 1. Grant yourself permission to impersonate (one-time)
+#   gcloud iam service-accounts add-iam-policy-binding \
+#     appart-backend@YOUR_PROJECT.iam.gserviceaccount.com \
+#     --member="user:YOUR_EMAIL@gmail.com" \
+#     --role="roles/iam.serviceAccountTokenCreator" \
+#     --project=YOUR_PROJECT
+#
+#   # 2. Login with impersonation
+#   gcloud auth application-default login \
+#     --impersonate-service-account=appart-backend@YOUR_PROJECT.iam.gserviceaccount.com
+#
+#   # 3. Start services
+#   ./dev.sh start-gcs
+#
+# Alternative: Direct ADC (uses your personal Google account permissions)
+# =======================================================================
+#   gcloud auth application-default login
 #   ./dev.sh start-gcs
 
 services:

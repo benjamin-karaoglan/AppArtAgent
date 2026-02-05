@@ -186,16 +186,51 @@ pnpm dev
 ## Environment Variables
 
 <details>
-<summary><b>Backend (.env)</b></summary>
+<summary><b>Backend (.env) - Local with MinIO</b></summary>
 
 ```bash
 DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
 GOOGLE_CLOUD_API_KEY=your_google_api_key
 SECRET_KEY=your-secret-key-at-least-32-characters
+STORAGE_BACKEND=minio
 MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 ```
+</details>
+
+<details>
+<summary><b>Backend (.env) - Local with GCS (Production Parity)</b></summary>
+
+For testing with real GCS buckets and Vertex AI, use service account impersonation:
+
+```bash
+# One-time setup: Grant impersonation permission
+gcloud iam service-accounts add-iam-policy-binding \
+  appart-backend@YOUR_PROJECT.iam.gserviceaccount.com \
+  --member="user:YOUR_EMAIL@gmail.com" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=YOUR_PROJECT
+
+# Login with impersonation
+gcloud auth application-default login \
+  --impersonate-service-account=appart-backend@YOUR_PROJECT.iam.gserviceaccount.com
+```
+
+Then configure `.env`:
+
+```bash
+DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
+SECRET_KEY=your-secret-key-at-least-32-characters
+STORAGE_BACKEND=gcs
+GCS_DOCUMENTS_BUCKET=your-project-documents
+GCS_PHOTOS_BUCKET=your-project-photos
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=europe-west1
+GEMINI_USE_VERTEXAI=true
+```
+
+Start with: `./dev.sh start-gcs`
 </details>
 
 <details>
