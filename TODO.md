@@ -26,3 +26,7 @@
 
 - [] Revise naming
 - [] Import dvf data to CloudSQL
+
+### Various:
+
+- [] Update email to use gmail workspace domain
