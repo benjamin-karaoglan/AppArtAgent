@@ -19,6 +19,33 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _repair_json(json_str: str) -> str:
+    """Attempt to repair truncated or malformed JSON from LLM responses."""
+    # Count brackets to find imbalance
+    open_braces = json_str.count('{') - json_str.count('}')
+    open_brackets = json_str.count('[') - json_str.count(']')
+
+    # Check for unterminated string (odd number of unescaped quotes)
+    in_string = False
+    i = 0
+    while i < len(json_str):
+        if json_str[i] == '"' and (i == 0 or json_str[i-1] != '\\'):
+            in_string = not in_string
+        i += 1
+
+    # If we're inside a string, close it
+    if in_string:
+        json_str += '"'
+
+    # Close any trailing comma before adding brackets
+    json_str = re.sub(r',\s*$', '', json_str)
+
+    # Close open brackets/braces
+    json_str += ']' * open_brackets + '}' * open_braces
+
+    return json_str
+
+
 def _extract_json(response_text: str) -> str:
     """Extract and clean JSON from LLM response."""
     # Find JSON start
@@ -40,7 +67,10 @@ def _extract_json(response_text: str) -> str:
     # Remove trailing commas
     response_text = re.sub(r',(\s*[}\]])', r'\1', response_text)
 
-    return response_text.strip()
+    # Attempt to repair truncated JSON
+    response_text = _repair_json(response_text.strip())
+
+    return response_text
 
 
 class DocumentProcessor:

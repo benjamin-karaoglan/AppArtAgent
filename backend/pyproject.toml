@@ -47,7 +47,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "grandalf>=0.8",
     "google-genai>=1.0.0",
-    "logfire>=4.19.0",
+    "logfire[fastapi,sqlalchemy]>=4.19.0",
     "langchain-google-genai>=4.2.0",
     # Google Cloud (for GCP deployment)
     "google-cloud-storage>=2.14.0",
