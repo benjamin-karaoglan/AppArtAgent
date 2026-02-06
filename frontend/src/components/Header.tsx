@@ -22,7 +22,7 @@ export default function Header() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center">
+            <Link href="/" className="flex items-center">
               <AppArtLogo size={36} className="text-primary-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">{t('appName')}</span>
             </Link>
