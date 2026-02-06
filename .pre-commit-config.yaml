@@ -1,0 +1,117 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# Fix all issues: pre-commit run --all-files (auto-fixes are enabled)
+
+repos:
+  # =============================================================================
+  # General hooks (auto-fix enabled)
+  # =============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+
+  # =============================================================================
+  # Secret detection
+  # =============================================================================
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  # =============================================================================
+  # Python - Ruff (linting + formatting) - AUTO-FIX ENABLED
+  # =============================================================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]  # Auto-fix all fixable issues
+        files: ^backend/
+      - id: ruff-format  # Auto-formats Python code
+        files: ^backend/
+
+  # =============================================================================
+  # Python - Type checking with mypy (no auto-fix available)
+  # =============================================================================
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^backend/
+        args: [--ignore-missing-imports, --no-strict-optional]
+        additional_dependencies:
+          - pydantic>=2.0
+          - fastapi>=0.104.0
+          - sqlalchemy>=2.0
+
+  # =============================================================================
+  # Python - Security linting with bandit (no auto-fix available)
+  # =============================================================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml, -r]
+        files: ^backend/
+        additional_dependencies: ["bandit[toml]"]
+
+  # =============================================================================
+  # Frontend - ESLint & TypeScript - AUTO-FIX ENABLED
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (auto-fix)
+        entry: bash -c 'cd frontend && pnpm exec next lint --fix'
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+
+      - id: tsc
+        name: tsc (type check)
+        entry: bash -c 'cd frontend && pnpm exec tsc --noEmit'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+
+  # =============================================================================
+  # Markdown - lint - AUTO-FIX ENABLED
+  # =============================================================================
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.17.1
+    hooks:
+      - id: markdownlint-cli2
+        args: [--fix]
+
+  # =============================================================================
+  # Commit message linting (conventional commits)
+  # =============================================================================
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]
+
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [eslint, tsc]
+  submodules: false

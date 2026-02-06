@@ -54,20 +54,20 @@ Follow coding standards (see below).
 ### 3. Test Changes
 
 ```bash
+# Run pre-commit hooks (linting, formatting, type checks)
+pre-commit run --all-files
+
 # Backend tests
 docker-compose exec backend pytest
 
 # Frontend tests
 docker-compose exec frontend pnpm test
-
-# Type checking
-docker-compose exec backend mypy app/
-docker-compose exec frontend pnpm type-check
 ```
 
 ### 4. Commit Changes
 
-Write clear commit messages:
+Write clear commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) format.
+Pre-commit hooks will validate your commit message format.
 
 ```bash
 git add .
@@ -80,7 +80,7 @@ git commit -m "feat: add PDF export functionality
 
 #### Commit Message Format
 
-```
+```text
 <type>: <description>
 
 [optional body]
@@ -88,14 +88,19 @@ git commit -m "feat: add PDF export functionality
 [optional footer]
 ```
 
-**Types**:
+**Allowed types** (enforced by pre-commit):
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
 - `style`: Formatting
 - `refactor`: Code restructuring
+- `perf`: Performance improvement
 - `test`: Adding tests
+- `build`: Build system changes
+- `ci`: CI configuration
 - `chore`: Maintenance
+- `revert`: Reverting changes
 
 ### 5. Push Changes
 
@@ -111,16 +116,68 @@ git push origin feature/your-feature-name
 4. Address feedback
 5. Merge when approved
 
+## Pre-commit Hooks
+
+We use pre-commit hooks to ensure code quality and consistency. **Install them before making any commits.**
+
+### Installation
+
+```bash
+# From project root
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+### What Runs on Commit
+
+| Hook | Auto-fix | Description |
+|------|----------|-------------|
+| `trailing-whitespace` | Yes | Removes trailing whitespace |
+| `end-of-file-fixer` | Yes | Ensures files end with newline |
+| `check-yaml/json/toml` | No | Validates config files |
+| `ruff` | Yes | Python linting (import sorting, unused vars, etc.) |
+| `ruff-format` | Yes | Python formatting |
+| `mypy` | No | Python type checking |
+| `bandit` | No | Python security linting |
+| `eslint` | Yes | TypeScript/JavaScript linting |
+| `tsc` | No | TypeScript type checking |
+| `markdownlint` | Yes | Markdown formatting |
+| `gitleaks` | No | Secret detection |
+| `conventional-pre-commit` | No | Commit message format |
+
+### Manual Usage
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run ruff --all-files
+
+# Skip hooks (use sparingly)
+git commit --no-verify -m "wip: temporary commit"
+```
+
+### Fixing Issues
+
+Most hooks auto-fix issues. If a commit fails:
+
+1. Review the output to see what was changed/flagged
+2. For auto-fixed files: stage the changes and commit again
+3. For non-fixable issues (mypy, bandit): fix manually and commit
+
 ## Coding Standards
 
 ### Python (Backend)
 
 **Style**:
+
 - Follow PEP 8
-- Use Black for formatting
+- Use Ruff for linting and formatting (enforced by pre-commit)
 - Maximum line length: 100
 
 **Type Hints**:
+
 ```python
 def process_document(
     document_id: int,
@@ -130,22 +187,24 @@ def process_document(
 ```
 
 **Docstrings**:
+
 ```python
 def analyze_document(self, doc: Document) -> Analysis:
     """Analyze a document using AI.
-    
+
     Args:
         doc: Document to analyze
-        
+
     Returns:
         Analysis result with summary and findings
-        
+
     Raises:
         AnalysisError: If analysis fails
     """
 ```
 
 **Imports**:
+
 ```python
 # Standard library
 import json
@@ -163,10 +222,12 @@ from app.services import DocumentService
 ### TypeScript (Frontend)
 
 **Style**:
-- Use ESLint configuration
-- Use Prettier for formatting
+
+- Use ESLint configuration (enforced by pre-commit with auto-fix)
+- TypeScript strict mode enabled
 
 **Type Definitions**:
+
 ```typescript
 interface Property {
   id: number;
@@ -181,6 +242,7 @@ function PropertyCard({ property }: { property: Property }) {
 ```
 
 **Component Structure**:
+
 ```typescript
 // 1. Imports
 import { useState } from 'react';
@@ -194,10 +256,10 @@ interface Props {
 export function MyComponent({ title }: Props) {
   // Hooks
   const [state, setState] = useState(false);
-  
+
   // Handlers
   const handleClick = () => { ... };
-  
+
   // Render
   return <div>{title}</div>;
 }
@@ -223,7 +285,7 @@ Brief description of changes
 - [ ] Manual testing completed
 
 ## Checklist
-- [ ] Code follows style guidelines
+- [ ] Pre-commit hooks pass (`pre-commit run --all-files`)
 - [ ] Self-reviewed code
 - [ ] Added comments for complex logic
 - [ ] Updated documentation
@@ -232,10 +294,11 @@ Brief description of changes
 
 ### Review Process
 
-1. **Automated checks** must pass
-2. **At least one approval** required
-3. **Address all comments** before merge
-4. **Squash and merge** preferred
+1. **Pre-commit hooks** must pass (linting, formatting, type checks)
+2. **CI/CD checks** must pass
+3. **At least one approval** required
+4. **Address all comments** before merge
+5. **Squash and merge** preferred
 
 ## Documentation
 
@@ -260,6 +323,7 @@ Brief description of changes
 ### Bug Reports
 
 Include:
+
 - Description of the bug
 - Steps to reproduce
 - Expected vs actual behavior
@@ -269,6 +333,7 @@ Include:
 ### Feature Requests
 
 Include:
+
 - Use case description
 - Proposed solution
 - Alternative approaches considered

@@ -1,0 +1,27 @@
+# Markdownlint configuration
+# https://github.com/DavidAnson/markdownlint
+
+default: true
+
+# Line length - disabled as it's often impractical
+MD013: false
+
+# Allow duplicate headings in different sections
+MD024:
+  siblings_only: true
+
+# Allow trailing punctuation in headings
+MD026:
+  punctuation: ".,;:!"
+
+# Allow inline HTML (useful for badges, etc.)
+MD033: false
+
+# Allow bare URLs
+MD034: false
+
+# Allow multiple blank lines (sometimes needed for readability)
+MD012: false
+
+# First line should be a top-level heading - disabled for flexibility
+MD041: false

@@ -68,6 +68,21 @@ brew install redis
 brew services start redis
 ```
 
+### Pre-commit Hooks (Required)
+
+Install pre-commit hooks before making any commits:
+
+```bash
+# Install pre-commit (from project root)
+uv add --dev pre-commit
+
+# Install the hooks
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+This enables automatic code formatting, linting, and validation on every commit.
+
 ### Backend Setup
 
 ```bash
