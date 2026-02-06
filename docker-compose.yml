@@ -75,6 +75,8 @@ services:
       MINIO_BUCKET: documents
       MINIO_SECURE: "false"
       AUTO_IMPORT_DVF: ${AUTO_IMPORT_DVF:-false}
+      LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
+      LOGFIRE_ENABLED: ${LOGFIRE_ENABLED:-false}
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv # Preserve venv from Docker image
