@@ -5,10 +5,10 @@ Combines standard Python logging with Logfire observability.
 """
 
 import logging
-import sys
 import os
-from pathlib import Path
+import sys
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Optional
 
 import logfire
@@ -37,8 +37,7 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)
     console_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
     console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
@@ -47,17 +46,17 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     log_dir = Path(os.getenv("LOG_DIR", "/tmp/logs"))
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
-        
+
         file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
-        
+
         # File handler for all logs
         file_handler = RotatingFileHandler(
             log_dir / "app.log",
             maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5
+            backupCount=5,
         )
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(file_formatter)
@@ -65,14 +64,12 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
 
         # Error file handler
         error_handler = RotatingFileHandler(
-            log_dir / "errors.log",
-            maxBytes=10 * 1024 * 1024,
-            backupCount=5
+            log_dir / "errors.log", maxBytes=10 * 1024 * 1024, backupCount=5
         )
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
         root_logger.addHandler(error_handler)
-        
+
         root_logger.info(f"File logging enabled: {log_dir}")
     except (PermissionError, OSError) as e:
         root_logger.warning(f"File logging disabled (permission error): {e}")
@@ -92,7 +89,7 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
 def setup_logfire(
     service_name: str = "appart-agent",
     environment: Optional[str] = None,
-    enable_console: bool = True
+    enable_console: bool = True,
 ) -> None:
     """
     Configure Logfire tracing for observability.
@@ -101,25 +98,25 @@ def setup_logfire(
         service_name: Name of the service
         environment: Environment name (development, staging, production)
         enable_console: Whether to enable console logging alongside Logfire
-    
+
     Note: Logfire requires authentication. Set LOGFIRE_TOKEN environment variable
     or run `logfire auth` locally. If not configured, tracing will be disabled.
     """
     # Check if Logfire is enabled and configured
     logfire_token = os.getenv("LOGFIRE_TOKEN", "")
     logfire_enabled = os.getenv("LOGFIRE_ENABLED", "false").lower() == "true"
-    
+
     if not logfire_enabled and not logfire_token:
         logger.info("Logfire disabled (set LOGFIRE_ENABLED=true or LOGFIRE_TOKEN to enable)")
         return
-    
+
     try:
         # Enable content capture for GenAI instrumentation
-        os.environ['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'] = 'true'
-        
+        os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "true"
+
         # Set token if provided
         if logfire_token:
-            os.environ['LOGFIRE_TOKEN'] = logfire_token
+            os.environ["LOGFIRE_TOKEN"] = logfire_token
 
         logfire.configure(
             service_name=service_name,
@@ -129,8 +126,10 @@ def setup_logfire(
                 colors="auto" if enable_console else "never",
                 span_style="show-parents",
                 include_timestamps=True,
-                verbose=True
-            ) if enable_console else False,
+                verbose=True,
+            )
+            if enable_console
+            else False,
             send_to_logfire=bool(logfire_token) or logfire_enabled,
         )
 
@@ -183,22 +182,13 @@ def instrument_fastapi(app) -> None:
 def trace_llm_call(model: str, provider: str, operation: str, **kwargs):
     """Context manager for tracing LLM calls."""
     return logfire.span(
-        f"llm.{provider}.{operation}",
-        model=model,
-        provider=provider,
-        operation=operation,
-        **kwargs
+        f"llm.{provider}.{operation}", model=model, provider=provider, operation=operation, **kwargs
     )
 
 
 def trace_storage_operation(operation: str, bucket: str, **kwargs):
     """Context manager for tracing storage operations."""
-    return logfire.span(
-        f"storage.{operation}",
-        operation=operation,
-        bucket=bucket,
-        **kwargs
-    )
+    return logfire.span(f"storage.{operation}", operation=operation, bucket=bucket, **kwargs)
 
 
 # Metrics logging
@@ -208,10 +198,10 @@ def log_llm_metrics(
     input_tokens: Optional[int] = None,
     output_tokens: Optional[int] = None,
     latency_ms: Optional[int] = None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """Log LLM usage metrics to Logfire."""
-    metrics = {"model": model, "provider": provider}
+    metrics: dict[str, str | int] = {"model": model, "provider": provider}
     if input_tokens is not None:
         metrics["input_tokens"] = input_tokens
     if output_tokens is not None:

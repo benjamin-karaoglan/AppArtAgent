@@ -49,7 +49,7 @@ export function Header() {
         <Link href="/" className="text-xl font-bold text-indigo-600">
           AppArt Agent
         </Link>
-        
+
         {user ? (
           <div className="flex items-center gap-4">
             <Link href="/dashboard">Dashboard</Link>
@@ -108,10 +108,10 @@ interface InfoTooltipProps {
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export function InfoTooltip({ 
-  title, 
-  children, 
-  position = 'top' 
+export function InfoTooltip({
+  title,
+  children,
+  position = 'top'
 }: InfoTooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -125,7 +125,7 @@ export function InfoTooltip({
       >
         <InfoIcon className="w-4 h-4" />
       </button>
-      
+
       {isOpen && (
         <div className={`absolute z-10 p-3 bg-white rounded-lg shadow-lg border
           ${position === 'top' ? 'bottom-full mb-2' : ''}
@@ -152,7 +152,7 @@ Interactive chart showing 5-year price trends.
 import { MarketTrendChart } from '@/components/MarketTrendChart';
 
 // Usage
-<MarketTrendChart 
+<MarketTrendChart
   data={trendData}
   postalCode="75006"
 />
@@ -331,11 +331,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-export function Button({ 
-  variant = 'primary', 
+export function Button({
+  variant = 'primary',
   loading,
   children,
-  ...props 
+  ...props
 }: ButtonProps) {
   const variants = {
     primary: 'bg-indigo-600 text-white hover:bg-indigo-700',

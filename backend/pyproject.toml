@@ -93,7 +93,11 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
-ignore = ["E501"]  # Line too long
+ignore = [
+    "E501",  # Line too long
+    "E711",  # Comparison to None (SQLAlchemy uses == None for query building)
+    "E712",  # Comparison to True/False (SQLAlchemy uses == True for query building)
+]
 
 [tool.black]
 line-length = 100
@@ -104,3 +108,19 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = [
+    "B101",  # assert used (fine in tests)
+    "B104",  # hardcoded bind to 0.0.0.0 (intentional for Docker)
+    "B106",  # hardcoded password (false positive on "bearer" auth scheme)
+    "B108",  # hardcoded tmp directory (intentional temp file usage)
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+exclude = ["tests", ".venv", "venv"]

@@ -162,7 +162,7 @@ flowchart TD
     GCP --> GCPLink["[GCP Guide](gcp.md)"]
 ```
 
-### Use Docker Compose when:
+### Use Docker Compose when
 
 - Developing locally
 - Running demos or testing
@@ -170,7 +170,7 @@ flowchart TD
 - Learning the system
 - Budget is limited
 
-### Use GCP Cloud Run when:
+### Use GCP Cloud Run when
 
 - Running in production
 - Need automatic scaling

@@ -5,6 +5,7 @@ description: Prompt for analyzing apartment photos and providing transformation 
 ---
 
 Analyze this apartment photo and provide:
+
 1. Current style description
 2. Condition assessment
 3. Suggested improvements based on this request: {transformation_request}
@@ -12,3 +13,5 @@ Analyze this apartment photo and provide:
 5. Style transformation description
 
 Provide detailed, actionable recommendations.
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

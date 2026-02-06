@@ -7,6 +7,7 @@ description: Prompt for analyzing French property tax and charges documents
 Analyze the following French property {document_type} document.
 
 Extract:
+
 1. Total amount charged
 2. Period covered (e.g., "3 months", "annual", "quarterly")
 3. Breakdown of charges by category
@@ -26,3 +27,5 @@ Provide your analysis in JSON format:
     }},
     "summary": "Brief summary"
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

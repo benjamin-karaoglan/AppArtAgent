@@ -1,32 +1,38 @@
-## TODO:
+## TODO
 
-### Documents:
+### Dashboard
 
-#### Bugs: 
+- [ ] Enable to get an overview of property: State, price, photos
 
-- [ ] Loading bar disapering
-- [ ] Bulk Load failing
+### Documents
 
-#### Feature:
+#### Bugs
+
+- [X] Loading bar disapering
+- [X] Bulk Load failing
+
+#### Feature
 
 - [ ] Smart summary &rarr; enable to recreate
+- [ ] Rethink the whole functionality
 
-### Redesign studio:
+### Redesign studio
 
-#### Bugs:
+#### Bugs
 
 - [ ] Uploading an image while running a redesign
 - [ ] Switching while running a redesign
 
-#### Feature:
+#### Feature
 
-- [ ] Multiturn redesign
+- [X] Multiturn redesign
 
-### Infrastructure:
+### Infrastructure
 
 - [ ] Revise naming
 - [ ] Import dvf data to CloudSQL
 
-### Various:
+### Various
 
 - [ ] Update email to use gmail workspace domain
+- [ ] Add demos (gif) + images (assets)

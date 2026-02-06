@@ -14,10 +14,8 @@ Usage:
     system_prompt = get_system_prompt("document_classifier", version="v1")
 """
 
-import os
-from pathlib import Path
-from typing import Optional
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +23,7 @@ PROMPTS_DIR = Path(__file__).parent
 DEFAULT_VERSION = "v1"
 
 
-def get_prompt(
-    prompt_name: str,
-    version: str = DEFAULT_VERSION,
-    **kwargs
-) -> str:
+def get_prompt(prompt_name: str, version: str = DEFAULT_VERSION, **kwargs) -> str:
     """
     Load and format a prompt from the prompts directory.
 
@@ -72,10 +66,7 @@ def get_prompt(
     return prompt_content
 
 
-def get_system_prompt(
-    prompt_name: str,
-    version: str = DEFAULT_VERSION
-) -> str:
+def get_system_prompt(prompt_name: str, version: str = DEFAULT_VERSION) -> str:
     """
     Load a system prompt from the prompts directory.
 
@@ -97,7 +88,4 @@ def list_prompts(version: str = DEFAULT_VERSION) -> list[str]:
     if not version_dir.exists():
         return []
 
-    return [
-        p.stem for p in version_dir.glob("*.md")
-        if not p.name.startswith("_")
-    ]
+    return [p.stem for p in version_dir.glob("*.md") if not p.name.startswith("_")]

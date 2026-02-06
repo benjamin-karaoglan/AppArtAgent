@@ -46,6 +46,7 @@ backend:
 ```
 
 **Process**:
+
 1. Save Python file
 2. Docker syncs to container (~100ms)
 3. Uvicorn detects change
@@ -67,6 +68,7 @@ frontend:
 ```
 
 **Process**:
+
 1. Save React file
 2. Next.js detects change
 3. Browser updates (< 1 second)
@@ -79,9 +81,11 @@ frontend:
 1. Open `backend/app/main.py`
 2. Find the startup log line
 3. Change it slightly:
+
    ```python
    logger.info(f"🚀 Starting {settings.PROJECT_NAME}")
    ```
+
 4. Save file
 5. Check logs: `./dev.sh logs backend`
 
@@ -98,18 +102,21 @@ frontend:
 ### Hot Reload Not Working (Backend)
 
 **Check Uvicorn is in reload mode**:
+
 ```bash
 docker-compose logs backend | grep "reloader"
 # Should see: "Started reloader process using WatchFiles"
 ```
 
 **Check volume mount**:
+
 ```bash
 docker-compose exec backend ls -la /app
 # Should show your source files
 ```
 
 **Restart backend**:
+
 ```bash
 docker-compose restart backend
 ```
@@ -117,12 +124,14 @@ docker-compose restart backend
 ### Hot Reload Not Working (Frontend)
 
 **Check dev mode**:
+
 ```bash
 docker-compose logs frontend | grep "Ready"
 # Should see: "Ready in X.Xs"
 ```
 
 **Clear Next.js cache**:
+
 ```bash
 docker-compose exec frontend rm -rf .next
 docker-compose restart frontend
@@ -133,6 +142,7 @@ docker-compose restart frontend
 **Optimize file watching**:
 
 Add to `.vscode/settings.json`:
+
 ```json
 {
   "files.watcherExclude": {
@@ -145,6 +155,7 @@ Add to `.vscode/settings.json`:
 ```
 
 **Check Docker resources**:
+
 ```bash
 docker stats
 # Ensure containers have enough memory
@@ -184,7 +195,7 @@ volumes:
 
 Create `.dockerignore`:
 
-```
+```text
 __pycache__
 *.pyc
 .git

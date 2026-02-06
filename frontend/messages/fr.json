@@ -1,0 +1,439 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "back": "Retour",
+    "loading": "Chargement...",
+    "close": "Fermer",
+    "upload": "Télécharger",
+    "download": "Télécharger",
+    "error": "Erreur",
+    "success": "Succès",
+    "deleting": "Suppression...",
+    "or": "Ou",
+    "rooms": "{count, plural, one {# pièce} other {# pièces}}",
+    "sales": "{count, plural, one {# vente} other {# ventes}}",
+    "documents": "{count, plural, one {# document} other {# documents}}"
+  },
+  "header": {
+    "dashboard": "Tableau de bord",
+    "properties": "Biens",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "getStarted": "Commencer",
+    "appName": "AppArt Agent"
+  },
+  "auth": {
+    "login": {
+      "title": "Connectez-vous à votre compte",
+      "orRegister": "créer un nouveau compte",
+      "email": "Adresse email",
+      "emailPlaceholder": "Adresse email",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "Mot de passe",
+      "submit": "Se connecter",
+      "submitting": "Connexion en cours...",
+      "googleButton": "Continuer avec Google",
+      "googleLoading": "Connexion à Google...",
+      "errors": {
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Adresse email invalide",
+        "passwordRequired": "Le mot de passe est requis",
+        "passwordMinLength": "Le mot de passe doit contenir au moins {min} caractères",
+        "invalidCredentials": "Email ou mot de passe incorrect",
+        "googleFailed": "La connexion Google a échoué. Veuillez réessayer."
+      }
+    },
+    "register": {
+      "title": "Créez votre compte",
+      "orLogin": "connectez-vous à votre compte",
+      "fullName": "Nom complet",
+      "fullNamePlaceholder": "Jean Dupont",
+      "email": "Adresse email",
+      "emailPlaceholder": "vous@exemple.com",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "submit": "Créer un compte",
+      "submitting": "Création du compte...",
+      "googleButton": "S'inscrire avec Google",
+      "googleLoading": "Connexion à Google...",
+      "errors": {
+        "fullNameRequired": "Le nom complet est requis",
+        "fullNameMinLength": "Le nom doit contenir au moins {min} caractères",
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Adresse email invalide",
+        "passwordRequired": "Le mot de passe est requis",
+        "passwordMinLength": "Le mot de passe doit contenir au moins {min} caractères",
+        "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+        "passwordsMismatch": "Les mots de passe ne correspondent pas",
+        "registrationFailed": "L'inscription a échoué. Veuillez réessayer.",
+        "googleFailed": "L'inscription Google a échoué. Veuillez réessayer."
+      }
+    }
+  },
+  "home": {
+    "hero": {
+      "title": "AppArt Agent",
+      "subtitle": "Prenez des décisions d'achat immobilier plus intelligentes grâce à l'IA",
+      "getStarted": "Commencer",
+      "signIn": "Se connecter",
+      "goToDashboard": "Tableau de bord",
+      "viewProperties": "Voir mes biens"
+    },
+    "features": {
+      "priceAnalysis": {
+        "title": "Analyse de Prix",
+        "description": "Comparez les prix demandés avec les données réelles du marché issues des registres DVF français. Sachez si vous faites une bonne affaire."
+      },
+      "documentAnalysis": {
+        "title": "Analyse de Documents",
+        "description": "Analyse IA des PV d'AG, diagnostics et documents financiers pour déceler les coûts cachés."
+      },
+      "riskAssessment": {
+        "title": "Évaluation des Risques",
+        "description": "Identifiez les problèmes potentiels comme l'amiante, le plomb et les mauvais classements DPE avant de vous engager."
+      },
+      "costCalculator": {
+        "title": "Calculateur de Coûts",
+        "description": "Estimations complètes des coûts annuels incluant charges, taxes et travaux à venir."
+      },
+      "styleVisualization": {
+        "title": "Visualisation de Style",
+        "description": "Téléchargez des photos et utilisez l'IA pour visualiser le potentiel de rénovation et les transformations de style."
+      },
+      "investmentScore": {
+        "title": "Score d'Investissement",
+        "description": "Obtenez un score d'investissement complet et des recommandations basées sur les données pour chaque bien."
+      }
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "step1": { "title": "Entrez l'adresse", "description": "Saisissez l'adresse de l'appartement et les détails de base" },
+      "step2": { "title": "Téléchargez les documents", "description": "Téléchargez les PV d'AG, diagnostics et documents financiers" },
+      "step3": { "title": "Analyse IA", "description": "Notre IA analyse tout et compare avec les données du marché" },
+      "step4": { "title": "Obtenez les résultats", "description": "Recevez un rapport complet et une recommandation" }
+    },
+    "cta": {
+      "title": "Prêt à prendre des décisions immobilières plus intelligentes ?",
+      "subtitle": "Rejoignez des milliers d'acheteurs avisés en France",
+      "button": "Commencer votre analyse gratuite",
+      "goToDashboard": "Accéder au tableau de bord"
+    },
+    "footer": {
+      "copyright": "© 2026 AppArt Agent. Tous droits réservés.",
+      "tagline": "Vous aidant à prendre des décisions immobilières éclairées en France"
+    }
+  },
+  "dashboard": {
+    "welcome": "Bon retour, {name} !",
+    "subtitle": "Gérez vos biens et analysez vos investissements potentiels",
+    "stats": {
+      "totalProperties": "Total des biens",
+      "documentsAnalyzed": "Documents analysés",
+      "redesignsGenerated": "Redesigns générés",
+      "dvfRecords": "Données DVF disponibles"
+    },
+    "properties": {
+      "title": "Vos biens",
+      "addProperty": "Ajouter un bien",
+      "loading": "Chargement des biens...",
+      "empty": {
+        "title": "Aucun bien",
+        "description": "Commencez par ajouter votre premier bien."
+      },
+      "deleteTitle": "Supprimer le bien",
+      "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
+      "deleteFailed": "Échec de la suppression du bien. Veuillez réessayer.",
+      "deleteTooltip": "Supprimer le bien"
+    }
+  },
+  "propertyForm": {
+    "backToDashboard": "Retour au tableau de bord",
+    "title": "Ajouter un nouveau bien",
+    "subtitle": "Entrez les détails du bien pour commencer votre analyse",
+    "location": {
+      "title": "Localisation du bien",
+      "address": "Adresse",
+      "addressRequired": "L'adresse est requise",
+      "addressPlaceholder": "Commencez à saisir l'adresse...",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "department": "Département",
+      "noAddressesFound": "Aucune adresse trouvée. Essayez un autre terme de recherche.",
+      "salesCount": "{count} ventes"
+    },
+    "details": {
+      "title": "Détails du bien",
+      "propertyType": "Type de bien",
+      "selectType": "Sélectionner le type",
+      "appartement": "Appartement",
+      "maison": "Maison",
+      "askingPrice": "Prix demandé (€)",
+      "surfaceArea": "Surface (m²)",
+      "rooms": "Nombre de pièces",
+      "floor": "Étage",
+      "buildingYear": "Année de construction"
+    },
+    "submit": "Créer le bien",
+    "submitting": "Création en cours...",
+    "failed": "Échec de la création du bien. Veuillez réessayer."
+  },
+  "property": {
+    "backToDashboard": "Retour au tableau de bord",
+    "notFound": "Bien non trouvé",
+    "loadFailed": "Échec du chargement des détails du bien",
+    "info": {
+      "title": "Informations sur le bien",
+      "type": "Type",
+      "askingPrice": "Prix demandé",
+      "surfaceArea": "Surface",
+      "rooms": "Pièces",
+      "floor": "Étage",
+      "buildingYear": "Année de construction",
+      "pricePerSqm": "Prix au m²"
+    },
+    "analysis": {
+      "title": "Analyse de prix",
+      "simpleAnalysis": "Analyse simple",
+      "trendAnalysis": "Analyse tendance (Projection 2025)",
+      "analyzing": "Analyse en cours...",
+      "manageDocuments": "Gérer les documents",
+      "redesignStudio": "Studio de redesign d'appartement",
+      "simpleTooltip": {
+        "title": "Analyse simple",
+        "whatItDoes": "Affiche uniquement les ventes à la même adresse exacte (même immeuble).",
+        "howItWorks": "Comment ça marche :",
+        "steps": {
+          "findSales": "Trouve toutes les ventes historiques à votre numéro d'immeuble",
+          "groupTransactions": "Regroupe correctement les transactions multi-lots",
+          "detectOutliers": "Détecte et signale les valeurs aberrantes par la méthode IQR",
+          "calculateAvg": "Calcule le prix moyen du marché au m²",
+          "rawPrices": "Utilise les prix historiques bruts (sans ajustement temporel)"
+        },
+        "bestFor": "Idéal pour : Les immeubles avec un historique de ventes récent. Montre les vrais prix de transaction dans votre immeuble."
+      },
+      "trendTooltip": {
+        "title": "Analyse tendance",
+        "whatItDoes": "Projette la valeur 2025 en utilisant les tendances du marché des adresses voisines.",
+        "howItWorks": "Comment ça marche :",
+        "steps": {
+          "takeSale": "Prend la vente la plus récente à votre adresse exacte",
+          "analyzeNeighboring": "Analyse les ventes des immeubles voisins (±2, ±4, ±6, etc.)",
+          "calculateTrend": "Calcule la tendance annuelle du marché",
+          "projectForward": "Projette le prix historique vers 2025",
+          "accountTime": "Tient compte du temps et de l'évolution du marché"
+        },
+        "bestFor": "Idéal pour : Les biens avec des données de vente plus anciennes. Estime la valeur actuelle basée sur les tendances du quartier."
+      },
+      "estimatedValue": "Valeur estimée",
+      "priceDeviation": "Écart de prix",
+      "comparableSales": "Ventes comparables",
+      "recommendation": "Recommandation :"
+    },
+    "trend": {
+      "title": "Projection Tendance 2025",
+      "projectedValue": "Valeur projetée 2025",
+      "marketTrend": "Tendance du marché",
+      "basedOnSales": "Basé sur {count} ventes voisines",
+      "neighboringSalesTitle": "Ventes voisines pour la tendance ({count})",
+      "baseSale": "Vente de référence",
+      "date": "Date :",
+      "pricePerSqm": "Prix/m² :"
+    },
+    "comparables": {
+      "title": "Ventes comparables ({total} au total, {included} incluses)",
+      "include": "Inclure",
+      "saleDate": "Date",
+      "address": "Adresse",
+      "surface": "Surface",
+      "salePrice": "Prix de vente",
+      "pricePerSqm": "Prix/m²",
+      "outlier": "Aberrante",
+      "outlierDetected": "Valeur aberrante détectée (méthode IQR)",
+      "includeInTrend": "Inclure dans l'analyse tendance",
+      "includeInAnalysis": "Inclure dans l'analyse",
+      "units": "{count} lots",
+      "individualUnits": "Lots individuels ({count} lots dans cette transaction)",
+      "unit": "Lot",
+      "rooms": "Pièces",
+      "individualPricePerSqm": "Prix/m² individuel",
+      "groupedNote": "Note : Les prix/m² individuels ci-dessus sont calculés par lot. Le prix/m² groupé ({price}) est le prix de marché correct pour l'ensemble de la transaction.",
+      "grouped": "Groupé",
+      "marketAvgPrice": "Prix moyen du marché/m²",
+      "yourPrice": "Votre prix/m²",
+      "marketMedianPrice": "Prix médian du marché/m²"
+    },
+    "marketTrend": {
+      "title": "Évolution des prix du marché",
+      "basedOnSales": "Basé sur {count} ventes",
+      "outliersExcluded": "{count, plural, one {# valeur aberrante exclue} other {# valeurs aberrantes exclues}} pour plus de précision",
+      "noData": "Aucune donnée de tendance du marché disponible",
+      "loadFailed": "Échec du chargement des données de tendance",
+      "positiveGrowth": "Croissance positive",
+      "positiveGrowthDesc": "Le prix a augmenté par rapport à l'année précédente",
+      "negativeGrowth": "Croissance négative",
+      "negativeGrowthDesc": "Le prix a diminué par rapport à l'année précédente",
+      "trendLine": "Ligne de tendance",
+      "trendLineDesc": "Trajectoire globale du marché",
+      "marketSummary": "Résumé du marché",
+      "earliestPrice": "Premier prix ({year}) :",
+      "latestPrice": "Dernier prix ({year}) :",
+      "totalChange": "Variation totale :",
+      "totalSalesAnalyzed": "Total des ventes analysées :"
+    },
+    "deleteTitle": "Supprimer le bien",
+    "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
+    "analyzeFailed": "Échec de l'analyse de prix",
+    "recalculateFailed": "Échec du recalcul de l'analyse",
+    "recalculateTrendFailed": "Échec du recalcul de l'analyse tendance",
+    "deleteFailed": "Échec de la suppression du bien"
+  },
+  "documents": {
+    "backToProperty": "Retour au bien",
+    "title": "Gestion des documents",
+    "subtitle": "Téléchargez et gérez les documents du bien. Les documents sont automatiquement analysés par l'IA.",
+    "smartUpload": {
+      "title": "Upload intelligent - Agent IA",
+      "subtitle": "Déposez tous vos documents en une fois. L'IA va automatiquement classifier, analyser et résumer le tout !",
+      "dropzone": "Déposez tous vos documents ici",
+      "browse": "ou cliquez pour parcourir les fichiers",
+      "autoClassification": "Auto-classification",
+      "parallelProcessing": "Traitement parallèle",
+      "smartSynthesis": "Synthèse intelligente",
+      "processing": "Traitement des documents",
+      "processingSubtitle": "L'agent IA classifie et analyse vos documents...",
+      "complete": "{completed} / {total} terminés",
+      "processingComplete": "Traitement terminé !",
+      "documentsAnalyzed": "{count} documents analysés avec succès",
+      "uploadMore": "Télécharger d'autres documents"
+    },
+    "synthesis": {
+      "title": "Synthèse IA",
+      "riskLevel": "Niveau de risque :",
+      "high": "ÉLEVÉ",
+      "medium": "MOYEN",
+      "low": "FAIBLE",
+      "keyFindings": "Points clés :",
+      "recommendations": "Recommandations :",
+      "totalAnnualCosts": "Coûts annuels totaux",
+      "totalOneTimeCosts": "Coûts ponctuels totaux"
+    },
+    "propertySynthesis": {
+      "title": "Analyse IA du bien",
+      "risk": "Risque : {level}",
+      "keyFindings": "Points clés",
+      "recommendations": "Recommandations"
+    },
+    "manualUpload": "Ou téléchargez manuellement par catégorie",
+    "categories": {
+      "pv_ag": { "label": "PV d'AG", "description": "Procès-verbaux d'assemblée générale" },
+      "diags": { "label": "Diagnostics", "description": "Documents de diagnostic" },
+      "taxe_fonciere": { "label": "Taxe Foncière", "description": "Documents de taxe foncière" },
+      "charges": { "label": "Charges", "description": "Charges de copropriété" }
+    },
+    "documentCount": "{count, plural, one {# document} other {# documents}}",
+    "uploadDocuments": "Télécharger des documents",
+    "chooseFiles": "Choisir des fichiers {type}",
+    "uploadingAnalyzing": "Téléchargement et analyse...",
+    "comprehensiveSummary": "Résumé complet",
+    "diagnosticSummary": "Résumé des diagnostics",
+    "regenerate": "Régénérer",
+    "regenerating": "Régénération...",
+    "keyFindings": "Points clés",
+    "annualCosts": "Coûts annuels",
+    "oneTimeCosts": "Coûts ponctuels",
+    "coproInsights": "Informations copropriété",
+    "paymentIssues": "Problèmes de paiement :",
+    "upcomingWorks": "Travaux à venir :",
+    "criticalIssues": "Problèmes critiques",
+    "uploaded": "Téléchargé le {date}",
+    "keyInsights": "Informations clés :",
+    "costs": "Coûts :",
+    "noDocuments": "Aucun document téléchargé",
+    "bulkFailed": "Le traitement en lot a échoué. Vérifiez les erreurs de chaque document.",
+    "processingTimeout": "Le traitement prend plus de temps que prévu. Veuillez vérifier plus tard.",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce document ?"
+  },
+  "photos": {
+    "backToProperty": "Retour au bien",
+    "title": "Studio de Redesign d'Appartement",
+    "uploadPhoto": "Télécharger une photo",
+    "roomType": "Type de pièce",
+    "roomTypes": {
+      "living room": "Salon",
+      "bedroom": "Chambre",
+      "kitchen": "Cuisine",
+      "bathroom": "Salle de bain",
+      "dining room": "Salle à manger",
+      "home office": "Bureau"
+    },
+    "choosePhoto": "Choisir une photo",
+    "selectImage": "Sélectionner une image",
+    "uploading": "Téléchargement...",
+    "yourPhotos": "Vos photos ({count})",
+    "noPhotos": "Aucune photo téléchargée",
+    "noRoomType": "Pas de type de pièce",
+    "redesignCount": "{count} redesigns",
+    "selectPhotoPrompt": "Téléchargez ou sélectionnez une photo pour commencer",
+    "newThread": "Nouveau",
+    "allGallery": "Tout",
+    "noRedesigns": "Aucun redesign",
+    "noRedesignsDesc": "Lancez une conversation pour générer votre premier redesign.",
+    "startConversation": "Démarrer une nouvelle conversation de redesign",
+    "startConversationDesc": "Choisissez un style prédéfini ou écrivez un prompt personnalisé ci-dessous pour générer votre premier redesign.",
+    "showLess": "Voir moins",
+    "showMore": "Voir plus",
+    "clickToView": "Cliquer pour voir en plein écran",
+    "refinePlaceholder": "Décrivez les ajustements souhaités...",
+    "promptPlaceholder": "Décrivez le redesign souhaité...",
+    "refineHint": "Affinez le résultat précédent. L'IA se souvient du contexte de la conversation.",
+    "promptHint": "Choisissez un style prédéfini ou écrivez un prompt personnalisé. Entrée pour envoyer, Maj+Entrée pour un retour à la ligne.",
+    "deletePhotoTitle": "Supprimer la photo",
+    "deletePhotoMessage": "Supprimer \"{filename}\" et tous ses redesigns ? Cette action est irréversible.",
+    "deletePhoto": "Supprimer la photo",
+    "original": "Original",
+    "redesign": "Redesign",
+    "compareTooltip": "Comparer avec l'original",
+    "fullscreenTooltip": "Redesign plein écran",
+    "prompt": "Prompt",
+    "clickToRename": "Cliquer pour renommer",
+    "doubleClickToRename": "Double-cliquer pour renommer",
+    "selectPhotoFirst": "Veuillez d'abord sélectionner une photo",
+    "selectPresetOrPrompt": "Veuillez sélectionner un style prédéfini ou entrer un prompt personnalisé",
+    "redesignGenerated": "Redesign généré",
+    "uploadFailed": "Échec du téléchargement de la photo",
+    "generateFailed": "Échec de la génération du redesign",
+    "deleteFailed": "Échec de la suppression de la photo",
+    "renameFailed": "Échec du renommage de la photo",
+    "roomTypeFailed": "Échec de la mise à jour du type de pièce",
+    "timeAgo": {
+      "justNow": "à l'instant",
+      "minutesAgo": "il y a {n} min",
+      "hoursAgo": "il y a {n}h",
+      "daysAgo": "il y a {n}j"
+    },
+    "thread": "Fil",
+    "custom": "Personnalisé",
+    "imageError": "Erreur d'image"
+  },
+  "properties": {
+    "title": "Mes biens",
+    "subtitle": "Gérez et analysez vos biens immobiliers",
+    "addProperty": "Ajouter un bien",
+    "loading": "Chargement des biens...",
+    "empty": {
+      "title": "Aucun bien",
+      "description": "Commencez par ajouter votre premier bien."
+    },
+    "deleteTitle": "Supprimer le bien",
+    "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
+    "deleteFailed": "Échec de la suppression du bien. Veuillez réessayer."
+  },
+  "metadata": {
+    "title": "AppArt Agent - Décisions Immobilières Intelligentes",
+    "description": "Plateforme IA pour vous aider à prendre des décisions d'achat immobilier éclairées en France",
+    "ogTitle": "AppArt Agent - Décisions Immobilières Intelligentes",
+    "ogDescription": "Plateforme IA pour vous aider à prendre des décisions d'achat immobilier éclairées en France"
+  }
+}

@@ -7,12 +7,13 @@ capabilities with support for multi-turn editing conversations.
 
 import logging
 import time
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from google import genai
 from google.genai import types
 
 from app.core.config import settings
+from app.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,7 @@ class ImageGenerator:
         if self.use_vertexai:
             if not self.project or not self.location:
                 raise RuntimeError("GOOGLE_CLOUD_PROJECT and LOCATION required for Vertex AI")
-            self.client = genai.Client(
-                vertexai=True,
-                project=self.project,
-                location=self.location
-            )
+            self.client = genai.Client(vertexai=True, project=self.project, location=self.location)
         else:
             api_key = settings.GOOGLE_CLOUD_API_KEY
             if not api_key:
@@ -79,7 +76,7 @@ class ImageGenerator:
         image_data: bytes,
         prompt: str,
         aspect_ratio: str = "16:9",
-        conversation_history: Optional[List[Dict[str, Any]]] = None
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Redesign an apartment photo.
@@ -112,10 +109,9 @@ class ImageGenerator:
                         contents.append(types.Content(role=turn["role"], parts=parts))
 
             # Add current request
-            contents.append(types.Content(
-                role="user",
-                parts=[image_part, types.Part.from_text(text=prompt)]
-            ))
+            contents.append(
+                types.Content(role="user", parts=[image_part, types.Part.from_text(text=prompt)])
+            )
 
             config = types.GenerateContentConfig(
                 response_modalities=["TEXT", "IMAGE"],
@@ -150,7 +146,7 @@ class ImageGenerator:
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
                 "model": self.model,
-                "text_response": text_response
+                "text_response": text_response,
             }
 
         except Exception as e:
@@ -161,7 +157,7 @@ class ImageGenerator:
         self,
         base_style: str,
         room_type: str = "living room",
-        additional_details: Optional[str] = None
+        additional_details: Optional[str] = None,
     ) -> str:
         """
         Create a detailed prompt for apartment redesign.
@@ -174,50 +170,13 @@ class ImageGenerator:
         Returns:
             Detailed narrative prompt
         """
-        style_prompts = {
-            "modern_norwegian": f"""
-You are an interior architect.
-Redesign this apartment {room_type} in a modern Norwegian style:
-- Keep room geometry and windows unchanged
-- Use clean lines with warm, natural wood tones (light oak or birch)
-- Flooring: warm oak wood
-- Walls: white and cream with accents of deep forest green, midnight blue, or charcoal gray
-- Add cozy textiles like wool throws and linen cushions
-- Lighting: warm and inviting with designer pendant lights or floor lamps
-- Include minimal but impactful decor: a single statement plant, ceramic vases, or contemporary Norwegian art
-- The overall atmosphere should feel spacious, airy, and connected to nature while maintaining sophisticated modern elegance
-Return only the edited image.
-            """,
-            "minimalist_scandinavian": f"""
-You are an interior architect.
-Redesign this apartment {room_type} as a minimalist Scandinavian sanctuary:
-- Keep room geometry and windows unchanged
-- Use monochromatic white and light gray base with pale wood accents
-- Furniture should be functional, sculptural pieces with clean geometric forms
-- Include subtle warmth through natural materials: jute rug, linen textiles
-- Add one or two green plants in simple ceramic pots
-- The space should have generous negative space, emphasizing openness and tranquility
-- Every object serves a purpose while contributing to the overall aesthetic harmony
-- Mood: calm, uncluttered, and effortlessly sophisticated
-Return only the edited image.
-            """,
-            "cozy_hygge": f"""
-You are an interior architect.
-Transform this apartment {room_type} into the ultimate hygge retreat:
-- Keep room geometry and windows unchanged
-- Feature a plush, oversized sofa with layers of soft blankets and cushions in warm neutrals
-- Add warm, ambient lighting from multiple sources: candles, vintage-style floor lamp
-- Include natural wood elements with a weathered, lived-in quality
-- A chunky knit throw drapes over a chair
-- Color palette: warm and inviting - caramel, terracotta, dusty rose, and cream
-- Add books stacked casually, a steaming mug on a side table
-- The atmosphere should evoke safety, comfort, and intimate togetherness
-- Lighting: cozy warm evening
-Return only the edited image.
-            """
+        template_map = {
+            "modern_norwegian": "redesign_modern_norwegian",
+            "minimalist_scandinavian": "redesign_minimalist_scandinavian",
+            "cozy_hygge": "redesign_cozy_hygge",
         }
-
-        prompt = style_prompts.get(base_style, style_prompts["modern_norwegian"]).strip()
+        template_name = template_map.get(base_style, "redesign_modern_norwegian")
+        prompt = get_prompt(template_name, room_type=room_type)
         if additional_details:
             prompt += f"\n\nAdditional requirements: {additional_details}"
         return prompt.strip()

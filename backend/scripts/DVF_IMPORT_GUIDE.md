@@ -23,12 +23,14 @@ See [PRICE_FIX_CHANGELOG.md](PRICE_FIX_CHANGELOG.md) for details.
 ## Files
 
 ### Import Scripts
+
 - **[fast_import_dvf_final.sh](fast_import_dvf_final.sh)** - **RECOMMENDED**: Main import script with all fixes (2021-2025)
 - **[fast_import_all_dvf_v2.sh](fast_import_all_dvf_v2.sh)** - Alternative import script
 - **[test_import_2023_v2.sh](test_import_2023_v2.sh)** - Test script for single year import
 - **[import_2021_only.sh](import_2021_only.sh)** - Import 2021 data separately (if needed)
 
 ### Utility Scripts
+
 - **[delete_all_dvf.sql](delete_all_dvf.sql)** - Truncate all DVF records
 - **[validate_dvf_data.sql](validate_dvf_data.sql)** - **NEW**: Comprehensive data quality validation report
 
@@ -48,6 +50,7 @@ cd /Users/carrefour/appart-agent/backend
 ```
 
 This will:
+
 1. Delete all existing DVF records
 2. Import 2021-2025 data (5 files)
 3. Show final statistics
@@ -112,22 +115,26 @@ SELECT data_year, COUNT(*) FROM dvf_records GROUP BY data_year ORDER BY data_yea
 The import process includes comprehensive data cleaning and transformation:
 
 #### 1. **Date Parsing & Validation**
+
 ```sql
 CASE WHEN date_mutation ~ '^\d{2}/\d{2}/\d{4}$' THEN
     TO_DATE(date_mutation, 'DD/MM/YYYY')
 ELSE NULL END
 ```
+
 - Validates French date format (`DD/MM/YYYY`)
 - Converts to PostgreSQL `DATE` type
 - Rejects invalid dates (set to NULL)
 - **Filter**: Only records with valid dates are imported
 
 #### 2. **Price Parsing & Validation** ⚠️ CRITICAL
+
 ```sql
 CASE WHEN valeur_fonciere ~ '^[\d,]+\.?\d*$' THEN
     REPLACE(valeur_fonciere, ',', '.')::numeric  -- CRITICAL: comma is decimal separator!
 ELSE NULL END
 ```
+
 - Validates numeric format with French decimal comma
 - **Converts comma to decimal point** (`,` → `.`)
   - French format: `1268540,00` = **1,268,540.00 euros**
@@ -137,18 +144,21 @@ ELSE NULL END
 - ⚠️ **Bug fixed 2025-12-28**: Previous version incorrectly removed comma (100x price error)
 
 #### 3. **Address Normalization**
+
 ```sql
 TRIM(COALESCE(no_voie || ' ', '') ||
      COALESCE(btq || ' ', '') ||
      COALESCE(type_de_voie || ' ', '') ||
      COALESCE(voie, ''))
 ```
+
 - Concatenates: street number + B/T/Q + street type + street name
 - Handles NULL values with `COALESCE`
 - Trims leading/trailing whitespace
 - Example: `56` + `RUE` + `NOTRE-DAME DES CHAMPS` → `56 RUE NOTRE-DAME DES CHAMPS`
 
 #### 4. **Surface Area Selection & Validation**
+
 ```sql
 CASE
     WHEN surface_carrez_1 ~ '^[\d,]+\.?\d*$' THEN
@@ -158,12 +168,14 @@ CASE
     ELSE NULL
 END
 ```
+
 - **Priority 1**: Carrez surface (legal living space)
 - **Priority 2**: Built surface (if Carrez unavailable)
 - Converts French decimal format (`,` → `.`)
 - Returns NULL if both unavailable
 
 #### 5. **Price per Sqm Calculation**
+
 ```sql
 REPLACE(valeur_fonciere, ',', '')::numeric /
 NULLIF(GREATEST(
@@ -171,20 +183,25 @@ NULLIF(GREATEST(
     CASE WHEN surface_reelle_bati ~ '^[\d,]+\.?\d*$' THEN ... END
 ), 0)
 ```
+
 - Calculates: `price / surface_area`
 - Uses largest available surface (Carrez or built)
 - **Division by zero protection**: `NULLIF(..., 0)` returns NULL if surface is 0
 - Only calculated if both price and surface are valid
 
 #### 6. **Property Type Filtering**
+
 ```sql
 WHERE type_local IN ('Appartement', 'Maison')
 ```
+
 - **Included**: Apartments and houses only
 - **Excluded**: Commercial properties, garages, parking spaces, land plots, dependencies
 
 #### 7. **Data Quality Filters**
+
 All imported records must satisfy:
+
 - Valid date format and parseable date
 - Valid price format and `price > 0`
 - Property type is `Appartement` or `Maison`
@@ -192,6 +209,7 @@ All imported records must satisfy:
 - **Note**: Surface area is NOT required (some sales don't include it)
 
 #### 8. **Metadata Generation**
+
 - `data_year`: Year extracted from filename (2021-2025)
 - `source_file`: Path to original DVF file
 - `import_batch_id`: UUID for this import batch (for audit trail)
@@ -199,9 +217,11 @@ All imported records must satisfy:
 - `raw_data`: JSON with additional fields for reference
 
 #### 9. **Deduplication Strategy**
+
 ```sql
 ON CONFLICT (sale_date, sale_price, address, postal_code, surface_area) DO NOTHING
 ```
+
 - Unique constraint on 5 fields (business key for property sales)
 - Silently skips duplicates on re-import
 - Allows safe re-running of import scripts
@@ -210,7 +230,7 @@ ON CONFLICT (sale_date, sale_price, address, postal_code, surface_area) DO NOTHI
 
 After full import (2021-2025):
 
-```
+```text
  data_year | record_count | appartements | maisons | earliest_sale | latest_sale
 -----------+--------------+--------------+---------+---------------+-------------
       2021 |    1,292,403 |      604,745 | 687,658 | 2021-01-01    | 2021-12-31
@@ -231,6 +251,7 @@ ERROR: Database container 'appart-agent-db-1' is not running!
 ```
 
 **Solution**:
+
 ```bash
 docker-compose up -d
 ```
@@ -297,6 +318,7 @@ SELECT data_year, COUNT(*) FROM dvf_records GROUP BY data_year ORDER BY data_yea
 ## Next Steps
 
 After import, you can:
+
 - Query records: `SELECT * FROM dvf_records WHERE postal_code = '75006' LIMIT 10;`
 - Use address search: `SELECT * FROM dvf_records WHERE address LIKE '%RUE DE SEVRES%';`
 - Analyze price trends: `SELECT data_year, AVG(price_per_sqm) FROM dvf_records GROUP BY data_year;`
@@ -328,6 +350,7 @@ GROUP BY data_year;
 ```
 
 **TODO Actions**:
+
 - [ ] Identify outlier thresholds (use IQR or Z-score method)
 - [ ] Investigate extreme values (are they errors or legitimate luxury properties?)
 - [ ] Add outlier flags to database schema (`is_outlier` boolean column)
@@ -353,6 +376,7 @@ GROUP BY data_year;
 ```
 
 **TODO Actions**:
+
 - [ ] Quantify missing data by year and field
 - [ ] Determine if missing data is MCAR (completely random) or systematic
 - [ ] Decide on imputation strategy (drop, mean/median fill, or flag)
@@ -376,6 +400,7 @@ FROM dvf_records;
 ```
 
 **TODO Actions**:
+
 - [ ] Validate address geocoding accuracy (if needed for mapping)
 - [ ] Check for duplicate addresses with vastly different prices (data errors?)
 - [ ] Implement address standardization (upper/lower case, abbreviations)
@@ -405,6 +430,7 @@ GROUP BY data_year, property_type;
 ```
 
 **TODO Actions**:
+
 - [ ] Identify unrealistic prices (typos, data entry errors)
 - [ ] Check for clustering around round numbers (indication of estimates vs actual prices)
 - [ ] Validate price trends year-over-year (should match known market trends)
@@ -433,6 +459,7 @@ GROUP BY property_type;
 ```
 
 **TODO Actions**:
+
 - [ ] Investigate extremely small surfaces (<10 sqm) - studios or errors?
 - [ ] Investigate extremely large surfaces (>500 sqm) - mansions or data errors?
 - [ ] Validate Carrez vs built surface discrepancies
@@ -457,6 +484,7 @@ ORDER BY month;
 ```
 
 **TODO Actions**:
+
 - [ ] Validate seasonal patterns (summer slowdown, year-end rush)
 - [ ] Check for data gaps (missing months or years)
 - [ ] Identify anomalous spikes or drops (could indicate incomplete data)
@@ -481,6 +509,7 @@ LIMIT 20;
 ```
 
 **TODO Actions**:
+
 - [ ] Verify coverage matches French geography (all departments represented?)
 - [ ] Check for urban/rural bias (Paris over-represented?)
 - [ ] Validate price/sqm by department against known market values
@@ -510,6 +539,7 @@ LIMIT 20;
 ```
 
 **TODO Actions**:
+
 - [ ] Compare against known benchmarks (e.g., Paris 6th should be 12K-18K €/sqm)
 - [ ] Flag records where price/sqm deviates >3 standard deviations from area mean
 - [ ] Check for calculation errors (price/surface formula issues)
@@ -536,6 +566,7 @@ LIMIT 100;
 ```
 
 **TODO Actions**:
+
 - [ ] Investigate records with same date/address but different prices
 - [ ] Check if these are legitimate multi-unit sales vs data errors
 - [ ] Consider fuzzy address matching for duplicate detection
@@ -547,6 +578,7 @@ LIMIT 100;
 Validate against domain knowledge:
 
 **TODO Actions**:
+
 - [ ] Cross-validate with official DVF statistics published by French government
 - [ ] Compare total record counts by year with government reports
 - [ ] Validate average prices against INSEE housing price index
@@ -558,6 +590,7 @@ Validate against domain knowledge:
 ### 📊 **Recommended EDA Workflow**
 
 1. **Create a Jupyter notebook** for exploratory data analysis:
+
    ```bash
    /Users/carrefour/appart-agent/backend/notebooks/dvf_eda.ipynb
    ```

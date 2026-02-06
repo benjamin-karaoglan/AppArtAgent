@@ -10,7 +10,7 @@ Docker is required to run the full application stack.
     ```bash
     # Install Docker Desktop
     brew install --cask docker
-    
+
     # Or download from https://www.docker.com/products/docker-desktop
     ```
 
@@ -18,10 +18,10 @@ Docker is required to run the full application stack.
     ```bash
     # Install Docker
     curl -fsSL https://get.docker.com | sh
-    
+
     # Add user to docker group
     sudo usermod -aG docker $USER
-    
+
     # Install Docker Compose
     sudo apt install docker-compose-plugin
     ```

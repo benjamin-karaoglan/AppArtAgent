@@ -10,6 +10,7 @@ Documents processed:
 {documents_json}
 
 Create a comprehensive synthesis that:
+
 1. Aggregates costs across all documents (annual costs, one-time costs)
 2. Identifies key risks and concerns
 3. Provides overall property assessment
@@ -31,3 +32,5 @@ Return a JSON object with this structure:
     "charges": {{"count": 0, "summary": ""}}
   }}
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

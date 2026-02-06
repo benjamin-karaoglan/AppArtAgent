@@ -391,6 +391,7 @@ terraform output dns_nameservers
 ```
 
 Update your domain registrar to use the output nameservers:
+
 - `ns-cloud-a1.googledomains.com.`
 - `ns-cloud-a2.googledomains.com.`
 - `ns-cloud-a3.googledomains.com.`
@@ -568,7 +569,7 @@ gcloud run services logs tail appart-backend --region $REGION
 
 Access [Cloud Logging](https://console.cloud.google.com/logs) with these filters:
 
-```
+```text
 # Backend errors
 resource.type="cloud_run_revision"
 resource.labels.service_name="appart-backend"
@@ -848,6 +849,7 @@ gcloud run services update appart-backend --region $REGION \
 ```
 
 The VPC egress options:
+
 - `PRIVATE_RANGES_ONLY` (recommended): Only internal traffic goes through VPC, external traffic uses default egress
 - `ALL_TRAFFIC`: All traffic goes through VPC (requires Cloud NAT for external access)
 

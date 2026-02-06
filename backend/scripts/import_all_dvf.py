@@ -11,31 +11,27 @@ This script:
 - Can be safely re-run (idempotent)
 """
 
-import sys
-import os
-from pathlib import Path
-import re
-import logging
 import hashlib
+import logging
+import re
+import sys
 import uuid
 from datetime import datetime
-from typing import List, Dict, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import pandas as pd
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.database import SessionLocal, engine
-from app.models.property import DVFRecord, DVFImport
+from app.core.database import SessionLocal
+from app.models.property import DVFImport
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -50,8 +46,8 @@ class AllDVFImporter:
     def calculate_file_hash(self, file_path: Path) -> str:
         """Calculate SHA256 hash of file."""
         sha256 = hashlib.sha256()
-        with open(file_path, 'rb') as f:
-            for chunk in iter(lambda: f.read(8192), b''):
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
 
@@ -63,7 +59,7 @@ class AllDVFImporter:
             ValeursFoncieres-2024.txt -> 2024
             ValeursFoncieres-2025-S1.txt -> 2025
         """
-        match = re.search(r'ValeursFoncieres-(\d{4})', filename)
+        match = re.search(r"ValeursFoncieres-(\d{4})", filename)
         if match:
             return int(match.group(1))
         return None
@@ -79,12 +75,14 @@ class AllDVFImporter:
             year = self.extract_year_from_filename(file_path.name)
             if year:
                 file_size_mb = file_path.stat().st_size / (1024 * 1024)
-                files.append({
-                    "path": file_path,
-                    "filename": file_path.name,
-                    "year": year,
-                    "size_mb": file_size_mb
-                })
+                files.append(
+                    {
+                        "path": file_path,
+                        "filename": file_path.name,
+                        "year": year,
+                        "size_mb": file_size_mb,
+                    }
+                )
                 logger.info(f"Found: {file_path.name} ({file_size_mb:.1f} MB) - Year: {year}")
             else:
                 logger.warning(f"Could not extract year from filename: {file_path.name}")
@@ -93,10 +91,11 @@ class AllDVFImporter:
 
     def check_already_imported(self, db: Session, file_hash: str) -> bool:
         """Check if this file was already imported."""
-        existing = db.query(DVFImport).filter(
-            DVFImport.source_file_hash == file_hash,
-            DVFImport.status == "completed"
-        ).first()
+        existing = (
+            db.query(DVFImport)
+            .filter(DVFImport.source_file_hash == file_hash, DVFImport.status == "completed")
+            .first()
+        )
         return existing is not None
 
     def import_file(self, db: Session, file_info: Dict) -> bool:
@@ -105,9 +104,9 @@ class AllDVFImporter:
         year = file_info["year"]
         filename = file_info["filename"]
 
-        logger.info(f"=" * 80)
+        logger.info("=" * 80)
         logger.info(f"Importing {filename} (Year: {year})")
-        logger.info(f"=" * 80)
+        logger.info("=" * 80)
 
         # Calculate file hash
         logger.info("Calculating file hash...")
@@ -127,7 +126,7 @@ class AllDVFImporter:
             source_file_hash=file_hash,
             data_year=year,
             status="in_progress",
-            started_at=datetime.utcnow()
+            started_at=datetime.utcnow(),
         )
         db.add(import_record)
         db.commit()
@@ -145,24 +144,24 @@ class AllDVFImporter:
 
             chunk_num = 0
             for chunk_df in pd.read_csv(
-                file_path,
-                sep='|',
-                dtype=str,
-                chunksize=self.read_chunk_size,
-                low_memory=False
+                file_path, sep="|", dtype=str, chunksize=self.read_chunk_size, low_memory=False
             ):
                 chunk_num += 1
                 chunk_size = len(chunk_df)
                 total_records += chunk_size
 
-                logger.info(f"Processing chunk {chunk_num} ({chunk_size:,} rows, {total_records:,} total so far)")
+                logger.info(
+                    f"Processing chunk {chunk_num} ({chunk_size:,} rows, {total_records:,} total so far)"
+                )
 
                 # Process chunk in batches
                 for batch_start in range(0, chunk_size, self.write_batch_size):
                     batch_end = min(batch_start + self.write_batch_size, chunk_size)
                     batch_df = chunk_df.iloc[batch_start:batch_end]
 
-                    batch_result = self._process_batch(db, batch_df, year, filename, file_hash, batch_id)
+                    batch_result = self._process_batch(
+                        db, batch_df, year, filename, file_hash, batch_id
+                    )
                     inserted += batch_result["inserted"]
                     updated += batch_result["updated"]
                     skipped += batch_result["skipped"]
@@ -192,12 +191,14 @@ class AllDVFImporter:
             import_record.error_records = errors
             db.commit()
 
-            logger.info(f"=" * 80)
+            logger.info("=" * 80)
             logger.info(f"✓ Import completed: {filename}")
             logger.info(f"  Duration: {duration:.1f}s ({total_records/duration:.0f} records/sec)")
-            logger.info(f"  Total: {total_records:,} | Inserted: {inserted:,} | Updated: {updated:,}")
+            logger.info(
+                f"  Total: {total_records:,} | Inserted: {inserted:,} | Updated: {updated:,}"
+            )
             logger.info(f"  Skipped: {skipped:,} | Errors: {errors:,}")
-            logger.info(f"=" * 80)
+            logger.info("=" * 80)
 
             return True
 
@@ -224,7 +225,7 @@ class AllDVFImporter:
         year: int,
         filename: str,
         file_hash: str,
-        batch_id: str
+        batch_id: str,
     ) -> Dict[str, int]:
         """Process a batch of records using UPSERT."""
         inserted = 0
@@ -238,29 +239,29 @@ class AllDVFImporter:
             try:
                 # Parse date
                 sale_date = None
-                if pd.notna(row.get('Date mutation')):
+                if pd.notna(row.get("Date mutation")):
                     try:
-                        sale_date = pd.to_datetime(row['Date mutation'], format='%d/%m/%Y').date()
-                    except:
+                        sale_date = pd.to_datetime(row["Date mutation"], format="%d/%m/%Y").date()
+                    except (ValueError, TypeError):
                         pass
 
                 # Parse numeric fields
                 def safe_float(val):
                     try:
-                        return float(val) if pd.notna(val) and val != '' else None
-                    except:
+                        return float(val) if pd.notna(val) and val != "" else None
+                    except (ValueError, TypeError):
                         return None
 
                 def safe_int(val):
                     try:
-                        return int(float(val)) if pd.notna(val) and val != '' else None
-                    except:
+                        return int(float(val)) if pd.notna(val) and val != "" else None
+                    except (ValueError, TypeError):
                         return None
 
-                sale_price = safe_float(row.get('Valeur fonciere'))
-                surface_area = safe_float(row.get('Surface reelle bati'))
-                rooms = safe_int(row.get('Nombre pieces principales'))
-                land_surface = safe_float(row.get('Surface terrain'))
+                sale_price = safe_float(row.get("Valeur fonciere"))
+                surface_area = safe_float(row.get("Surface reelle bati"))
+                rooms = safe_int(row.get("Nombre pieces principales"))
+                land_surface = safe_float(row.get("Surface terrain"))
 
                 # Calculate price per sqm
                 price_per_sqm = None
@@ -269,38 +270,41 @@ class AllDVFImporter:
 
                 # Build address
                 address_parts = []
-                if pd.notna(row.get('Adresse numero')):
-                    address_parts.append(str(row['Adresse numero']))
-                if pd.notna(row.get('Adresse nom voie')):
-                    address_parts.append(str(row['Adresse nom voie']))
-                address = ' '.join(address_parts) if address_parts else None
+                if pd.notna(row.get("Adresse numero")):
+                    address_parts.append(str(row["Adresse numero"]))
+                if pd.notna(row.get("Adresse nom voie")):
+                    address_parts.append(str(row["Adresse nom voie"]))
+                address = " ".join(address_parts) if address_parts else None
 
                 # Create transaction group ID for deduplication
                 transaction_group_id = hashlib.md5(
-                    f"{sale_date}_{sale_price}_{address}_{row.get('Code postal', '')}".encode()
+                    f"{sale_date}_{sale_price}_{address}_{row.get('Code postal', '')}".encode(),
+                    usedforsecurity=False,
                 ).hexdigest()
 
-                records.append({
-                    'sale_date': sale_date,
-                    'sale_price': sale_price,
-                    'address': address,
-                    'postal_code': row.get('Code postal'),
-                    'city': row.get('Commune'),
-                    'department': row.get('Code departement'),
-                    'property_type': row.get('Type local'),
-                    'surface_area': surface_area,
-                    'rooms': rooms,
-                    'land_surface': land_surface,
-                    'price_per_sqm': price_per_sqm,
-                    'raw_data': None,  # Skip raw data to save space
-                    'data_year': year,
-                    'source_file': filename,
-                    'source_file_hash': file_hash,
-                    'import_batch_id': batch_id,
-                    'imported_at': datetime.utcnow(),
-                    'transaction_group_id': transaction_group_id,
-                    'created_at': datetime.utcnow()
-                })
+                records.append(
+                    {
+                        "sale_date": sale_date,
+                        "sale_price": sale_price,
+                        "address": address,
+                        "postal_code": row.get("Code postal"),
+                        "city": row.get("Commune"),
+                        "department": row.get("Code departement"),
+                        "property_type": row.get("Type local"),
+                        "surface_area": surface_area,
+                        "rooms": rooms,
+                        "land_surface": land_surface,
+                        "price_per_sqm": price_per_sqm,
+                        "raw_data": None,  # Skip raw data to save space
+                        "data_year": year,
+                        "source_file": filename,
+                        "source_file_hash": file_hash,
+                        "import_batch_id": batch_id,
+                        "imported_at": datetime.utcnow(),
+                        "transaction_group_id": transaction_group_id,
+                        "created_at": datetime.utcnow(),
+                    }
+                )
 
             except Exception as e:
                 logger.debug(f"Error processing row: {e}")
@@ -344,12 +348,7 @@ class AllDVFImporter:
             logger.error(f"Batch insert error: {e}")
             errors += len(records)
 
-        return {
-            "inserted": inserted,
-            "updated": updated,
-            "skipped": skipped,
-            "errors": errors
-        }
+        return {"inserted": inserted, "updated": updated, "skipped": skipped, "errors": errors}
 
     def import_all(self) -> bool:
         """Import all DVF files."""

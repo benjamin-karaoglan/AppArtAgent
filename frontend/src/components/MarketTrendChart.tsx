@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
   const [trendData, setTrendData] = useState<MarketTrendData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const t = useTranslations('property.marketTrend');
 
   useEffect(() => {
     loadTrendData();
@@ -35,7 +37,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
       setTrendData(response.data);
     } catch (err) {
       console.error('Failed to load market trend:', err);
-      setError('Failed to load market trend data');
+      setError(t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
   if (error || !trendData || trendData.years.length === 0) {
     return (
       <div className="text-sm text-gray-500 text-center py-4">
-        {error || 'No market trend data available'}
+        {error || t('noData')}
       </div>
     );
   }
@@ -77,12 +79,12 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
     <div className="bg-white rounded-lg p-6">
       <div className="mb-4">
         <h3 className="text-lg font-medium text-gray-900">
-          Market Price Evolution{trendData.street_name ? ` - ${trendData.street_name}` : ''}
+          {t('title')}{trendData.street_name ? ` - ${trendData.street_name}` : ''}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Based on {trendData.total_sales} sales{trendData.outliers_excluded > 0 && (
+          {t('basedOnSales', { count: trendData.total_sales })}{trendData.outliers_excluded > 0 && (
             <span className="font-medium text-orange-600">
-              {' '}({trendData.outliers_excluded} outlier{trendData.outliers_excluded > 1 ? 's' : ''} excluded for accuracy)
+              {' '}({t('outliersExcluded', { count: trendData.outliers_excluded })})
             </span>
           )}
         </p>
@@ -154,7 +156,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
                       maximumFractionDigits: 0,
                     }).format(trendData.average_prices[idx])}/m²
                     {idx > 0 && ` (${yoyChange > 0 ? '+' : ''}${yoyChange.toFixed(1)}%)`}
-                    {'\n'}{trendData.sample_counts[idx]} sales
+                    {'\n'}{trendData.sample_counts[idx]} {t('basedOnSales', { count: trendData.sample_counts[idx] }).split(' ').slice(-1)[0]}
                   </title>
                 </rect>
 
@@ -192,7 +194,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
                   fontSize="10"
                   fill="#9ca3af"
                 >
-                  {trendData.sample_counts[idx]} sales
+                  {trendData.sample_counts[idx]}
                 </text>
               </g>
             );
@@ -236,22 +238,22 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
         <div className="flex items-center gap-2 p-3 bg-green-50 rounded">
           <TrendingUp className="h-5 w-5 text-green-600" />
           <div>
-            <div className="font-medium text-green-900">Positive Growth</div>
-            <div className="text-green-700 text-xs">Price increased vs previous year</div>
+            <div className="font-medium text-green-900">{t('positiveGrowth')}</div>
+            <div className="text-green-700 text-xs">{t('positiveGrowthDesc')}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 p-3 bg-red-50 rounded">
           <TrendingDown className="h-5 w-5 text-red-600" />
           <div>
-            <div className="font-medium text-red-900">Negative Growth</div>
-            <div className="text-red-700 text-xs">Price decreased vs previous year</div>
+            <div className="font-medium text-red-900">{t('negativeGrowth')}</div>
+            <div className="text-red-700 text-xs">{t('negativeGrowthDesc')}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 p-3 bg-blue-50 rounded">
           <div className="w-5 h-5 bg-blue-500 rounded"></div>
           <div>
-            <div className="font-medium text-blue-900">Trend Line</div>
-            <div className="text-blue-700 text-xs">Overall market trajectory</div>
+            <div className="font-medium text-blue-900">{t('trendLine')}</div>
+            <div className="text-blue-700 text-xs">{t('trendLineDesc')}</div>
           </div>
         </div>
       </div>
@@ -259,10 +261,10 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
       {/* Overall trend summary */}
       {trendData.years.length > 1 && (
         <div className="mt-4 p-4 bg-gray-50 rounded border border-gray-200">
-          <div className="text-sm font-medium text-gray-900 mb-2">Market Summary</div>
+          <div className="text-sm font-medium text-gray-900 mb-2">{t('marketSummary')}</div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-600">Earliest price ({trendData.years[0]}):</span>
+              <span className="text-gray-600">{t('earliestPrice', { year: trendData.years[0] })}</span>
               <span className="ml-2 font-semibold">
                 {new Intl.NumberFormat('fr-FR', {
                   style: 'currency',
@@ -272,7 +274,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
               </span>
             </div>
             <div>
-              <span className="text-gray-600">Latest price ({trendData.years[trendData.years.length - 1]}):</span>
+              <span className="text-gray-600">{t('latestPrice', { year: trendData.years[trendData.years.length - 1] })}</span>
               <span className="ml-2 font-semibold">
                 {new Intl.NumberFormat('fr-FR', {
                   style: 'currency',
@@ -282,7 +284,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
               </span>
             </div>
             <div>
-              <span className="text-gray-600">Total change:</span>
+              <span className="text-gray-600">{t('totalChange')}</span>
               <span className={`ml-2 font-semibold ${
                 trendData.average_prices[trendData.average_prices.length - 1] >= trendData.average_prices[0]
                   ? 'text-green-600'
@@ -292,9 +294,9 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
               </span>
             </div>
             <div>
-              <span className="text-gray-600">Total sales analyzed:</span>
+              <span className="text-gray-600">{t('totalSalesAnalyzed')}</span>
               <span className="ml-2 font-semibold">
-                {trendData.sample_counts.reduce((a, b) => a + b, 0)} sales
+                {trendData.sample_counts.reduce((a, b) => a + b, 0)}
               </span>
             </div>
           </div>

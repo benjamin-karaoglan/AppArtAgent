@@ -38,20 +38,20 @@ services:
     environment:
       # Switch storage backend to GCS
       STORAGE_BACKEND: gcs
-      
+
       # GCS bucket configuration (set these in your .env or export them)
       GCS_DOCUMENTS_BUCKET: ${GCS_DOCUMENTS_BUCKET:-}
       GCS_PHOTOS_BUCKET: ${GCS_PHOTOS_BUCKET:-}
-      
+
       # Google Cloud configuration
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT}
       GOOGLE_APPLICATION_CREDENTIALS: /app/.secrets/adc.json
-    
+
     volumes:
       # Mount Google Cloud credentials
       # Option 1: Use ADC from gcloud auth application-default login
       - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/app/.secrets/adc.json:ro
-    
+
     # Override depends_on to remove minio dependency
     depends_on:
       db:

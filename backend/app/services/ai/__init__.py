@@ -11,13 +11,13 @@ from app.services.ai.document_analyzer import (
     DocumentAnalyzer,
     get_document_analyzer,
 )
-from app.services.ai.image_generator import (
-    ImageGenerator,
-    get_image_generator,
-)
 from app.services.ai.document_processor import (
     DocumentProcessor,
     get_document_processor,
+)
+from app.services.ai.image_generator import (
+    ImageGenerator,
+    get_image_generator,
 )
 
 __all__ = [

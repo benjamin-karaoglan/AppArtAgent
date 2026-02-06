@@ -2,26 +2,34 @@
 Pydantic schemas for Photo and PhotoRedesign models.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class PhotoUpload(BaseModel):
     """Schema for uploading a new photo."""
+
     property_id: Optional[int] = Field(None, description="Associated property ID")
-    room_type: Optional[str] = Field(None, description="Type of room (living_room, bedroom, kitchen, etc.)")
+    room_type: Optional[str] = Field(
+        None, description="Type of room (living_room, bedroom, kitchen, etc.)"
+    )
     description: Optional[str] = Field(None, description="Optional description of the photo")
 
 
 class PhotoUpdate(BaseModel):
     """Schema for updating photo metadata."""
-    room_type: Optional[str] = Field(None, description="Type of room (living_room, bedroom, kitchen, etc.)")
+
+    room_type: Optional[str] = Field(
+        None, description="Type of room (living_room, bedroom, kitchen, etc.)"
+    )
     filename: Optional[str] = Field(None, description="Display name for the photo")
 
 
 class PhotoResponse(BaseModel):
     """Schema for photo response."""
+
     id: int
     uuid: Optional[str] = None
     user_id: int
@@ -43,25 +51,26 @@ class PhotoResponse(BaseModel):
 
 class RedesignRequest(BaseModel):
     """Schema for requesting a photo redesign."""
+
     style_preset: Optional[str] = Field(
-        None,
-        description="Preset style: modern_norwegian, minimalist_scandinavian, or cozy_hygge"
+        None, description="Preset style: modern_norwegian, minimalist_scandinavian, or cozy_hygge"
     )
     custom_prompt: Optional[str] = Field(
-        None,
-        description="Custom redesign prompt (used if style_preset not provided)"
+        None, description="Custom redesign prompt (used if style_preset not provided)"
     )
     room_type: str = Field("living room", description="Type of room being redesigned")
     additional_details: Optional[str] = Field(None, description="Additional customization details")
-    aspect_ratio: str = Field("16:9", description="Image aspect ratio: 1:1, 16:9, 9:16, 4:3, or 3:4")
+    aspect_ratio: str = Field(
+        "16:9", description="Image aspect ratio: 1:1, 16:9, 9:16, 4:3, or 3:4"
+    )
     parent_redesign_id: Optional[int] = Field(
-        None,
-        description="ID of parent redesign for multi-turn iteration"
+        None, description="ID of parent redesign for multi-turn iteration"
     )
 
 
 class RedesignResponse(BaseModel):
     """Schema for redesign response."""
+
     id: int
     redesign_uuid: str
     photo_id: int
@@ -79,7 +88,9 @@ class RedesignResponse(BaseModel):
     generation_time_ms: Optional[int]
     is_favorite: bool
     user_rating: Optional[int]
-    presigned_url: Optional[str] = Field(None, description="Temporary URL to access the redesigned image")
+    presigned_url: Optional[str] = Field(
+        None, description="Temporary URL to access the redesigned image"
+    )
 
     class Config:
         from_attributes = True
@@ -87,18 +98,21 @@ class RedesignResponse(BaseModel):
 
 class PhotoListResponse(BaseModel):
     """Schema for list of photos."""
+
     photos: List[PhotoResponse]
     total: int
 
 
 class RedesignListResponse(BaseModel):
     """Schema for list of redesigns."""
+
     redesigns: List[RedesignResponse]
     total: int
 
 
 class StylePresetsResponse(BaseModel):
     """Schema for available style presets."""
+
     presets: List[Dict[str, str]] = Field(
         default=[
             {
@@ -117,7 +131,7 @@ class StylePresetsResponse(BaseModel):
                     "- Include minimal but impactful decor: a single statement plant, ceramic vases, or contemporary Norwegian art\n"
                     "- The overall atmosphere should feel spacious, airy, and connected to nature while maintaining sophisticated modern elegance\n"
                     "Return only the edited image."
-                )
+                ),
             },
             {
                 "id": "minimalist_scandinavian",
@@ -135,7 +149,7 @@ class StylePresetsResponse(BaseModel):
                     "- Every object serves a purpose while contributing to the overall aesthetic harmony\n"
                     "- Mood: calm, uncluttered, and effortlessly sophisticated\n"
                     "Return only the edited image."
-                )
+                ),
             },
             {
                 "id": "cozy_hygge",
@@ -154,7 +168,7 @@ class StylePresetsResponse(BaseModel):
                     "- The atmosphere should evoke safety, comfort, and intimate togetherness\n"
                     "- Lighting: cozy warm evening\n"
                     "Return only the edited image."
-                )
-            }
+                ),
+            },
         ]
     )

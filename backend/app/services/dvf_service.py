@@ -2,14 +2,16 @@
 DVF (Demandes de Valeurs Foncières) service for property price analysis.
 """
 
-from typing import List, Dict, Any, Optional, Tuple, Union
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
-from datetime import datetime, timedelta, date
-import statistics
 import re
+import statistics
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from app.models.property import DVFRecord, DVFGroupedTransaction, Property
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
+
+from app.core.i18n import translate
+from app.models.property import DVFGroupedTransaction, DVFRecord, Property
 
 
 class DVFService:
@@ -49,7 +51,9 @@ class DVFService:
             outlier_flags = []
             for sale in sales:
                 if sale.price_per_sqm:
-                    is_outlier = sale.price_per_sqm < lower_bound or sale.price_per_sqm > upper_bound
+                    is_outlier = (
+                        sale.price_per_sqm < lower_bound or sale.price_per_sqm > upper_bound
+                    )
                     outlier_flags.append(is_outlier)
                 else:
                     outlier_flags.append(False)
@@ -88,7 +92,9 @@ class DVFService:
             return None, None
 
         # Try to extract street number (handle formats like "56", "56 bis", "56-58")
-        match = re.match(r'^(\d+)(?:\s*(?:bis|ter|quater|[A-Z])?)?\s+(.+)$', address.strip(), re.IGNORECASE)
+        match = re.match(
+            r"^(\d+)(?:\s*(?:bis|ter|quater|[A-Z])?)?\s+(.+)$", address.strip(), re.IGNORECASE
+        )
         if match:
             try:
                 street_number = int(match.group(1))
@@ -106,7 +112,7 @@ class DVFService:
         property_type: str,
         address: str,
         months_back: int = 60,
-        max_results: int = 20
+        max_results: int = 20,
     ) -> List[DVFRecord]:
         """
         Get sales for the EXACT address only, no neighbors or fallbacks.
@@ -135,15 +141,20 @@ class DVFService:
             return []
 
         # Query for exact address matches only
-        exact_query = db.query(DVFRecord).filter(
-            DVFRecord.sale_date >= cutoff_date,
-            DVFRecord.property_type == property_type,
-            DVFRecord.surface_area.isnot(None),
-            DVFRecord.price_per_sqm.isnot(None),
-            DVFRecord.price_per_sqm > 0,
-            DVFRecord.postal_code == postal_code,
-            DVFRecord.address.ilike(f'{street_number} {street_name}%')
-        ).order_by(DVFRecord.sale_date.desc()).limit(max_results)
+        exact_query = (
+            db.query(DVFRecord)
+            .filter(
+                DVFRecord.sale_date >= cutoff_date,
+                DVFRecord.property_type == property_type,
+                DVFRecord.surface_area.isnot(None),
+                DVFRecord.price_per_sqm.isnot(None),
+                DVFRecord.price_per_sqm > 0,
+                DVFRecord.postal_code == postal_code,
+                DVFRecord.address.ilike(f"{street_number} {street_name}%"),
+            )
+            .order_by(DVFRecord.sale_date.desc())
+            .limit(max_results)
+        )
 
         return exact_query.all()
 
@@ -154,7 +165,7 @@ class DVFService:
         property_type: str,
         address: str,
         months_back: int = 60,
-        max_results: int = 20
+        max_results: int = 20,
     ) -> List[DVFGroupedTransaction]:
         """
         Get GROUPED sales (multi-unit sales aggregated) for exact address.
@@ -183,17 +194,20 @@ class DVFService:
             return []
 
         # Query grouped transactions view
-        query = db.query(DVFGroupedTransaction).filter(
-            DVFGroupedTransaction.sale_date >= cutoff_date,
-            DVFGroupedTransaction.property_type == property_type,
-            DVFGroupedTransaction.total_surface_area.isnot(None),
-            DVFGroupedTransaction.grouped_price_per_sqm.isnot(None),
-            DVFGroupedTransaction.grouped_price_per_sqm > 0,
-            DVFGroupedTransaction.postal_code == postal_code,
-            DVFGroupedTransaction.address.ilike(f'{street_number} {street_name}%')
-        ).order_by(
-            DVFGroupedTransaction.sale_date.desc()
-        ).limit(max_results)
+        query = (
+            db.query(DVFGroupedTransaction)
+            .filter(
+                DVFGroupedTransaction.sale_date >= cutoff_date,
+                DVFGroupedTransaction.property_type == property_type,
+                DVFGroupedTransaction.total_surface_area.isnot(None),
+                DVFGroupedTransaction.grouped_price_per_sqm.isnot(None),
+                DVFGroupedTransaction.grouped_price_per_sqm > 0,
+                DVFGroupedTransaction.postal_code == postal_code,
+                DVFGroupedTransaction.address.ilike(f"{street_number} {street_name}%"),
+            )
+            .order_by(DVFGroupedTransaction.sale_date.desc())
+            .limit(max_results)
+        )
 
         return query.all()
 
@@ -206,7 +220,7 @@ class DVFService:
         address: str = "",
         radius_km: int = 2,
         months_back: int = 60,  # CHANGED: 60 months = 5 years to include 2022-2025
-        max_results: int = 20
+        max_results: int = 20,
     ) -> List[DVFRecord]:
         """
         Find comparable property sales from DVF data with smart address-based matching.
@@ -243,13 +257,12 @@ class DVFService:
             DVFRecord.surface_area.isnot(None),
             DVFRecord.price_per_sqm.isnot(None),
             DVFRecord.price_per_sqm > 0,
-            DVFRecord.postal_code == postal_code
+            DVFRecord.postal_code == postal_code,
         )
 
         # Base filters WITH surface area tolerance (for neighboring/broader searches)
         base_filters_with_surface = and_(
-            base_filters_no_surface,
-            DVFRecord.surface_area.between(min_surface, max_surface)
+            base_filters_no_surface, DVFRecord.surface_area.between(min_surface, max_surface)
         )
 
         # CRITICAL CHANGE: Exact address matches ignore surface area filter
@@ -260,10 +273,15 @@ class DVFService:
 
         # Try to find exact address matches first (WITHOUT surface area filter)
         if street_number and street_name:
-            exact_query = db.query(DVFRecord).filter(
-                base_filters_no_surface,
-                DVFRecord.address.ilike(f'{street_number} {street_name}%')
-            ).order_by(DVFRecord.sale_date.desc()).limit(max_results)
+            exact_query = (
+                db.query(DVFRecord)
+                .filter(
+                    base_filters_no_surface,
+                    DVFRecord.address.ilike(f"{street_number} {street_name}%"),
+                )
+                .order_by(DVFRecord.sale_date.desc())
+                .limit(max_results)
+            )
             exact_results = exact_query.all()
 
         # If we have exact address sales AND they match the surface area criteria,
@@ -271,8 +289,7 @@ class DVFService:
         if exact_results:
             # Check if at least one exact result matches the surface area range
             has_matching_surface = any(
-                min_surface <= sale.surface_area <= max_surface
-                for sale in exact_results
+                min_surface <= sale.surface_area <= max_surface for sale in exact_results
             )
 
             if has_matching_surface or len(exact_results) >= 3:
@@ -297,14 +314,15 @@ class DVFService:
                     neighbors.append(street_number - offset)
 
             neighbor_conditions = [
-                DVFRecord.address.ilike(f'{num} {street_name}%')
-                for num in neighbors
+                DVFRecord.address.ilike(f"{num} {street_name}%") for num in neighbors
             ]
 
-            neighbor_query = db.query(DVFRecord).filter(
-                base_filters_with_surface,
-                or_(*neighbor_conditions)
-            ).order_by(DVFRecord.sale_date.desc()).limit(max_results - len(results))
+            neighbor_query = (
+                db.query(DVFRecord)
+                .filter(base_filters_with_surface, or_(*neighbor_conditions))
+                .order_by(DVFRecord.sale_date.desc())
+                .limit(max_results - len(results))
+            )
 
             neighbor_results = neighbor_query.all()
             # Avoid duplicates (though shouldn't happen since exact address doesn't match surface filter)
@@ -313,10 +331,12 @@ class DVFService:
 
         # Priority 3: Same street (broader range, WITH surface area filter)
         if len(results) < 5 and street_name:
-            street_query = db.query(DVFRecord).filter(
-                base_filters_with_surface,
-                DVFRecord.address.ilike(f'%{street_name}%')
-            ).order_by(DVFRecord.sale_date.desc()).limit(max_results - len(results))
+            street_query = (
+                db.query(DVFRecord)
+                .filter(base_filters_with_surface, DVFRecord.address.ilike(f"%{street_name}%"))
+                .order_by(DVFRecord.sale_date.desc())
+                .limit(max_results - len(results))
+            )
 
             street_results = street_query.all()
             # Avoid duplicates
@@ -325,9 +345,12 @@ class DVFService:
 
         # Priority 4: Fallback to same postal code (WITH surface area filter)
         if len(results) < 5:
-            fallback_query = db.query(DVFRecord).filter(
-                base_filters_with_surface
-            ).order_by(DVFRecord.sale_date.desc()).limit(max_results - len(results))
+            fallback_query = (
+                db.query(DVFRecord)
+                .filter(base_filters_with_surface)
+                .order_by(DVFRecord.sale_date.desc())
+                .limit(max_results - len(results))
+            )
 
             fallback_results = fallback_query.all()
             # Avoid duplicates
@@ -361,7 +384,7 @@ class DVFService:
         surface_area: float,
         address: str,
         months_back: int = 24,  # Changed to 24 months (2024-2025)
-        max_results: int = 200  # Increased to get ALL sales on the street
+        max_results: int = 200,  # Increased to get ALL sales on the street
     ) -> List[DVFRecord]:
         """
         Get neighboring address sales for trend calculation.
@@ -385,7 +408,7 @@ class DVFService:
             DVFRecord.surface_area.isnot(None),
             DVFRecord.price_per_sqm.isnot(None),
             DVFRecord.price_per_sqm > 0,
-            DVFRecord.postal_code == postal_code
+            DVFRecord.postal_code == postal_code,
         )
 
         # Get neighboring addresses
@@ -396,22 +419,25 @@ class DVFService:
                 neighbors.append(street_number - offset)
 
         neighbor_conditions = [
-            DVFRecord.address.ilike(f'{num} {street_name}%')
-            for num in neighbors
+            DVFRecord.address.ilike(f"{num} {street_name}%") for num in neighbors
         ]
 
         # Also include same street for broader trend
-        neighbor_conditions.append(DVFRecord.address.ilike(f'%{street_name}%'))
+        neighbor_conditions.append(DVFRecord.address.ilike(f"%{street_name}%"))
 
-        query = db.query(DVFRecord).filter(
-            base_filters,
-            or_(*neighbor_conditions)
-        ).order_by(DVFRecord.sale_date.desc()).limit(max_results)
+        query = (
+            db.query(DVFRecord)
+            .filter(base_filters, or_(*neighbor_conditions))
+            .order_by(DVFRecord.sale_date.desc())
+            .limit(max_results)
+        )
 
         return query.all()
 
     @staticmethod
-    def calculate_market_trend(comparable_sales: List[DVFRecord], use_latest_year_only: bool = False) -> float:
+    def calculate_market_trend(
+        comparable_sales: List[DVFRecord], use_latest_year_only: bool = False
+    ) -> float:
         """
         Calculate market trend (annual price increase/decrease percentage).
 
@@ -427,7 +453,7 @@ class DVFService:
             return 0.0
 
         # Group sales by year
-        sales_by_year = {}
+        sales_by_year: dict[int, list[float]] = {}
         for sale in comparable_sales:
             if sale.sale_date and sale.price_per_sqm and sale.price_per_sqm > 0:
                 year = sale.sale_date.year
@@ -440,10 +466,7 @@ class DVFService:
             return 0.0
 
         # Calculate average price per year
-        year_averages = {
-            year: statistics.mean(prices)
-            for year, prices in sales_by_year.items()
-        }
+        year_averages = {year: statistics.mean(prices) for year, prices in sales_by_year.items()}
 
         # Sort by year
         sorted_years = sorted(year_averages.keys())
@@ -451,7 +474,7 @@ class DVFService:
         # Calculate year-over-year changes
         yoy_changes = []
         for i in range(1, len(sorted_years)):
-            prev_year = sorted_years[i-1]
+            prev_year = sorted_years[i - 1]
             curr_year = sorted_years[i]
             years_diff = curr_year - prev_year
 
@@ -468,9 +491,7 @@ class DVFService:
 
     @staticmethod
     def apply_time_adjustment(
-        price_per_sqm: float,
-        sale_date: Union[datetime, date],
-        trend_pct: float
+        price_per_sqm: float, sale_date: Union[datetime, date], trend_pct: float
     ) -> float:
         """
         Adjust historical price to current value using trend.
@@ -504,7 +525,7 @@ class DVFService:
     def calculate_trend_based_projection(
         exact_address_sales: List[DVFRecord],
         neighboring_sales: List[DVFRecord],
-        surface_area: float
+        surface_area: float,
     ) -> Dict[str, Any]:
         """
         Calculate 2025 price projection using trend from neighboring addresses.
@@ -524,7 +545,7 @@ class DVFService:
                 "trend_used": 0,
                 "trend_source": "insufficient_data",
                 "base_sale_date": None,
-                "base_price_per_sqm": None
+                "base_price_per_sqm": None,
             }
 
         # Get most recent exact address sale
@@ -532,15 +553,12 @@ class DVFService:
         base_sale = exact_address_sales[0]
 
         # Calculate trend from neighboring addresses (use ONLY latest year)
-        trend_pct = DVFService.calculate_market_trend(
-            neighboring_sales,
-            use_latest_year_only=True
-        )
+        trend_pct = DVFService.calculate_market_trend(neighboring_sales, use_latest_year_only=True)
 
         # Debug logging
         print("🔍 TREND CALCULATION DEBUG:")
         print(f"   Total neighboring sales: {len(neighboring_sales)}")
-        sales_by_year_debug = {}
+        sales_by_year_debug: dict[int, list[float]] = {}
         for sale in neighboring_sales:
             if sale.sale_date and sale.price_per_sqm:
                 year = sale.sale_date.year
@@ -560,14 +578,12 @@ class DVFService:
                 "trend_used": 0,
                 "trend_source": "no_significant_trend",
                 "base_sale_date": base_sale.sale_date,
-                "base_price_per_sqm": base_sale.price_per_sqm
+                "base_price_per_sqm": base_sale.price_per_sqm,
             }
 
         # Project to 2025
         projected_price_per_sqm = DVFService.apply_time_adjustment(
-            base_sale.price_per_sqm,
-            base_sale.sale_date,
-            trend_pct
+            base_sale.price_per_sqm, base_sale.sale_date, trend_pct
         )
 
         return {
@@ -577,7 +593,7 @@ class DVFService:
             "trend_source": "neighboring_addresses",
             "base_sale_date": base_sale.sale_date,
             "base_price_per_sqm": base_sale.price_per_sqm,
-            "trend_sample_size": len(neighboring_sales)
+            "trend_sample_size": len(neighboring_sales),
         }
 
     @staticmethod
@@ -586,7 +602,8 @@ class DVFService:
         surface_area: float,
         comparable_sales: List[DVFRecord],
         exclude_indices: Optional[List[int]] = None,
-        apply_time_adjustment: bool = False
+        apply_time_adjustment: bool = False,
+        locale: str = "fr",
     ) -> Dict[str, Any]:
         """
         Calculate comprehensive price analysis based on comparable sales.
@@ -597,6 +614,7 @@ class DVFService:
             comparable_sales: List of comparable sales
             exclude_indices: Optional list of indices to exclude from calculation (for outliers)
             apply_time_adjustment: Whether to adjust prices for time (default False for simple analysis)
+            locale: Language for recommendation strings ('fr' or 'en')
         """
         if not comparable_sales:
             return {
@@ -604,7 +622,7 @@ class DVFService:
                 "price_per_sqm": asking_price / surface_area if surface_area else 0,
                 "market_avg_price_per_sqm": 0,
                 "price_deviation_percent": 0,
-                "recommendation": "Insufficient data",
+                "recommendation": translate("insufficient_data", locale),
                 "confidence_score": 0,
                 "market_trend_annual": 0,
             }
@@ -619,7 +637,7 @@ class DVFService:
                 "price_per_sqm": asking_price / surface_area if surface_area else 0,
                 "market_avg_price_per_sqm": 0,
                 "price_deviation_percent": 0,
-                "recommendation": "Insufficient data (all sales excluded)",
+                "recommendation": translate("insufficient_data_excluded", locale),
                 "confidence_score": 0,
                 "market_trend_annual": 0,
             }
@@ -634,9 +652,7 @@ class DVFService:
                 if apply_time_adjustment and abs(market_trend) > 0.5:
                     # Apply time adjustment to project old prices to current value
                     adjusted_price = DVFService.apply_time_adjustment(
-                        sale.price_per_sqm,
-                        sale.sale_date,
-                        market_trend
+                        sale.price_per_sqm, sale.sale_date, market_trend
                     )
                 else:
                     # Use raw price per sqm (no adjustment)
@@ -649,7 +665,7 @@ class DVFService:
                 "price_per_sqm": asking_price / surface_area if surface_area else 0,
                 "market_avg_price_per_sqm": 0,
                 "price_deviation_percent": 0,
-                "recommendation": "Insufficient data",
+                "recommendation": translate("insufficient_data", locale),
                 "confidence_score": 0,
                 "market_trend_annual": 0,
             }
@@ -665,22 +681,23 @@ class DVFService:
         # Calculate deviation
         price_deviation_percent = (
             ((asking_price_per_sqm - market_avg_price_per_sqm) / market_avg_price_per_sqm) * 100
-            if market_avg_price_per_sqm > 0 else 0
+            if market_avg_price_per_sqm > 0
+            else 0
         )
 
         # Generate recommendation
         if price_deviation_percent < -10:
-            recommendation = "Excellent deal - Below market price"
+            recommendation = translate("excellent_deal", locale)
         elif price_deviation_percent < -5:
-            recommendation = "Good deal - Slightly below market"
+            recommendation = translate("good_deal", locale)
         elif price_deviation_percent < 5:
-            recommendation = "Fair price - At market value"
+            recommendation = translate("fair_price", locale)
         elif price_deviation_percent < 10:
-            recommendation = "Slightly overpriced - Room for negotiation"
+            recommendation = translate("slightly_overpriced", locale)
         elif price_deviation_percent < 20:
-            recommendation = "Overpriced - Significant negotiation needed"
+            recommendation = translate("overpriced", locale)
         else:
-            recommendation = "Heavily overpriced - Reconsider or negotiate heavily"
+            recommendation = translate("heavily_overpriced", locale)
 
         # Confidence score based on number of comparables (20 is ideal)
         confidence_score = min(100, (len(filtered_sales) / 20) * 100)
@@ -702,7 +719,7 @@ class DVFService:
         property_data: Property,
         price_analysis: Dict[str, Any],
         annual_costs: float,
-        risk_factors: List[str]
+        risk_factors: List[str],
     ) -> Dict[str, Any]:
         """
         Calculate overall investment score and metrics.
@@ -737,11 +754,7 @@ class DVFService:
             cost_score = 50
 
         # Overall investment score (weighted average)
-        investment_score = (
-            value_score * 0.4 +
-            risk_score * 0.3 +
-            cost_score * 0.3
-        )
+        investment_score = value_score * 0.4 + risk_score * 0.3 + cost_score * 0.3
 
         # Overall recommendation
         if investment_score >= 80:

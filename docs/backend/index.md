@@ -14,7 +14,7 @@ The AppArt Agent backend is a FastAPI application providing REST APIs for proper
 
 ## Project Structure
 
-```
+```text
 backend/
 ├── app/
 │   ├── api/                 # REST API endpoints

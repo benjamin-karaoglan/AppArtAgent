@@ -39,8 +39,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://appart:appart@localhost:5432/appart_agent"
+        "DATABASE_URL", "postgresql://appart:appart@localhost:5432/appart_agent"
     )
 
     # Google Cloud / Gemini (Primary LLM Provider)
@@ -50,8 +49,12 @@ class Settings(BaseSettings):
     GEMINI_USE_VERTEXAI: bool = os.getenv("GEMINI_USE_VERTEXAI", "false").lower() == "true"
 
     # Gemini Models
-    GEMINI_LLM_MODEL: str = os.getenv("GEMINI_LLM_MODEL", "gemini-2.0-flash-lite")  # Default for text/document analysis
-    GEMINI_IMAGE_MODEL: str = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")  # For image generation
+    GEMINI_LLM_MODEL: str = os.getenv(
+        "GEMINI_LLM_MODEL", "gemini-2.0-flash-lite"
+    )  # Default for text/document analysis
+    GEMINI_IMAGE_MODEL: str = os.getenv(
+        "GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image"
+    )  # For image generation
 
     # Anthropic (DEPRECATED - kept for backward compatibility)
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
@@ -61,7 +64,14 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/tmp/uploads")
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = [
-        ".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".xls", ".xlsx"
+        ".pdf",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
     ]
 
     # DVF Data - Use environment variable or /tmp for Cloud Run

@@ -1,9 +1,21 @@
 """Property and DVF record models."""
 
 import uuid as uuid_lib
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Date, Text, Index, Boolean
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import (
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import relationship
+
 from app.core.database import Base
 
 
@@ -13,7 +25,9 @@ class Property(Base):
     __tablename__ = "properties"
 
     id = Column(Integer, primary_key=True, index=True)
-    uuid = Column(String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(
+        String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4())
+    )
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # Address information
@@ -42,7 +56,9 @@ class Property(Base):
 
     # Relationships
     user = relationship("User", back_populates="properties")
-    documents = relationship("Document", back_populates="related_property", cascade="all, delete-orphan")
+    documents = relationship(
+        "Document", back_populates="related_property", cascade="all, delete-orphan"
+    )
     analyses = relationship("Analysis", back_populates="property", cascade="all, delete-orphan")
 
 
@@ -83,30 +99,37 @@ class DVFRecord(Base):
     imported_at = Column(DateTime, default=datetime.utcnow)  # When this record was imported
 
     # Transaction grouping (multiple properties sold together)
-    transaction_group_id = Column(String(32), index=True)  # Hash of (sale_date, price, address, postal)
+    transaction_group_id = Column(
+        String(32), index=True
+    )  # Hash of (sale_date, price, address, postal)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Composite indexes for query optimization
     __table_args__ = (
         # Unique constraint for deduplication - DVF business key
-        Index('idx_dvf_unique_sale',
-              'sale_date', 'sale_price', 'address', 'postal_code', 'surface_area',
-              unique=True),
-
+        Index(
+            "idx_dvf_unique_sale",
+            "sale_date",
+            "sale_price",
+            "address",
+            "postal_code",
+            "surface_area",
+            unique=True,
+        ),
         # Composite indexes for common query patterns
-        Index('idx_dvf_postal_type_address', 'postal_code', 'property_type', 'address'),
-        Index('idx_dvf_date_postal_type', 'sale_date', 'postal_code', 'property_type'),
-        Index('idx_dvf_postal_type_surface', 'postal_code', 'property_type', 'surface_area'),
-
+        Index("idx_dvf_postal_type_address", "postal_code", "property_type", "address"),
+        Index("idx_dvf_date_postal_type", "sale_date", "postal_code", "property_type"),
+        Index("idx_dvf_postal_type_surface", "postal_code", "property_type", "surface_area"),
         # GIN index for fast ILIKE queries on address (requires pg_trgm extension)
-        Index('idx_dvf_address_gin', 'address',
-              postgresql_using='gin',
-              postgresql_ops={'address': 'gin_trgm_ops'}),
-
+        Index(
+            "idx_dvf_address_gin",
+            "address",
+            postgresql_using="gin",
+            postgresql_ops={"address": "gin_trgm_ops"},
+        ),
         # Partial index for price_per_sqm (only non-null positive values)
-        Index('idx_dvf_price_per_sqm', 'price_per_sqm',
-              postgresql_where='price_per_sqm > 0'),
+        Index("idx_dvf_price_per_sqm", "price_per_sqm", postgresql_where="price_per_sqm > 0"),
     )
 
 
@@ -139,15 +162,15 @@ class DVFImport(Base):
 
     # Indexes for querying
     __table_args__ = (
-        Index('idx_dvf_imports_status', 'status'),
-        Index('idx_dvf_imports_year_status', 'data_year', 'status'),
+        Index("idx_dvf_imports_status", "status"),
+        Index("idx_dvf_imports_year_status", "data_year", "status"),
     )
 
 
 class DVFStats(Base):
     """
     Aggregate statistics for DVF records.
-    
+
     Single row table that tracks overall DVF data metrics.
     Updated after DVF imports complete.
     """

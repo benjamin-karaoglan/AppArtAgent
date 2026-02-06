@@ -25,11 +25,13 @@ docker-compose up
 ### Local Development with uv
 
 1. Install uv:
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 2. Create a virtual environment and install dependencies:
+
 ```bash
 cd backend
 uv venv
@@ -38,12 +40,14 @@ uv pip install -r requirements.txt
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
 4. Run the application:
+
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -74,6 +78,7 @@ Key environment variables (set in `.env`):
 ## Logging
 
 Logs are stored in the `logs/` directory:
+
 - `app.log`: All application logs with rotation (10MB max, 5 backups)
 - `errors.log`: Error-level logs only
 
@@ -100,12 +105,14 @@ For processing multiple documents with intelligent classification:
 6. **Status Tracking**: Monitor progress via `/api/documents/bulk-status/{workflow_id}`
 
 **Architecture Benefits**:
+
 - **Auto-Classification**: AI automatically determines document types
 - **Batch Processing**: Upload all property documents at once
 - **Synthesis**: Get comprehensive property analysis from all documents
 - **Deduplication**: SHA-256 file hashing prevents duplicate processing
 
 Supported document types:
+
 - **PV d'AG**: Assembly meeting minutes
 - **Diagnostics**: DPE, amiante, plomb, termite, electric, gas
 - **Tax documents**: Taxe foncière
@@ -114,6 +121,7 @@ Supported document types:
 ## API Documentation
 
 Once running, visit:
+
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 

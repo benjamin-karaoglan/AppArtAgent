@@ -1,13 +1,15 @@
 """Property schemas for request/response validation."""
 
-from pydantic import BaseModel, field_validator, model_validator
-from typing import Optional, Union, List
-from datetime import datetime, date
 import json
+from datetime import date, datetime
+from typing import List, Optional, Union
+
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class PropertyBase(BaseModel):
     """Base property schema."""
+
     address: str
     postal_code: Optional[str] = None
     city: Optional[str] = None
@@ -22,11 +24,13 @@ class PropertyBase(BaseModel):
 
 class PropertyCreate(PropertyBase):
     """Schema for creating a new property."""
+
     pass
 
 
 class PropertyUpdate(BaseModel):
     """Schema for updating a property."""
+
     address: Optional[str] = None
     asking_price: Optional[float] = None
     surface_area: Optional[float] = None
@@ -38,6 +42,7 @@ class PropertyUpdate(BaseModel):
 
 class PropertyResponse(PropertyBase):
     """Schema for property response."""
+
     id: int
     user_id: int
     estimated_value: Optional[float] = None
@@ -53,6 +58,7 @@ class PropertyResponse(PropertyBase):
 
 class LotDetail(BaseModel):
     """Schema for individual lot in a multi-unit transaction."""
+
     id: int
     surface_area: Optional[float] = None
     rooms: Optional[int] = None
@@ -62,6 +68,7 @@ class LotDetail(BaseModel):
 
 class DVFRecordResponse(BaseModel):
     """Schema for DVF record response."""
+
     id: int
     sale_date: Union[datetime, date]
     sale_price: float
@@ -79,7 +86,7 @@ class DVFRecordResponse(BaseModel):
     is_multi_unit: Optional[bool] = False
     lots_detail: Optional[List[LotDetail]] = None
 
-    @field_validator('sale_date', mode='before')
+    @field_validator("sale_date", mode="before")
     @classmethod
     def convert_date_to_datetime(cls, v):
         """Convert date to datetime for consistent API response."""
@@ -93,6 +100,7 @@ class DVFRecordResponse(BaseModel):
 
 class DVFGroupedTransactionResponse(BaseModel):
     """Schema for grouped DVF transaction response (multi-unit sales aggregated)."""
+
     id: int
     transaction_group_id: str
     sale_date: Union[datetime, date]
@@ -109,7 +117,7 @@ class DVFGroupedTransactionResponse(BaseModel):
     lots_detail: Optional[List[LotDetail]] = None  # Individual lots for drill-down
     is_outlier: Optional[bool] = False
 
-    @field_validator('sale_date', mode='before')
+    @field_validator("sale_date", mode="before")
     @classmethod
     def convert_date_to_datetime(cls, v):
         """Convert date to datetime for consistent API response."""
@@ -117,7 +125,7 @@ class DVFGroupedTransactionResponse(BaseModel):
             return datetime.combine(v, datetime.min.time())
         return v
 
-    @field_validator('lots_detail', mode='before')
+    @field_validator("lots_detail", mode="before")
     @classmethod
     def parse_lots_detail(cls, v):
         """Parse JSON string to list of dicts."""
@@ -128,7 +136,7 @@ class DVFGroupedTransactionResponse(BaseModel):
                 return None
         return v
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def calculate_is_multi_unit(self):
         """Determine if multi-unit based on unit_count."""
         if self.is_multi_unit is None:
@@ -141,14 +149,13 @@ class DVFGroupedTransactionResponse(BaseModel):
 
 class PriceAnalysisResponse(BaseModel):
     """Schema for price analysis response."""
+
     estimated_value: float
     price_per_sqm: float
     market_avg_price_per_sqm: float
     market_median_price_per_sqm: Optional[float] = None
     price_deviation_percent: float
-    comparable_sales: list[
-        Union[DVFRecordResponse, DVFGroupedTransactionResponse]
-    ]
+    comparable_sales: list[Union[DVFRecordResponse, DVFGroupedTransactionResponse]]
     recommendation: str
     confidence_score: float
     comparables_count: Optional[int] = None

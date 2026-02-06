@@ -7,6 +7,7 @@ description: Prompt for analyzing French copropriété assembly meeting minutes
 Analyze the following French copropriété assembly meeting minutes (PV d'AG).
 
 Extract and identify:
+
 1. All upcoming works mentioned (travaux à venir)
 2. Estimated costs for each work item
 3. Financial health of the copropriété (budget, reserves, debts)
@@ -34,3 +35,5 @@ Provide your analysis in JSON format with the following structure:
     "key_findings": ["finding 1", "finding 2"],
     "recommendations": ["recommendation 1", "recommendation 2"]
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

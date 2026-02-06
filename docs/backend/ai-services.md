@@ -197,7 +197,7 @@ result = await generator.redesign_photo(
 
 Prompts are versioned and stored in `app/prompts/`:
 
-```
+```text
 prompts/
 └── v1/
     ├── analyze_diagnostic.md
@@ -277,6 +277,7 @@ GOOGLE_CLOUD_LOCATION=europe-west1
 ```
 
 This ensures you test with:
+
 - Same Vertex AI models as production
 - Same IAM permissions as the deployed service
 - No API key management required

@@ -8,21 +8,20 @@ Example:
     python scripts/rollback_dvf_import.py a1b2c3d4-e5f6-7890-abcd-ef1234567890
 """
 
-import sys
-import os
 import argparse
 import logging
+import os
+import sys
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import SessionLocal
-from app.models.property import DVFRecord, DVFImport
+from app.models.property import DVFImport, DVFRecord
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -33,9 +32,7 @@ def rollback_import(batch_id: str):
     db = SessionLocal()
     try:
         # Get import record
-        import_record = db.query(DVFImport).filter(
-            DVFImport.batch_id == batch_id
-        ).first()
+        import_record = db.query(DVFImport).filter(DVFImport.batch_id == batch_id).first()
 
         if not import_record:
             logger.error(f"Import batch not found: {batch_id}")
@@ -46,25 +43,29 @@ def rollback_import(batch_id: str):
         logger.info(f"Imported: {import_record.inserted_records:,} records")
 
         # Confirm rollback
-        response = input(f"\nRollback this import? This will DELETE {import_record.inserted_records:,} records. (yes/no): ")
-        if response.lower() != 'yes':
+        response = input(
+            f"\nRollback this import? This will DELETE {import_record.inserted_records:,} records. (yes/no): "
+        )
+        if response.lower() != "yes":
             logger.info("Rollback cancelled")
             return
 
         # Delete records from this batch
         logger.info(f"Deleting records with import_batch_id = {batch_id}...")
 
-        deleted_count = db.query(DVFRecord).filter(
-            DVFRecord.import_batch_id == batch_id
-        ).delete(synchronize_session=False)
+        deleted_count = (
+            db.query(DVFRecord)
+            .filter(DVFRecord.import_batch_id == batch_id)
+            .delete(synchronize_session=False)
+        )
 
         # Update import record status
-        import_record.status = 'rolled_back'
+        import_record.status = "rolled_back"
 
         db.commit()
 
         logger.info(f"✓ Rolled back {deleted_count:,} records from batch {batch_id}")
-        logger.info(f"Import record marked as 'rolled_back'")
+        logger.info("Import record marked as 'rolled_back'")
 
     except Exception as e:
         db.rollback()
@@ -102,9 +103,9 @@ def list_imports():
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description='Rollback DVF import batch')
-    parser.add_argument('batch_id', nargs='?', help='Batch ID to rollback')
-    parser.add_argument('--list', action='store_true', help='List all import batches')
+    parser = argparse.ArgumentParser(description="Rollback DVF import batch")
+    parser.add_argument("batch_id", nargs="?", help="Batch ID to rollback")
+    parser.add_argument("--list", action="store_true", help="List all import batches")
 
     args = parser.parse_args()
 

@@ -12,10 +12,10 @@ run_migrations() {
     local max_attempts=5
     local attempt=1
     local wait_time=5
-    
+
     while [ $attempt -le $max_attempts ]; do
         echo "Migration attempt $attempt of $max_attempts..."
-        
+
         # Test database connection
         python -c "
 import os
@@ -47,7 +47,7 @@ except Exception as e:
     print(f'ERROR: Database connection failed: {e}')
     sys.exit(1)
 "
-        
+
         if [ $? -eq 0 ]; then
             echo "Database connection successful, running migrations..."
             alembic upgrade head
@@ -58,13 +58,13 @@ except Exception as e:
                 echo "Alembic migrations failed"
             fi
         fi
-        
+
         echo "Attempt $attempt failed, waiting ${wait_time}s before retry..."
         sleep $wait_time
         attempt=$((attempt + 1))
         wait_time=$((wait_time * 2))  # Exponential backoff
     done
-    
+
     echo "ERROR: All migration attempts failed"
     return 1
 }

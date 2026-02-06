@@ -25,6 +25,7 @@ POST /api/users/register
 ```
 
 **Request Body**:
+
 ```json
 {
   "email": "user@example.com",
@@ -34,6 +35,7 @@ POST /api/users/register
 ```
 
 **Response** `201 Created`:
+
 ```json
 {
   "id": 1,
@@ -50,6 +52,7 @@ POST /api/users/login
 ```
 
 **Request Body**:
+
 ```json
 {
   "email": "user@example.com",
@@ -58,6 +61,7 @@ POST /api/users/login
 ```
 
 **Response** `200 OK`:
+
 ```json
 {
   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
@@ -76,12 +80,14 @@ GET /api/properties
 ```
 
 **Query Parameters**:
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `skip` | int | Pagination offset (default: 0) |
 | `limit` | int | Results per page (default: 100) |
 
 **Response** `200 OK`:
+
 ```json
 [
   {
@@ -103,6 +109,7 @@ POST /api/properties
 ```
 
 **Request Body**:
+
 ```json
 {
   "address": "56 Rue Notre-Dame des Champs",
@@ -145,6 +152,7 @@ Content-Type: multipart/form-data
 ```
 
 **Form Fields**:
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `file` | file | Yes | PDF or image file |
@@ -152,6 +160,7 @@ Content-Type: multipart/form-data
 | `document_type` | string | No | Type (auto-classified if omitted) |
 
 **Response** `201 Created`:
+
 ```json
 {
   "id": 1,
@@ -171,12 +180,14 @@ Content-Type: multipart/form-data
 ```
 
 **Form Fields**:
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `files` | file[] | Yes | Multiple PDF/image files |
 | `property_id` | int | Yes | Associated property |
 
 **Response** `202 Accepted`:
+
 ```json
 {
   "status": "processing",
@@ -194,6 +205,7 @@ GET /api/documents/bulk-status/{workflow_id}
 ```
 
 **Response** `200 OK`:
+
 ```json
 {
   "workflow_id": "bulk-processing-1-1706612400",
@@ -230,6 +242,7 @@ GET /api/documents
 ```
 
 **Query Parameters**:
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `property_id` | int | Filter by property |
@@ -258,6 +271,7 @@ GET /api/analysis/price
 ```
 
 **Query Parameters**:
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `address` | string | Yes | Property address |
@@ -265,6 +279,7 @@ GET /api/analysis/price
 | `property_type` | string | No | apartment/house |
 
 **Response** `200 OK`:
+
 ```json
 {
   "address": "56 Rue Notre-Dame des Champs",
@@ -297,12 +312,14 @@ GET /api/analysis/trends
 ```
 
 **Query Parameters**:
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `postal_code` | string | Yes | Area postal code |
 | `years` | int | No | Years of history (default: 5) |
 
 **Response** `200 OK`:
+
 ```json
 {
   "postal_code": "75006",
@@ -330,6 +347,7 @@ Content-Type: multipart/form-data
 ```
 
 **Form Fields**:
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `file` | file | Yes | JPG/PNG image |
@@ -343,6 +361,7 @@ POST /api/photos/{id}/redesign
 ```
 
 **Request Body**:
+
 ```json
 {
   "style": "modern",
@@ -354,6 +373,7 @@ POST /api/photos/{id}/redesign
 ```
 
 **Response** `202 Accepted`:
+
 ```json
 {
   "redesign_id": "redesign-123-456",

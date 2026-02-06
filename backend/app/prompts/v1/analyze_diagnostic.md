@@ -7,6 +7,7 @@ description: Prompt for analyzing French property diagnostic documents
 Analyze the following French property diagnostic document.
 
 Extract and identify:
+
 1. DPE (Energy Performance) rating (A-G)
 2. GES (Greenhouse Gas) rating (A-G)
 3. Energy consumption (kWh/m²/year)
@@ -31,3 +32,5 @@ Provide your analysis in JSON format with the following structure:
     "summary": "Brief summary",
     "recommendations": ["recommendation 1", "recommendation 2"]
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

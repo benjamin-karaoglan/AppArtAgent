@@ -2,10 +2,11 @@
 Photo model for apartment redesign feature.
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, JSON
 import uuid as uuid_lib
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
@@ -16,7 +17,9 @@ class Photo(Base):
     __tablename__ = "photos"
 
     id = Column(Integer, primary_key=True, index=True)
-    uuid = Column(String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(
+        String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4())
+    )
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     property_id = Column(Integer, ForeignKey("properties.id"), nullable=True)
 
@@ -34,7 +37,9 @@ class Photo(Base):
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    redesigns = relationship("PhotoRedesign", back_populates="original_photo", cascade="all, delete-orphan")
+    redesigns = relationship(
+        "PhotoRedesign", back_populates="original_photo", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Photo {self.id}: {self.filename}>"
@@ -46,7 +51,9 @@ class PhotoRedesign(Base):
     __tablename__ = "photo_redesigns"
 
     id = Column(Integer, primary_key=True, index=True)
-    redesign_uuid = Column(String, unique=True, index=True, nullable=False, default=lambda: str(uuid_lib.uuid4()))
+    redesign_uuid = Column(
+        String, unique=True, index=True, nullable=False, default=lambda: str(uuid_lib.uuid4())
+    )
     photo_id = Column(Integer, ForeignKey("photos.id"), nullable=False)
 
     # Generated image - storage-agnostic fields (column names kept as minio_* for backward compatibility)

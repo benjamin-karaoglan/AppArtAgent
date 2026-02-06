@@ -52,7 +52,7 @@ flowchart TB
 
 ## File Structure
 
-```
+```text
 infra/
 └── terraform/
     ├── main.tf                    # All Terraform resources (~1500 lines)
@@ -538,12 +538,14 @@ terraform destroy -target=google_compute_global_forwarding_rule.https
 ### Terraform Errors
 
 **API not enabled:**
+
 ```bash
 # Enable required API
 gcloud services enable SERVICE_NAME.googleapis.com
 ```
 
 **Permission denied:**
+
 ```bash
 # Check current user
 gcloud auth list
@@ -553,6 +555,7 @@ gcloud config set project YOUR_PROJECT_ID
 ```
 
 **Resource already exists:**
+
 ```bash
 # Import the resource
 terraform import RESOURCE_ADDRESS RESOURCE_ID
@@ -561,12 +564,14 @@ terraform import RESOURCE_ADDRESS RESOURCE_ID
 ### State Issues
 
 **State lock:**
+
 ```bash
 # Force unlock (use carefully)
 terraform force-unlock LOCK_ID
 ```
 
 **State out of sync:**
+
 ```bash
 # Refresh state from GCP
 terraform refresh

@@ -16,26 +16,23 @@ Structure:
 # AI Services
 from app.services.ai import (
     DocumentAnalyzer,
-    get_document_analyzer,
-    ImageGenerator,
-    get_image_generator,
     DocumentProcessor,
+    ImageGenerator,
+    get_document_analyzer,
     get_document_processor,
+    get_image_generator,
 )
 
 # Document Services
 from app.services.documents import (
-    DocumentParser,
-    get_document_parser,
     BulkProcessor,
+    DocumentParser,
     get_bulk_processor,
+    get_document_parser,
 )
 
-# Storage Service
-from app.services.storage import (
-    StorageService,
-    get_storage_service,
-)
+# DVF Service
+from app.services.dvf_service import DVFService
 
 # Price Analysis
 from app.services.price_analysis import (
@@ -43,8 +40,11 @@ from app.services.price_analysis import (
     get_price_analyzer,
 )
 
-# DVF Service
-from app.services.dvf_service import DVFService
+# Storage Service
+from app.services.storage import (
+    StorageService,
+    get_storage_service,
+)
 
 # =============================================================================
 # Backward Compatibility Aliases

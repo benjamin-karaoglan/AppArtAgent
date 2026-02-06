@@ -9,15 +9,15 @@ The backend is selected based on STORAGE_BACKEND environment variable.
 """
 
 import logging
-from io import BytesIO
-from typing import Optional, BinaryIO, Protocol
-from datetime import timedelta
-from urllib.parse import urlparse
 from abc import ABC, abstractmethod
+from datetime import timedelta
+from io import BytesIO
+from typing import BinaryIO, Optional
+from urllib.parse import urlparse
 
+from app.core.cache import cache_get, cache_set
 from app.core.config import settings
 from app.core.logging import trace_storage_operation
-from app.core.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Storage Backend Interface
 # =============================================================================
+
 
 class StorageBackend(ABC):
     """Abstract base class for storage backends."""
@@ -36,7 +37,7 @@ class StorageBackend(ABC):
         filename: str,
         bucket_name: Optional[str] = None,
         content_type: str = "application/octet-stream",
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
     ) -> str:
         """Upload a file to storage."""
         pass
@@ -58,10 +59,7 @@ class StorageBackend(ABC):
 
     @abstractmethod
     def get_presigned_url(
-        self,
-        object_name: str,
-        bucket_name: Optional[str] = None,
-        expiry=None
+        self, object_name: str, bucket_name: Optional[str] = None, expiry=None
     ) -> str:
         """Generate a presigned/signed URL for file access."""
         pass
@@ -75,6 +73,7 @@ class StorageBackend(ABC):
 # =============================================================================
 # MinIO/S3 Backend
 # =============================================================================
+
 
 class MinIOBackend(StorageBackend):
     """S3-compatible storage backend using MinIO."""
@@ -101,19 +100,21 @@ class MinIOBackend(StorageBackend):
             settings.MINIO_ENDPOINT,
             access_key=settings.MINIO_ACCESS_KEY,
             secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_SECURE
+            secure=settings.MINIO_SECURE,
         )
 
         # Public client for generating external URLs
         self.public_client = None
         if settings.MINIO_PUBLIC_ENDPOINT:
-            public_endpoint, public_secure = self._normalize_endpoint(settings.MINIO_PUBLIC_ENDPOINT)
+            public_endpoint, public_secure = self._normalize_endpoint(
+                settings.MINIO_PUBLIC_ENDPOINT
+            )
             self.public_client = Minio(
                 public_endpoint,
                 access_key=settings.MINIO_ACCESS_KEY,
                 secret_key=settings.MINIO_SECRET_KEY,
                 secure=public_secure,
-                region=settings.MINIO_REGION
+                region=settings.MINIO_REGION,
             )
 
         self.default_bucket = settings.MINIO_BUCKET
@@ -125,6 +126,7 @@ class MinIOBackend(StorageBackend):
     def _ensure_bucket_exists(self, bucket_name: str) -> None:
         """Ensure a bucket exists."""
         from minio.error import S3Error
+
         try:
             if not self.client.bucket_exists(bucket_name):
                 self.client.make_bucket(bucket_name)
@@ -139,13 +141,16 @@ class MinIOBackend(StorageBackend):
         filename: str,
         bucket_name: Optional[str] = None,
         content_type: str = "application/octet-stream",
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
     ) -> str:
         from minio.error import S3Error
+
         bucket = bucket_name or self.default_bucket
         file_size = len(file_data)
 
-        with trace_storage_operation(operation="upload", bucket=bucket, filename=filename, file_size=file_size):
+        with trace_storage_operation(
+            operation="upload", bucket=bucket, filename=filename, file_size=file_size
+        ):
             try:
                 self.client.put_object(
                     bucket_name=bucket,
@@ -153,7 +158,7 @@ class MinIOBackend(StorageBackend):
                     data=BytesIO(file_data),
                     length=file_size,
                     content_type=content_type,
-                    metadata=metadata or {}
+                    metadata=metadata or {},
                 )
                 logger.info(f"Uploaded: {filename} ({file_size} bytes)")
                 return filename
@@ -163,6 +168,7 @@ class MinIOBackend(StorageBackend):
 
     def download_file(self, object_name: str, bucket_name: Optional[str] = None) -> bytes:
         from minio.error import S3Error
+
         bucket = bucket_name or self.default_bucket
 
         with trace_storage_operation(operation="download", bucket=bucket, filename=object_name):
@@ -179,6 +185,7 @@ class MinIOBackend(StorageBackend):
 
     def delete_file(self, object_name: str, bucket_name: Optional[str] = None) -> bool:
         from minio.error import S3Error
+
         bucket = bucket_name or self.default_bucket
         try:
             self.client.remove_object(bucket, object_name)
@@ -190,6 +197,7 @@ class MinIOBackend(StorageBackend):
 
     def file_exists(self, object_name: str, bucket_name: Optional[str] = None) -> bool:
         from minio.error import S3Error
+
         bucket = bucket_name or self.default_bucket
         try:
             self.client.stat_object(bucket, object_name)
@@ -200,12 +208,10 @@ class MinIOBackend(StorageBackend):
             raise
 
     def get_presigned_url(
-        self,
-        object_name: str,
-        bucket_name: Optional[str] = None,
-        expiry=None
+        self, object_name: str, bucket_name: Optional[str] = None, expiry=None
     ) -> str:
         from minio.error import S3Error
+
         bucket = bucket_name or self.default_bucket
 
         if expiry is None:
@@ -218,9 +224,7 @@ class MinIOBackend(StorageBackend):
         try:
             client = self.public_client or self.client
             return client.presigned_get_object(
-                bucket_name=bucket,
-                object_name=object_name,
-                expires=expires
+                bucket_name=bucket, object_name=object_name, expires=expires
             )
         except S3Error as e:
             logger.error(f"URL generation failed: {e}")
@@ -228,6 +232,7 @@ class MinIOBackend(StorageBackend):
 
     def list_files(self, prefix: str = "", bucket_name: Optional[str] = None) -> list[str]:
         from minio.error import S3Error
+
         bucket = bucket_name or self.default_bucket
         try:
             objects = self.client.list_objects(bucket, prefix=prefix, recursive=True)
@@ -241,19 +246,22 @@ class MinIOBackend(StorageBackend):
 # Google Cloud Storage Backend
 # =============================================================================
 
+
 class GCSBackend(StorageBackend):
     """Google Cloud Storage backend."""
 
     def __init__(self):
         """Initialize GCS client."""
-        from google.cloud import storage
         from google.auth import default
-        
+        from google.cloud import storage
+
         # Get default credentials to determine the service account email
         self._credentials, self._project = default()
-        
+
         self.client = storage.Client(project=settings.GOOGLE_CLOUD_PROJECT)
-        self.documents_bucket = settings.GCS_DOCUMENTS_BUCKET or f"{settings.GOOGLE_CLOUD_PROJECT}-documents"
+        self.documents_bucket = (
+            settings.GCS_DOCUMENTS_BUCKET or f"{settings.GOOGLE_CLOUD_PROJECT}-documents"
+        )
         self.photos_bucket = settings.GCS_PHOTOS_BUCKET or f"{settings.GOOGLE_CLOUD_PROJECT}-photos"
 
         # Set default bucket for compatibility with StorageService
@@ -262,25 +270,28 @@ class GCSBackend(StorageBackend):
         # Get service account email for signing URLs
         self._service_account_email = self._get_service_account_email()
 
-        logger.info(f"GCS backend initialized: documents={self.documents_bucket}, photos={self.photos_bucket}")
+        logger.info(
+            f"GCS backend initialized: documents={self.documents_bucket}, photos={self.photos_bucket}"
+        )
         logger.info(f"GCS service account for signing: {self._service_account_email}")
-    
+
     def _get_service_account_email(self) -> str:
         """Get the service account email for URL signing."""
         # Try to get service account email from credentials
         # Note: compute engine credentials return 'default' which is not valid for signing
-        if hasattr(self._credentials, 'service_account_email'):
+        if hasattr(self._credentials, "service_account_email"):
             email = self._credentials.service_account_email
-            if email and email != 'default':
+            if email and email != "default":
                 return email
 
         # For compute engine credentials, fetch from metadata server
         try:
             import requests
+
             response = requests.get(
-                'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email',
-                headers={'Metadata-Flavor': 'Google'},
-                timeout=5
+                "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email",
+                headers={"Metadata-Flavor": "Google"},
+                timeout=5,
             )
             if response.status_code == 200:
                 return response.text.strip()
@@ -306,12 +317,14 @@ class GCSBackend(StorageBackend):
         filename: str,
         bucket_name: Optional[str] = None,
         content_type: str = "application/octet-stream",
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
     ) -> str:
         file_size = len(file_data)
         bucket = self._get_bucket(bucket_name)
 
-        with trace_storage_operation(operation="upload", bucket=bucket.name, filename=filename, file_size=file_size):
+        with trace_storage_operation(
+            operation="upload", bucket=bucket.name, filename=filename, file_size=file_size
+        ):
             try:
                 blob = bucket.blob(filename)
                 blob.upload_from_string(file_data, content_type=content_type)
@@ -329,7 +342,9 @@ class GCSBackend(StorageBackend):
     def download_file(self, object_name: str, bucket_name: Optional[str] = None) -> bytes:
         bucket = self._get_bucket(bucket_name)
 
-        with trace_storage_operation(operation="download", bucket=bucket.name, filename=object_name):
+        with trace_storage_operation(
+            operation="download", bucket=bucket.name, filename=object_name
+        ):
             try:
                 blob = bucket.blob(object_name)
                 data = blob.download_as_bytes()
@@ -356,10 +371,7 @@ class GCSBackend(StorageBackend):
         return blob.exists()
 
     def get_presigned_url(
-        self,
-        object_name: str,
-        bucket_name: Optional[str] = None,
-        expiry=None
+        self, object_name: str, bucket_name: Optional[str] = None, expiry=None
     ) -> str:
         """
         Generate a signed URL for file access.
@@ -367,9 +379,8 @@ class GCSBackend(StorageBackend):
         Uses IAM signBlob API when running with Application Default Credentials
         (e.g., on Cloud Run) since compute engine credentials don't have private keys.
         """
-        from google.auth import compute_engine
+        from google.auth import compute_engine, impersonated_credentials
         from google.auth.transport import requests as google_requests
-        from google.auth import impersonated_credentials
 
         bucket = self._get_bucket(bucket_name)
 
@@ -394,7 +405,7 @@ class GCSBackend(StorageBackend):
                 signing_credentials = impersonated_credentials.Credentials(
                     source_credentials=self._credentials,
                     target_principal=self._service_account_email,
-                    target_scopes=['https://www.googleapis.com/auth/cloud-platform'],
+                    target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
                 )
 
                 # Generate signed URL using the signing credentials
@@ -406,11 +417,7 @@ class GCSBackend(StorageBackend):
                 )
             else:
                 # Standard signed URL generation with service account key
-                url = blob.generate_signed_url(
-                    version="v4",
-                    expiration=expires,
-                    method="GET"
-                )
+                url = blob.generate_signed_url(version="v4", expiration=expires, method="GET")
 
             return url
         except Exception as e:
@@ -430,6 +437,7 @@ class GCSBackend(StorageBackend):
 # =============================================================================
 # Storage Service (Facade)
 # =============================================================================
+
 
 class StorageService:
     """
@@ -460,7 +468,7 @@ class StorageService:
             logger.info("Using MinIO storage backend")
 
         # Expose default bucket for backward compatibility
-        if hasattr(self._backend, 'default_bucket'):
+        if hasattr(self._backend, "default_bucket"):
             self.bucket = self._backend.default_bucket
         else:
             self.bucket = settings.MINIO_BUCKET
@@ -471,7 +479,7 @@ class StorageService:
         filename: str,
         bucket_name: Optional[str] = None,
         content_type: str = "application/octet-stream",
-        metadata: Optional[dict] = None
+        metadata: Optional[dict] = None,
     ) -> str:
         """Upload a file to storage."""
         return self._backend.upload_file(file_data, filename, bucket_name, content_type, metadata)
@@ -480,7 +488,9 @@ class StorageService:
         """Download a file from storage."""
         return self._backend.download_file(object_name, bucket_name)
 
-    def get_file(self, minio_key: str = None, bucket_name: Optional[str] = None, storage_key: str = None) -> bytes:
+    def get_file(
+        self, minio_key: str = None, bucket_name: Optional[str] = None, storage_key: str = None
+    ) -> bytes:
         """Alias for download_file (backward compatibility)."""
         key = storage_key or minio_key
         return self.download_file(key, bucket_name)
@@ -494,10 +504,7 @@ class StorageService:
         return self._backend.file_exists(object_name, bucket_name)
 
     def get_presigned_url(
-        self,
-        minio_key: str,
-        bucket_name: Optional[str] = None,
-        expiry=None
+        self, minio_key: str, bucket_name: Optional[str] = None, expiry=None
     ) -> str:
         """Generate a presigned/signed URL for file access (cached in Redis)."""
         bucket = bucket_name or self._backend.default_bucket

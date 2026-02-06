@@ -1,18 +1,21 @@
 """Document schemas for request/response validation."""
 
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
 
 
 class DocumentUpload(BaseModel):
     """Schema for document upload."""
+
     property_id: Optional[int] = None
     document_category: str  # PV_AG, diagnostic, tax, charges, photo
 
 
 class DocumentResponse(BaseModel):
     """Schema for document response."""
+
     id: int
     uuid: Optional[str] = None
     user_id: Optional[int] = None
@@ -47,6 +50,7 @@ class DocumentResponse(BaseModel):
 
 class PVAGAnalysisResponse(BaseModel):
     """Schema for PV d'AG analysis response."""
+
     document_id: int
     summary: str
     upcoming_works: List[Dict[str, Any]]
@@ -58,6 +62,7 @@ class PVAGAnalysisResponse(BaseModel):
 
 class DiagnosticAnalysisResponse(BaseModel):
     """Schema for diagnostic document analysis."""
+
     document_id: int
     dpe_rating: Optional[str] = None
     ges_rating: Optional[str] = None
@@ -72,6 +77,7 @@ class DiagnosticAnalysisResponse(BaseModel):
 
 class TaxChargesAnalysisResponse(BaseModel):
     """Schema for tax and charges analysis."""
+
     document_id: int
     document_type: str  # taxe_fonciere, charges
     period_covered: str
@@ -83,6 +89,7 @@ class TaxChargesAnalysisResponse(BaseModel):
 
 class DocumentSummaryResponse(BaseModel):
     """Schema for aggregated document summary response."""
+
     id: int
     property_id: int
     category: str

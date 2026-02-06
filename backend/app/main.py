@@ -2,15 +2,16 @@
 Main FastAPI application entry point for AppArt Agent.
 """
 
+import logging
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
-import logging
 
+from app.api import analysis, documents, photos, properties, users, webhooks
 from app.core.config import settings
-from app.core.logging import setup_logging, setup_logfire, instrument_fastapi
-from app.api import properties, documents, analysis, users, photos, webhooks
+from app.core.logging import instrument_fastapi, setup_logfire, setup_logging
 
 # Initialize logging
 setup_logging(settings.LOG_LEVEL)
@@ -18,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize Logfire tracing
 setup_logfire(
-    service_name="appart-agent-backend",
-    environment=settings.ENVIRONMENT,
-    enable_console=True
+    service_name="appart-agent-backend", environment=settings.ENVIRONMENT, enable_console=True
 )
 
 # Create FastAPI app
@@ -101,6 +100,7 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

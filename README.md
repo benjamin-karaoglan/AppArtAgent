@@ -41,18 +41,21 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 ## Features
 
 ### 📊 Price Analysis
+
 - Address-based property search with DVF data (2022-2025)
 - Historical sales analysis and trend projections
 - Interactive 5-year market evolution chart
 - IQR-based outlier detection for accurate pricing
 
 ### 📄 Document Analysis
+
 - **Bulk Upload**: Drag & drop multiple documents at once
 - **Auto-Classification**: AI identifies document types automatically
 - **Parallel Processing**: All documents analyzed simultaneously
 - **Synthesis**: Cross-document analysis with cost aggregation and risk assessment
 
 ### 🎨 Photo Redesign Studio
+
 - Upload apartment photos
 - AI-driven style transformation
 - Visualize renovation potential
@@ -103,7 +106,7 @@ docker-compose exec backend alembic upgrade head
 
 ## Project Structure
 
-```
+```text
 AppArtAgent/
 ├── backend/                 # FastAPI backend
 │   ├── app/
@@ -171,6 +174,7 @@ uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
+
 </details>
 
 <details>
@@ -181,6 +185,7 @@ cd frontend
 pnpm install
 pnpm dev
 ```
+
 </details>
 
 ## Environment Variables
@@ -197,6 +202,7 @@ MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 ```
+
 </details>
 
 <details>
@@ -238,7 +244,49 @@ Start with: `./dev.sh start-gcs`
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Better Auth (authentication via Next.js)
+DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
+BETTER_AUTH_SECRET=your-better-auth-secret-at-least-32-characters
+
+# Google OAuth (optional - from Google Cloud Console)
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 ```
+
+</details>
+
+<details>
+<summary><b>Authentication Setup (Better Auth + Google OAuth)</b></summary>
+
+Authentication is handled by [Better Auth](https://www.better-auth.com/) via Next.js API routes.
+The backend validates sessions by checking the `better-auth.session_token` cookie against the database.
+
+**Email/Password:** Works out of the box. Set `BETTER_AUTH_SECRET` and run database migrations.
+
+**Google OAuth (optional):**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create an OAuth 2.0 Client ID (Web application type)
+3. Add authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google` (local)
+   - `https://your-frontend-url/api/auth/callback/google` (production)
+4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
+
+**Database migrations:** Better Auth tables are created by Alembic:
+
+```bash
+docker-compose exec backend alembic upgrade head
+```
+
+**Migrate existing users to Better Auth:**
+
+```bash
+docker-compose exec backend python scripts/migrate_users_to_better_auth.py --dry-run
+docker-compose exec backend python scripts/migrate_users_to_better_auth.py
+```
+
 </details>
 
 ## DVF Data
@@ -285,6 +333,7 @@ For commercial use, enterprise deployments, or SaaS applications, please contact
 📧 **[benjamin.karaoglan@appartagent.com](mailto:benjamin.karaoglan@appartagent.com)**
 
 Commercial licenses include:
+
 - Full commercial usage rights
 - Priority support
 - Custom feature development
