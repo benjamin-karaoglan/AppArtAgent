@@ -31,13 +31,13 @@ export default function Header() {
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                 <Link
                   href="/dashboard"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center justify-center min-w-[9rem] px-1 pt-1 border-b-2 text-sm font-medium"
                 >
                   {t('dashboard')}
                 </Link>
                 <Link
                   href="/properties"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center justify-center min-w-[5.5rem] px-1 pt-1 border-b-2 text-sm font-medium"
                 >
                   {t('properties')}
                 </Link>
@@ -74,13 +74,13 @@ export default function Header() {
               <div className="flex items-center space-x-4">
                 <Link
                   href="/auth/login"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+                  className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium text-center min-w-[6.5rem]"
                 >
                   {t('login')}
                 </Link>
                 <Link
                   href="/auth/register"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="inline-flex items-center justify-center min-w-[7.5rem] px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   {t('getStarted')}
                 </Link>

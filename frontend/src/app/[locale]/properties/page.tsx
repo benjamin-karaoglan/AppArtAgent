@@ -5,40 +5,21 @@ import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
-import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
-import { Plus, Home, FileText, TrendingUp, Trash2, Palette } from 'lucide-react';
+import { Plus, Home, Trash2 } from 'lucide-react';
 import type { Property } from '@/types';
 
-interface UserStats {
-  documents_analyzed_count: number;
-  redesigns_generated_count: number;
-  total_properties: number;
-}
-
-interface DVFStats {
-  total_records: number;
-  formatted_count: string;
-  total_imports: number;
-  last_updated: string | null;
-}
-
-function DashboardContent() {
-  const t = useTranslations('dashboard');
+function PropertiesContent() {
+  const t = useTranslations('properties');
   const tc = useTranslations('common');
-  const { user } = useAuth();
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletePropertyId, setDeletePropertyId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [dvfStats, setDvfStats] = useState<DVFStats | null>(null);
 
   useEffect(() => {
     loadProperties();
-    loadUserStats();
-    loadDvfStats();
   }, []);
 
   const loadProperties = async () => {
@@ -52,26 +33,8 @@ function DashboardContent() {
     }
   };
 
-  const loadUserStats = async () => {
-    try {
-      const response = await api.get('/api/users/stats');
-      setUserStats(response.data);
-    } catch (error) {
-      console.error('Failed to load user stats:', error);
-    }
-  };
-
-  const loadDvfStats = async () => {
-    try {
-      const response = await api.get('/api/properties/dvf-stats');
-      setDvfStats(response.data);
-    } catch (error) {
-      console.error('Failed to load DVF stats:', error);
-    }
-  };
-
   const handleDeleteClick = (e: React.MouseEvent, propertyId: number) => {
-    e.stopPropagation(); // Prevent navigation to property detail
+    e.stopPropagation();
     setDeletePropertyId(propertyId);
   };
 
@@ -81,12 +44,11 @@ function DashboardContent() {
     setDeleting(true);
     try {
       await api.delete(`/api/properties/${deletePropertyId}`);
-      // Reload properties list
       await loadProperties();
       setDeletePropertyId(null);
     } catch (error) {
       console.error('Failed to delete property:', error);
-      alert(t('properties.deleteFailed'));
+      alert(t('deleteFailed'));
     } finally {
       setDeleting(false);
     }
@@ -104,128 +66,39 @@ function DashboardContent() {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* Welcome Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {t('welcome', { name: user?.full_name || '' })}
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              {t('subtitle')}
-            </p>
+          {/* Header Section */}
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {t('title')}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                {t('subtitle')}
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/properties/new')}
+              className="inline-flex items-center justify-center min-w-[10rem] px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              {t('addProperty')}
+            </button>
           </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Home className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.totalProperties')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {properties.length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <FileText className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.documentsAnalyzed')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {userStats?.documents_analyzed_count ?? 0}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Palette className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.redesignsGenerated')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {userStats?.redesigns_generated_count ?? 0}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <TrendingUp className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.dvfRecords')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {dvfStats?.formatted_count ?? '0'}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Properties Section */}
+          {/* Properties Grid */}
           <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  {t('properties.title')}
-                </h3>
-                <button
-                  onClick={() => router.push('/properties/new')}
-                  className="inline-flex items-center justify-center min-w-[10rem] px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  {t('properties.addProperty')}
-                </button>
-              </div>
-            </div>
-
             <div className="px-4 py-5 sm:p-6">
               {loading ? (
                 <div className="text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <p className="mt-2 text-sm text-gray-500">{t('properties.loading')}</p>
+                  <p className="mt-2 text-sm text-gray-500">{t('loading')}</p>
                 </div>
               ) : properties.length === 0 ? (
                 <div className="text-center py-12">
                   <Home className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('properties.empty.title')}</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('empty.title')}</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {t('properties.empty.description')}
+                    {t('empty.description')}
                   </p>
                   <div className="mt-6">
                     <button
@@ -233,7 +106,7 @@ function DashboardContent() {
                       className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <Plus className="h-5 w-5 mr-2" />
-                      {t('properties.addProperty')}
+                      {t('addProperty')}
                     </button>
                   </div>
                 </div>
@@ -248,7 +121,7 @@ function DashboardContent() {
                       <button
                         onClick={(e) => handleDeleteClick(e, property.id)}
                         className="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title={t('properties.deleteTooltip')}
+                        title={tc('delete')}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -303,11 +176,11 @@ function DashboardContent() {
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                       <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        {t('properties.deleteTitle')}
+                        {t('deleteTitle')}
                       </h3>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          {t('properties.deleteMessage')}
+                          {t('deleteMessage')}
                         </p>
                       </div>
                     </div>
@@ -340,10 +213,10 @@ function DashboardContent() {
   );
 }
 
-export default function DashboardPage() {
+export default function PropertiesPage() {
   return (
     <ProtectedRoute>
-      <DashboardContent />
+      <PropertiesContent />
     </ProtectedRoute>
   );
 }

@@ -71,7 +71,9 @@
       "title": "AppArt Agent",
       "subtitle": "Make smarter apartment purchasing decisions with AI-powered insights",
       "getStarted": "Get Started",
-      "signIn": "Sign In"
+      "signIn": "Sign In",
+      "goToDashboard": "Go to Dashboard",
+      "viewProperties": "View My Properties"
     },
     "features": {
       "priceAnalysis": {
@@ -109,7 +111,8 @@
     "cta": {
       "title": "Ready to make smarter property decisions?",
       "subtitle": "Join thousands of smart buyers in France",
-      "button": "Start Your Free Analysis"
+      "button": "Start Your Free Analysis",
+      "goToDashboard": "Go to Dashboard"
     },
     "footer": {
       "copyright": "© 2026 AppArt Agent. All rights reserved.",
@@ -407,6 +410,19 @@
     "thread": "Thread",
     "custom": "Custom",
     "imageError": "Image Error"
+  },
+  "properties": {
+    "title": "My Properties",
+    "subtitle": "Manage and analyze your properties",
+    "addProperty": "Add Property",
+    "loading": "Loading properties...",
+    "empty": {
+      "title": "No properties",
+      "description": "Get started by adding your first property."
+    },
+    "deleteTitle": "Delete Property",
+    "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
+    "deleteFailed": "Failed to delete property. Please try again."
   },
   "metadata": {
     "title": "AppArt Agent - Smart Property Decisions",

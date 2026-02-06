@@ -5,9 +5,11 @@ import { useTranslations } from 'next-intl'
 import { FileText, Image as ImageIcon, TrendingUp, Shield, Calculator } from 'lucide-react'
 import Header from '@/components/Header'
 import AppArtLogo from '@/components/AppArtLogo'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function HomePage() {
   const t = useTranslations('home')
+  const { isAuthenticated, loading } = useAuth()
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -22,12 +24,25 @@ export default function HomePage() {
             {t('hero.subtitle')}
           </p>
           <div className="flex gap-4 justify-center">
-            <Link href="/auth/register" className="btn-primary text-lg px-8 py-3">
-              {t('hero.getStarted')}
-            </Link>
-            <Link href="/auth/login" className="btn-secondary text-lg px-8 py-3">
-              {t('hero.signIn')}
-            </Link>
+            {!loading && isAuthenticated ? (
+              <>
+                <Link href="/dashboard" className="btn-primary text-lg px-8 py-3 text-center min-w-[11.5rem]">
+                  {t('hero.goToDashboard')}
+                </Link>
+                <Link href="/properties" className="btn-secondary text-lg px-8 py-3 text-center min-w-[11.5rem]">
+                  {t('hero.viewProperties')}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/register" className="btn-primary text-lg px-8 py-3 text-center min-w-[11.5rem]">
+                  {t('hero.getStarted')}
+                </Link>
+                <Link href="/auth/login" className="btn-secondary text-lg px-8 py-3 text-center min-w-[11.5rem]">
+                  {t('hero.signIn')}
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -80,9 +95,15 @@ export default function HomePage() {
         <div className="mt-24 text-center bg-primary-600 text-white rounded-2xl p-12">
           <h2 className="text-3xl font-bold mb-4">{t('cta.title')}</h2>
           <p className="text-xl mb-8 opacity-90">{t('cta.subtitle')}</p>
-          <Link href="/auth/register" className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors inline-block">
-            {t('cta.button')}
-          </Link>
+          {!loading && isAuthenticated ? (
+            <Link href="/dashboard" className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors inline-block">
+              {t('cta.goToDashboard')}
+            </Link>
+          ) : (
+            <Link href="/auth/register" className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors inline-block">
+              {t('cta.button')}
+            </Link>
+          )}
         </div>
       </div>
 

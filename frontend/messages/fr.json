@@ -71,7 +71,9 @@
       "title": "AppArt Agent",
       "subtitle": "Prenez des décisions d'achat immobilier plus intelligentes grâce à l'IA",
       "getStarted": "Commencer",
-      "signIn": "Se connecter"
+      "signIn": "Se connecter",
+      "goToDashboard": "Tableau de bord",
+      "viewProperties": "Voir mes biens"
     },
     "features": {
       "priceAnalysis": {
@@ -109,7 +111,8 @@
     "cta": {
       "title": "Prêt à prendre des décisions immobilières plus intelligentes ?",
       "subtitle": "Rejoignez des milliers d'acheteurs avisés en France",
-      "button": "Commencer votre analyse gratuite"
+      "button": "Commencer votre analyse gratuite",
+      "goToDashboard": "Accéder au tableau de bord"
     },
     "footer": {
       "copyright": "© 2026 AppArt Agent. Tous droits réservés.",
@@ -407,6 +410,19 @@
     "thread": "Fil",
     "custom": "Personnalisé",
     "imageError": "Erreur d'image"
+  },
+  "properties": {
+    "title": "Mes biens",
+    "subtitle": "Gérez et analysez vos biens immobiliers",
+    "addProperty": "Ajouter un bien",
+    "loading": "Chargement des biens...",
+    "empty": {
+      "title": "Aucun bien",
+      "description": "Commencez par ajouter votre premier bien."
+    },
+    "deleteTitle": "Supprimer le bien",
+    "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
+    "deleteFailed": "Échec de la suppression du bien. Veuillez réessayer."
   },
   "metadata": {
     "title": "AppArt Agent - Décisions Immobilières Intelligentes",
