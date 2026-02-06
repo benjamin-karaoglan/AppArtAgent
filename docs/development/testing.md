@@ -58,7 +58,7 @@ pnpm test:coverage
 
 ### Test Structure
 
-```
+```text
 backend/tests/
 ├── __init__.py
 ├── conftest.py          # Shared fixtures
@@ -121,7 +121,7 @@ def test_create_property(db_session: Session):
     )
     db_session.add(property)
     db_session.commit()
-    
+
     assert property.id is not None
     assert property.price_per_sqm is None  # Surface not set
 ```
@@ -142,9 +142,9 @@ def db_session():
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
-    
+
     yield session
-    
+
     session.close()
 
 @pytest.fixture
@@ -175,10 +175,10 @@ async def test_document_analysis_with_mock():
             "summary": "Test summary",
             "key_findings": ["Finding 1"]
         })
-        
+
         # Test your code that uses DocumentAnalyzer
         result = await process_document(test_doc)
-        
+
         assert result["summary"] == "Test summary"
 ```
 
@@ -186,7 +186,7 @@ async def test_document_analysis_with_mock():
 
 ### Test Structure
 
-```
+```text
 frontend/
 ├── __tests__/
 │   ├── components/
@@ -232,9 +232,9 @@ describe('useAuth', () => {
     const wrapper = ({ children }) => (
       <AuthProvider>{children}</AuthProvider>
     );
-    
+
     const { result } = renderHook(() => useAuth(), { wrapper });
-    
+
     expect(result.current.user).toBeNull();
     expect(result.current.loading).toBe(false);
   });
@@ -317,7 +317,7 @@ jobs:
           cd backend
           uv pip install -e ".[dev]"
           pytest --cov=app
-  
+
   frontend-tests:
     runs-on: ubuntu-latest
     steps:

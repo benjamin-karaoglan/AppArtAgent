@@ -266,7 +266,7 @@ docker-compose exec backend alembic history
 
 ### Migration Files
 
-```
+```text
 alembic/versions/
 ├── 30257fbe1e49_create_initial_tables.py
 ├── a1b2c3d4e5f6_add_minio_temporal_columns.py
@@ -282,11 +282,11 @@ alembic/versions/
 
 ```sql
 -- DVF address search (trigram for fuzzy matching)
-CREATE INDEX idx_dvf_address_gin ON dvf_records 
+CREATE INDEX idx_dvf_address_gin ON dvf_records
 USING GIN (address gin_trgm_ops);
 
 -- Common query pattern
-CREATE INDEX idx_dvf_postal_type_addr ON dvf_records 
+CREATE INDEX idx_dvf_postal_type_addr ON dvf_records
 (postal_code, property_type, address);
 
 -- Date range queries
@@ -301,11 +301,11 @@ CREATE INDEX idx_documents_status ON documents (status);
 
 ```sql
 -- Prevent duplicate DVF records
-ALTER TABLE dvf_records ADD CONSTRAINT uq_dvf_sale 
+ALTER TABLE dvf_records ADD CONSTRAINT uq_dvf_sale
 UNIQUE (sale_date, sale_price, address, postal_code, surface_area);
 
 -- Prevent duplicate documents (by hash)
-ALTER TABLE documents ADD CONSTRAINT uq_doc_hash 
+ALTER TABLE documents ADD CONSTRAINT uq_doc_hash
 UNIQUE (property_id, file_hash);
 ```
 
@@ -371,14 +371,14 @@ docker-compose exec -T db psql -U appart appart_agent < backup.sql
 
 ```sql
 -- Check table sizes
-SELECT 
+SELECT
     relname as table_name,
     pg_size_pretty(pg_total_relation_size(relid)) as total_size
 FROM pg_catalog.pg_statio_user_tables
 ORDER BY pg_total_relation_size(relid) DESC;
 
 -- Check index usage
-SELECT 
+SELECT
     indexrelname as index_name,
     idx_scan as times_used
 FROM pg_stat_user_indexes

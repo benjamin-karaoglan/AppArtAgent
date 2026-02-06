@@ -68,7 +68,7 @@ pnpm start
 
 ## Project Structure
 
-```
+```text
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── dashboard/          # Main dashboard

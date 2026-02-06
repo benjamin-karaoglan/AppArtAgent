@@ -57,7 +57,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Impossible de valider les identifiants",
         "en": "Could not validate credentials",
     },
-
     # ── Properties ────────────────────────────────────────────────────────
     "property_not_found": {
         "fr": "Bien non trouvé",
@@ -107,7 +106,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Aucune vente trouvée pour l'analyse tendance",
         "en": "No sales found for trend analysis",
     },
-
     # ── Documents ─────────────────────────────────────────────────────────
     "file_type_not_allowed": {
         "fr": "Le type de fichier {ext} n'est pas autorisé",
@@ -177,7 +175,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Échec du téléchargement du document : {error}",
         "en": "Failed to upload document: {error}",
     },
-
     # ── Photos ────────────────────────────────────────────────────────────
     "file_must_be_image": {
         "fr": "Le fichier doit être une image (JPEG, JPG, PNG ou WebP)",
@@ -203,7 +200,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Échec de la suppression de la photo : {error}",
         "en": "Failed to delete photo: {error}",
     },
-
     # ── DVF Recommendations ──────────────────────────────────────────────
     "excellent_deal": {
         "fr": "Excellente affaire - En dessous du prix du marché",
@@ -237,7 +233,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Données insuffisantes (toutes les ventes exclues)",
         "en": "Insufficient data (all sales excluded)",
     },
-
     # ── Style Presets ────────────────────────────────────────────────────
     "preset_modern_norwegian_name": {
         "fr": "Norvégien Moderne",
@@ -263,7 +258,6 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Chaleur enveloppante, textiles doux, éclairage d'ambiance, confort intimiste",
         "en": "Warm embrace, soft textiles, ambient lighting, intimate comfort",
     },
-
     # ── Style Preset Prompt Templates ────────────────────────────────────
     "preset_modern_norwegian_prompt": {
         "fr": (

@@ -7,6 +7,7 @@ description: Prompt for analyzing French copropriété assembly meeting minutes
 Analyze the following French copropriété assembly meeting minutes (PV d'AG).
 
 Extract and identify:
+
 1. All upcoming works mentioned (travaux à venir)
 2. Estimated costs for each work item
 3. Financial health of the copropriété (budget, reserves, debts)

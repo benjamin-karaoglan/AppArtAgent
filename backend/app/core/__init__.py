@@ -9,12 +9,12 @@ Modules:
 """
 
 from app.core.config import settings
-from app.core.database import get_db, SessionLocal, engine
+from app.core.database import SessionLocal, engine, get_db
 from app.core.logging import (
-    setup_logging,
-    setup_logfire,
-    instrument_fastapi,
     get_logger,
+    instrument_fastapi,
+    setup_logfire,
+    setup_logging,
     trace_llm_call,
     trace_storage_operation,
 )

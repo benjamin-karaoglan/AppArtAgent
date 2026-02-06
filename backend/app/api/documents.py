@@ -1,32 +1,31 @@
 """Documents API routes with comprehensive logging and multimodal support."""
 
+import hashlib
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from typing import Optional
-from datetime import datetime
 import os
 import uuid
-import hashlib
-import PyPDF2
+from datetime import datetime
+from typing import Optional
 
-from app.core.database import get_db
-from app.core.security import get_current_user
+import PyPDF2
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.core.database import get_db
 from app.core.i18n import get_local, get_output_language, translate
-from app.models.document import Document
+from app.core.security import get_current_user
+from app.models.document import Document, DocumentSummary
 from app.models.user import User
 from app.schemas.document import (
+    DiagnosticAnalysisResponse,
     DocumentResponse,
     PVAGAnalysisResponse,
-    DiagnosticAnalysisResponse,
-    TaxChargesAnalysisResponse
+    TaxChargesAnalysisResponse,
 )
 from app.services.ai import get_document_analyzer
-from app.services.documents import DocumentParser, get_document_parser
+from app.services.documents import DocumentParser
 from app.services.storage import get_storage_service
-from app.models.document import DocumentSummary
-from app.schemas.document import DocumentSummaryResponse
 
 # Backward compatibility aliases
 get_gemini_llm_service = get_document_analyzer
@@ -39,6 +38,7 @@ router = APIRouter()
 # Lazy initialization - don't initialize at module level for Cloud Run compatibility
 _doc_parser = None
 
+
 def get_doc_parser():
     """Get or create document parser (lazy initialization)."""
     global _doc_parser
@@ -47,7 +47,9 @@ def get_doc_parser():
     return _doc_parser
 
 
-def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucket: str = None, locale: str = "fr") -> str:
+def extract_text_from_pdf(
+    file_path: str, storage_key: str = None, storage_bucket: str = None, locale: str = "fr"
+) -> str:
     """
     Extract text from PDF file.
 
@@ -64,7 +66,7 @@ def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucke
             pdf_reader = PyPDF2.PdfReader(BytesIO(file_data))
         else:
             # Read from local file path (legacy support)
-            with open(file_path, 'rb') as file:
+            with open(file_path, "rb") as file:
                 pdf_reader = PyPDF2.PdfReader(file)
 
         for page in pdf_reader.pages:
@@ -72,7 +74,7 @@ def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucke
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("failed_extract_pdf", locale, error=str(e))
+            detail=translate("failed_extract_pdf", locale, error=str(e)),
         )
     return text
 
@@ -86,7 +88,7 @@ async def upload_document(
     document_subcategory: Optional[str] = Form(None),
     auto_parse: bool = Form(True),
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Upload a document for analysis.
@@ -99,8 +101,10 @@ async def upload_document(
     """
     locale = get_local(request)
 
-    logger.info(f"Document upload request - user: {current_user}, category: {document_category}, "
-                f"subcategory: {document_subcategory}, property_id: {property_id}, filename: {file.filename}")
+    logger.info(
+        f"Document upload request - user: {current_user}, category: {document_category}, "
+        f"subcategory: {document_subcategory}, property_id: {property_id}, filename: {file.filename}"
+    )
 
     # Validate file extension
     file_ext = os.path.splitext(file.filename)[1].lower()
@@ -108,7 +112,7 @@ async def upload_document(
         logger.warning(f"Invalid file type attempted: {file_ext} for file {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("file_type_not_allowed", locale, ext=file_ext)
+            detail=translate("file_type_not_allowed", locale, ext=file_ext),
         )
 
     # Read file content
@@ -120,7 +124,7 @@ async def upload_document(
         logger.error(f"Failed to read file {file.filename}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=translate("failed_read_file", locale, error=str(e))
+            detail=translate("failed_read_file", locale, error=str(e)),
         )
 
     # Calculate file hash for deduplication
@@ -147,7 +151,7 @@ async def upload_document(
             document_category=document_category,
             document_subcategory=document_subcategory,
             file_size=file_size,
-            file_hash=file_hash
+            file_hash=file_hash,
         )
 
         db.add(document)
@@ -168,8 +172,8 @@ async def upload_document(
                 "document_uuid": doc_uuid,
                 "user_uuid": user_uuid,
                 "category": document_category,
-                "subcategory": document_subcategory or ""
-            }
+                "subcategory": document_subcategory or "",
+            },
         )
         logger.info(f"File uploaded to storage: {storage_key}")
 
@@ -186,7 +190,7 @@ async def upload_document(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=translate("failed_create_document", locale, error=str(e))
+            detail=translate("failed_create_document", locale, error=str(e)),
         )
 
     # Automatically parse document if requested
@@ -199,17 +203,21 @@ async def upload_document(
             # Trigger aggregation if this is pv_ag or diags
             if document_category == "pv_ag":
                 logger.info(f"Triggering PV AG aggregation for property {property_id}")
-                await get_doc_parser().aggregate_pv_ag_summaries(property_id, db, output_language=output_language)
+                await get_doc_parser().aggregate_pv_ag_summaries(
+                    property_id, db, output_language=output_language
+                )
             elif document_category == "diags":
                 logger.info(f"Triggering diagnostic aggregation for property {property_id}")
-                await get_doc_parser().aggregate_diagnostic_summaries(property_id, db, output_language=output_language)
+                await get_doc_parser().aggregate_diagnostic_summaries(
+                    property_id, db, output_language=output_language
+                )
         except Exception as e:
             logger.error(f"Auto-parse failed for document ID {document.id}: {e}", exc_info=True)
             # Don't fail the upload if parsing fails - document is still saved
     elif not property_id:
-        logger.info(f"Auto-parse skipped - no property_id provided")
+        logger.info("Auto-parse skipped - no property_id provided")
     else:
-        logger.info(f"Auto-parse disabled by request")
+        logger.info("Auto-parse disabled by request")
 
     db.refresh(document)
     logger.info(f"Document upload completed successfully: ID {document.id}")
@@ -221,10 +229,10 @@ async def list_documents(
     request: Request,
     property_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """List all documents for the current user."""
-    locale = get_local(request)
+    get_local(request)
 
     query = db.query(Document).filter(Document.user_id == int(current_user))
 
@@ -240,20 +248,20 @@ async def get_document(
     request: Request,
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """Get a specific document."""
     locale = get_local(request)
 
-    document = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == int(current_user)
-    ).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == int(current_user))
+        .first()
+    )
 
     if not document:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("document_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("document_not_found", locale)
         )
 
     return document
@@ -264,20 +272,20 @@ async def analyze_pvag(
     request: Request,
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """Analyze PV d'AG document using Claude AI."""
     locale = get_local(request)
 
-    document = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == int(current_user)
-    ).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == int(current_user))
+        .first()
+    )
 
     if not document:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("document_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("document_not_found", locale)
         )
 
     # Extract text from document
@@ -286,21 +294,23 @@ async def analyze_pvag(
             document.file_path,
             storage_key=document.storage_key,
             storage_bucket=document.storage_bucket,
-            locale=locale
+            locale=locale,
         )
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("only_pdf_pvag", locale)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=translate("only_pdf_pvag", locale)
         )
 
     # Analyze with Gemini
     gemini_service = get_gemini_llm_service()
     output_language = get_output_language(locale)
-    analysis = await gemini_service.analyze_pvag_document(document_text, output_language=output_language)
+    analysis = await gemini_service.analyze_pvag_document(
+        document_text, output_language=output_language
+    )
 
     # Update document with analysis
     import json
+
     document.is_analyzed = True
     document.analysis_summary = analysis.get("summary", "")
     document.extracted_data = json.dumps(analysis)
@@ -317,9 +327,7 @@ async def analyze_pvag(
         "upcoming_works": sum(
             work.get("estimated_cost", 0) for work in analysis.get("upcoming_works", [])
         ),
-        "total": sum(
-            work.get("estimated_cost", 0) for work in analysis.get("upcoming_works", [])
-        )
+        "total": sum(work.get("estimated_cost", 0) for work in analysis.get("upcoming_works", [])),
     }
 
     return PVAGAnalysisResponse(
@@ -329,7 +337,7 @@ async def analyze_pvag(
         estimated_costs=estimated_costs,
         risk_level=analysis.get("risk_level", "unknown"),
         key_findings=analysis.get("key_findings", []),
-        recommendations=analysis.get("recommendations", [])
+        recommendations=analysis.get("recommendations", []),
     )
 
 
@@ -338,20 +346,20 @@ async def analyze_diagnostic(
     request: Request,
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """Analyze diagnostic document (DPE, amiante, plomb) using Claude AI."""
     locale = get_local(request)
 
-    document = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == int(current_user)
-    ).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == int(current_user))
+        .first()
+    )
 
     if not document:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("document_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("document_not_found", locale)
         )
 
     # Extract text
@@ -360,21 +368,23 @@ async def analyze_diagnostic(
             document.file_path,
             storage_key=document.storage_key,
             storage_bucket=document.storage_bucket,
-            locale=locale
+            locale=locale,
         )
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("only_pdf_supported", locale)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=translate("only_pdf_supported", locale)
         )
 
     # Analyze with Gemini
     gemini_service = get_gemini_llm_service()
     output_language = get_output_language(locale)
-    analysis = await gemini_service.analyze_diagnostic_document(document_text, output_language=output_language)
+    analysis = await gemini_service.analyze_diagnostic_document(
+        document_text, output_language=output_language
+    )
 
     # Update document
     import json
+
     document.is_analyzed = True
     document.analysis_summary = analysis.get("summary", "")
     document.extracted_data = json.dumps(analysis)
@@ -387,10 +397,7 @@ async def analyze_diagnostic(
 
     db.commit()
 
-    return DiagnosticAnalysisResponse(
-        document_id=document_id,
-        **analysis
-    )
+    return DiagnosticAnalysisResponse(document_id=document_id, **analysis)
 
 
 @router.post("/{document_id}/analyze-tax-charges", response_model=TaxChargesAnalysisResponse)
@@ -398,20 +405,20 @@ async def analyze_tax_charges(
     request: Request,
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """Analyze tax or charges document using Claude AI."""
     locale = get_local(request)
 
-    document = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == int(current_user)
-    ).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == int(current_user))
+        .first()
+    )
 
     if not document:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("document_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("document_not_found", locale)
         )
 
     # Extract text
@@ -420,12 +427,11 @@ async def analyze_tax_charges(
             document.file_path,
             storage_key=document.storage_key,
             storage_bucket=document.storage_bucket,
-            locale=locale
+            locale=locale,
         )
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("only_pdf_supported", locale)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=translate("only_pdf_supported", locale)
         )
 
     # Determine document type from category
@@ -434,10 +440,13 @@ async def analyze_tax_charges(
     # Analyze with Gemini
     gemini_service = get_gemini_llm_service()
     output_language = get_output_language(locale)
-    analysis = await gemini_service.analyze_tax_charges_document(document_text, doc_type, output_language=output_language)
+    analysis = await gemini_service.analyze_tax_charges_document(
+        document_text, doc_type, output_language=output_language
+    )
 
     # Update document
     import json
+
     document.is_analyzed = True
     document.analysis_summary = analysis.get("summary", "")
     document.extracted_data = json.dumps(analysis)
@@ -449,10 +458,7 @@ async def analyze_tax_charges(
 
     db.commit()
 
-    return TaxChargesAnalysisResponse(
-        document_id=document_id,
-        **analysis
-    )
+    return TaxChargesAnalysisResponse(document_id=document_id, **analysis)
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -460,20 +466,20 @@ async def delete_document(
     request: Request,
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """Delete a document."""
     locale = get_local(request)
 
-    document = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == int(current_user)
-    ).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == int(current_user))
+        .first()
+    )
 
     if not document:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("document_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("document_not_found", locale)
         )
 
     # Delete file from storage service
@@ -499,7 +505,7 @@ async def get_document_summaries(
     property_id: int,
     category: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Get aggregated document summaries for a property.
@@ -515,20 +521,18 @@ async def get_document_summaries(
     from app.models.property import Property
 
     # Verify property belongs to user
-    property = db.query(Property).filter(
-        Property.id == property_id,
-        Property.user_id == int(current_user)
-    ).first()
+    property = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
 
     if not property:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("property_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
         )
 
-    query = db.query(DocumentSummary).filter(
-        DocumentSummary.property_id == property_id
-    )
+    query = db.query(DocumentSummary).filter(DocumentSummary.property_id == property_id)
 
     if category:
         query = query.filter(DocumentSummary.category == category)
@@ -551,11 +555,13 @@ async def get_document_summaries(
             "diagnostic_issues": summary.diagnostic_issues,
             "created_at": summary.created_at,
             "updated_at": summary.updated_at,
-            "document_count": db.query(Document).filter(
+            "document_count": db.query(Document)
+            .filter(
                 Document.property_id == property_id,
                 Document.document_category == summary.category,
-                Document.is_analyzed == True
-            ).count()
+                Document.is_analyzed == True,
+            )
+            .count(),
         }
         result.append(summary_dict)
 
@@ -567,7 +573,7 @@ async def get_property_synthesis(
     request: Request,
     property_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Get the overall AI synthesis for a property (from bulk upload).
@@ -579,22 +585,23 @@ async def get_property_synthesis(
     from app.models.property import Property
 
     # Verify property belongs to user
-    property = db.query(Property).filter(
-        Property.id == property_id,
-        Property.user_id == int(current_user)
-    ).first()
+    property = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
 
     if not property:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("property_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
         )
 
     # Get synthesis (category is NULL for overall synthesis)
-    synthesis = db.query(DocumentSummary).filter(
-        DocumentSummary.property_id == property_id,
-        DocumentSummary.category == None
-    ).first()
+    synthesis = (
+        db.query(DocumentSummary)
+        .filter(DocumentSummary.property_id == property_id, DocumentSummary.category == None)
+        .first()
+    )
 
     if not synthesis:
         return None
@@ -608,7 +615,7 @@ async def get_property_synthesis(
         "total_one_time_cost": synthesis.total_one_time_cost,
         "key_findings": synthesis.key_findings,
         "recommendations": synthesis.recommendations,
-        "last_updated": synthesis.last_updated
+        "last_updated": synthesis.last_updated,
     }
 
 
@@ -618,7 +625,7 @@ async def regenerate_summaries(
     property_id: int,
     category: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Manually trigger regeneration of document summaries for a property category.
@@ -630,33 +637,37 @@ async def regenerate_summaries(
     from app.models.property import Property
 
     # Verify property belongs to user
-    property = db.query(Property).filter(
-        Property.id == property_id,
-        Property.user_id == int(current_user)
-    ).first()
+    property = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
 
     if not property:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("property_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
         )
 
     output_language = get_output_language(locale)
     try:
         if category == "pv_ag":
-            summary = await get_doc_parser().aggregate_pv_ag_summaries(property_id, db, output_language=output_language)
+            summary = await get_doc_parser().aggregate_pv_ag_summaries(
+                property_id, db, output_language=output_language
+            )
         elif category == "diags":
-            summary = await get_doc_parser().aggregate_diagnostic_summaries(property_id, db, output_language=output_language)
+            summary = await get_doc_parser().aggregate_diagnostic_summaries(
+                property_id, db, output_language=output_language
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=translate("aggregation_not_supported", locale, category=category)
+                detail=translate("aggregation_not_supported", locale, category=category),
             )
 
         if not summary:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=translate("no_documents_to_aggregate", locale)
+                detail=translate("no_documents_to_aggregate", locale),
             )
 
         return {
@@ -671,7 +682,7 @@ async def regenerate_summaries(
             "copropriete_insights": summary.copropriete_insights,
             "diagnostic_issues": summary.diagnostic_issues,
             "created_at": summary.created_at,
-            "updated_at": summary.updated_at
+            "updated_at": summary.updated_at,
         }
 
     except HTTPException:
@@ -679,7 +690,7 @@ async def regenerate_summaries(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=translate("failed_regenerate_summary", locale, error=str(e))
+            detail=translate("failed_regenerate_summary", locale, error=str(e)),
         )
 
 
@@ -691,7 +702,7 @@ async def upload_document_async(
     document_category: str = Form(...),
     document_subcategory: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Upload a document for async processing with MinIO.
@@ -709,8 +720,10 @@ async def upload_document_async(
     """
     locale = get_local(request)
 
-    logger.info(f"Async document upload - user: {current_user}, category: {document_category}, "
-                f"subcategory: {document_subcategory}, property_id: {property_id}, filename: {file.filename}")
+    logger.info(
+        f"Async document upload - user: {current_user}, category: {document_category}, "
+        f"subcategory: {document_subcategory}, property_id: {property_id}, filename: {file.filename}"
+    )
 
     # Validate file extension
     file_ext = os.path.splitext(file.filename)[1].lower()
@@ -718,7 +731,7 @@ async def upload_document_async(
         logger.warning(f"Invalid file type: {file_ext} for file {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("file_type_not_allowed", locale, ext=file_ext)
+            detail=translate("file_type_not_allowed", locale, ext=file_ext),
         )
 
     # Read file content
@@ -730,7 +743,7 @@ async def upload_document_async(
         logger.error(f"Failed to read file {file.filename}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=translate("failed_read_file", locale, error=str(e))
+            detail=translate("failed_read_file", locale, error=str(e)),
         )
 
     # Calculate file hash
@@ -758,7 +771,7 @@ async def upload_document_async(
             document_subcategory=document_subcategory,
             file_size=file_size,
             file_hash=file_hash,
-            processing_status="pending"
+            processing_status="pending",
         )
         db.add(document)
         db.flush()  # Get the document ID
@@ -779,8 +792,8 @@ async def upload_document_async(
                 "document_uuid": doc_uuid,
                 "user_uuid": user_uuid,
                 "category": document_category,
-                "subcategory": document_subcategory or ""
-            }
+                "subcategory": document_subcategory or "",
+            },
         )
 
         logger.info(f"File uploaded to storage: {storage_key}")
@@ -810,7 +823,7 @@ async def upload_document_async(
             file_size=document.file_size,
             property_id=document.property_id,
             processing_status=document.processing_status,
-            workflow_id=document.workflow_id
+            workflow_id=document.workflow_id,
         )
 
     except Exception as e:
@@ -818,7 +831,7 @@ async def upload_document_async(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=translate("failed_upload_document", locale, error=str(e))
+            detail=translate("failed_upload_document", locale, error=str(e)),
         )
 
 
@@ -827,7 +840,7 @@ async def get_document_status(
     request: Request,
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Get the processing status of a document.
@@ -842,15 +855,15 @@ async def get_document_status(
 
     logger.info(f"Status check for document {document_id}")
 
-    document = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == int(current_user)
-    ).first()
+    document = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == int(current_user))
+        .first()
+    )
 
     if not document:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("document_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("document_not_found", locale)
         )
 
     return {
@@ -862,7 +875,7 @@ async def get_document_status(
         "workflow_run_id": document.workflow_run_id,
         "processing_started_at": document.processing_started_at,
         "processing_completed_at": document.processing_completed_at,
-        "processing_error": document.processing_error
+        "processing_error": document.processing_error,
     }
 
 
@@ -872,7 +885,7 @@ async def bulk_upload_documents(
     files: list[UploadFile] = File(...),
     property_id: int = Form(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Upload multiple documents at once with intelligent classification and processing.
@@ -897,27 +910,26 @@ async def bulk_upload_documents(
 
     if not files or len(files) == 0:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("no_files_provided", locale)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=translate("no_files_provided", locale)
         )
 
     if len(files) > 50:  # Reasonable limit
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("max_files_exceeded", locale)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=translate("max_files_exceeded", locale)
         )
 
     # Verify property belongs to user
     from app.models.property import Property
-    property = db.query(Property).filter(
-        Property.id == property_id,
-        Property.user_id == int(current_user)
-    ).first()
+
+    property = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
 
     if not property:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("property_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
         )
 
     # Get user UUID for path structure
@@ -959,7 +971,7 @@ async def bulk_upload_documents(
                 document_category="pending_classification",  # Agent will classify
                 file_size=file_size,
                 file_hash=file_hash,
-                processing_status="pending"
+                processing_status="pending",
             )
             db.add(document)
             db.flush()  # Get document ID
@@ -973,8 +985,8 @@ async def bulk_upload_documents(
                 metadata={
                     "document_uuid": doc_uuid,
                     "user_uuid": user_uuid,
-                    "property_id": str(property_id)
-                }
+                    "property_id": str(property_id),
+                },
             )
 
             # Update document
@@ -983,12 +995,14 @@ async def bulk_upload_documents(
             document.file_path = f"storage://{storage_service.bucket}/{storage_key}"
 
             uploaded_documents.append(document)
-            document_uploads_info.append({
-                "document_id": document.id,
-                "document_uuid": doc_uuid,
-                "storage_key": storage_key,
-                "filename": file.filename
-            })
+            document_uploads_info.append(
+                {
+                    "document_id": document.id,
+                    "document_uuid": doc_uuid,
+                    "storage_key": storage_key,
+                    "filename": file.filename,
+                }
+            )
 
             logger.info(f"Uploaded {file.filename} to storage: {storage_key}")
 
@@ -1000,7 +1014,9 @@ async def bulk_upload_documents(
                 from app.services.documents import get_bulk_processor
 
                 # Generate workflow ID
-                workflow_id = f"bulk-{property_id}-{int(datetime.now().timestamp())}-{uuid.uuid4().hex[:8]}"
+                workflow_id = (
+                    f"bulk-{property_id}-{int(datetime.now().timestamp())}-{uuid.uuid4().hex[:8]}"
+                )
 
                 # Update documents with workflow ID
                 for doc in uploaded_documents:
@@ -1016,7 +1032,7 @@ async def bulk_upload_documents(
                     workflow_id=workflow_id,
                     property_id=property_id,
                     document_uploads=document_uploads_info,
-                    output_language=output_language
+                    output_language=output_language,
                 )
 
                 logger.info(f"Started async bulk processing: {workflow_id}")
@@ -1030,7 +1046,7 @@ async def bulk_upload_documents(
                         f"Successfully uploaded {len(uploaded_documents)} documents. "
                         "The AI agent is now classifying and processing them. "
                         "Check the status to see progress."
-                    )
+                    ),
                 }
 
             except Exception as e:
@@ -1043,14 +1059,14 @@ async def bulk_upload_documents(
 
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=translate("failed_start_processing", locale, error=str(e))
+                    detail=translate("failed_start_processing", locale, error=str(e)),
                 )
         else:
             return {
                 "status": "pending",
                 "document_ids": [],
                 "total_files": 0,
-                "message": "No valid documents to process"
+                "message": "No valid documents to process",
             }
 
     except HTTPException:
@@ -1061,7 +1077,7 @@ async def bulk_upload_documents(
         logger.error(f"Bulk upload failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=translate("bulk_upload_failed", locale, error=str(e))
+            detail=translate("bulk_upload_failed", locale, error=str(e)),
         )
 
 
@@ -1070,7 +1086,7 @@ async def get_bulk_processing_status(
     request: Request,
     workflow_id: str,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user),
 ):
     """
     Get the status of a bulk document processing workflow.
@@ -1086,27 +1102,27 @@ async def get_bulk_processing_status(
     logger.info(f"Bulk status check for workflow {workflow_id}")
 
     # Get all documents for this workflow
-    documents = db.query(Document).filter(
-        Document.workflow_id == workflow_id,
-        Document.user_id == int(current_user)
-    ).all()
+    documents = (
+        db.query(Document)
+        .filter(Document.workflow_id == workflow_id, Document.user_id == int(current_user))
+        .all()
+    )
 
     if not documents:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("workflow_not_found", locale)
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("workflow_not_found", locale)
         )
 
     property_id = documents[0].property_id
 
     # Get synthesis if available
-    synthesis = db.query(DocumentSummary).filter(
-        DocumentSummary.property_id == property_id
-    ).first()
+    synthesis = db.query(DocumentSummary).filter(DocumentSummary.property_id == property_id).first()
 
     logger.info(f"Synthesis found for property {property_id}: {synthesis is not None}")
     if synthesis:
-        logger.info(f"Synthesis data - risk: {synthesis.risk_level}, summary length: {len(synthesis.overall_summary) if synthesis.overall_summary else 0}")
+        logger.info(
+            f"Synthesis data - risk: {synthesis.risk_level}, summary length: {len(synthesis.overall_summary) if synthesis.overall_summary else 0}"
+        )
 
     # Calculate progress
     total = len(documents)
@@ -1134,7 +1150,7 @@ async def get_bulk_processing_status(
             "completed": completed,
             "failed": failed,
             "processing": processing,
-            "percentage": int((completed / total) * 100) if total > 0 else 0
+            "percentage": int((completed / total) * 100) if total > 0 else 0,
         },
         "documents": [
             {
@@ -1144,7 +1160,7 @@ async def get_bulk_processing_status(
                 "document_subcategory": doc.document_subcategory,
                 "processing_status": doc.processing_status,
                 "is_analyzed": doc.is_analyzed,
-                "processing_error": doc.processing_error
+                "processing_error": doc.processing_error,
             }
             for doc in documents
         ],
@@ -1154,8 +1170,10 @@ async def get_bulk_processing_status(
             "total_one_time_cost": synthesis.total_one_time_cost if synthesis else None,
             "risk_level": synthesis.risk_level if synthesis else None,
             "key_findings": synthesis.key_findings if synthesis else [],
-            "recommendations": synthesis.recommendations if synthesis else []
-        } if synthesis else None
+            "recommendations": synthesis.recommendations if synthesis else [],
+        }
+        if synthesis
+        else None,
     }
 
     logger.info(f"Returning synthesis: {response_data['synthesis'] is not None}")

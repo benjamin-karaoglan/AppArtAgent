@@ -4,7 +4,7 @@ AppArt Agent uses Next.js 14 App Router for file-based routing.
 
 ## Route Structure
 
-```
+```text
 /                           # Landing page
 ├── /auth
 │   ├── /login              # Login form
@@ -85,10 +85,10 @@ Property overview with:
 
 ```tsx
 // Dynamic route parameter
-export default function PropertyPage({ 
-  params 
-}: { 
-  params: { id: string } 
+export default function PropertyPage({
+  params
+}: {
+  params: { id: string }
 }) {
   const propertyId = params.id;
   // ...
@@ -220,7 +220,7 @@ export default function DashboardLayout({
 ```tsx
 import Link from 'next/link';
 
-<Link 
+<Link
   href={`/properties/${property.id}`}
   className="text-indigo-600 hover:text-indigo-800"
 >
@@ -301,13 +301,13 @@ Dynamic metadata for SEO:
 // src/app/properties/[id]/page.tsx
 import { Metadata } from 'next';
 
-export async function generateMetadata({ 
-  params 
-}: { 
-  params: { id: string } 
+export async function generateMetadata({
+  params
+}: {
+  params: { id: string }
 }): Promise<Metadata> {
   const property = await fetchProperty(params.id);
-  
+
   return {
     title: `${property.address} | AppArt Agent`,
     description: `Property analysis for ${property.address}, ${property.city}`,

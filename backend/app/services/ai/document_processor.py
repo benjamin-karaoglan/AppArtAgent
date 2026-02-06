@@ -5,11 +5,11 @@ Processes documents individually using Gemini for classification
 and type-specific analysis. Handles PV AG, diagnostics, taxes, and charges.
 """
 
-import logging
 import base64
 import json
+import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from google import genai
 from google.genai import types
@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 def _repair_json(json_str: str) -> str:
     """Attempt to repair truncated or malformed JSON from LLM responses."""
     # Count brackets to find imbalance
-    open_braces = json_str.count('{') - json_str.count('}')
-    open_brackets = json_str.count('[') - json_str.count(']')
+    open_braces = json_str.count("{") - json_str.count("}")
+    open_brackets = json_str.count("[") - json_str.count("]")
 
     # Check for unterminated string (odd number of unescaped quotes)
     in_string = False
     i = 0
     while i < len(json_str):
-        if json_str[i] == '"' and (i == 0 or json_str[i-1] != '\\'):
+        if json_str[i] == '"' and (i == 0 or json_str[i - 1] != "\\"):
             in_string = not in_string
         i += 1
 
@@ -39,10 +39,10 @@ def _repair_json(json_str: str) -> str:
         json_str += '"'
 
     # Close any trailing comma before adding brackets
-    json_str = re.sub(r',\s*$', '', json_str)
+    json_str = re.sub(r",\s*$", "", json_str)
 
     # Close open brackets/braces
-    json_str += ']' * open_brackets + '}' * open_braces
+    json_str += "]" * open_brackets + "}" * open_braces
 
     return json_str
 
@@ -51,22 +51,22 @@ def _extract_json(response_text: str) -> str:
     """Extract and clean JSON from LLM response."""
     # Find JSON start
     json_start = min(
-        response_text.find('{') if response_text.find('{') != -1 else len(response_text),
-        response_text.find('[') if response_text.find('[') != -1 else len(response_text)
+        response_text.find("{") if response_text.find("{") != -1 else len(response_text),
+        response_text.find("[") if response_text.find("[") != -1 else len(response_text),
     )
     if json_start > 0:
         response_text = response_text[json_start:]
 
     # Remove markdown blocks
-    if '```' in response_text:
-        response_text = re.sub(r'```(?:json)?\s*', '', response_text)
+    if "```" in response_text:
+        response_text = re.sub(r"```(?:json)?\s*", "", response_text)
 
     # Fix number formatting
-    response_text = re.sub(r':\s*(\d+),(\d+\.?\d*)', r': \1\2', response_text)
-    response_text = re.sub(r':\s*(\d+),(\d+),(\d+\.?\d*)', r': \1\2\3', response_text)
+    response_text = re.sub(r":\s*(\d+),(\d+\.?\d*)", r": \1\2", response_text)
+    response_text = re.sub(r":\s*(\d+),(\d+),(\d+\.?\d*)", r": \1\2\3", response_text)
 
     # Remove trailing commas
-    response_text = re.sub(r',(\s*[}\]])', r'\1', response_text)
+    response_text = re.sub(r",(\s*[}\]])", r"\1", response_text)
 
     # Attempt to repair truncated JSON
     response_text = _repair_json(response_text.strip())
@@ -114,9 +114,13 @@ class DocumentProcessor:
         parts = getattr(content, "parts", None) or []
         return "\n".join(p.text for p in parts if getattr(p, "text", None)).strip()
 
-    def _get_config(self, max_tokens: int = 2000, temperature: float = 0.1) -> types.GenerateContentConfig:
+    def _get_config(
+        self, max_tokens: int = 2000, temperature: float = 0.1
+    ) -> types.GenerateContentConfig:
         """Get generation config."""
-        return types.GenerateContentConfig(temperature=temperature, top_p=0.95, max_output_tokens=max_tokens)
+        return types.GenerateContentConfig(
+            temperature=temperature, top_p=0.95, max_output_tokens=max_tokens
+        )
 
     def _build_image_parts(self, images: List[str]) -> List[types.Part]:
         """Convert base64 images to Gemini parts."""
@@ -136,7 +140,9 @@ class DocumentProcessor:
             return "unknown"
 
         parts = self._build_image_parts(images[:3])
-        parts.append(types.Part.from_text(text=get_prompt("dp_classify_document", filename=filename)))
+        parts.append(
+            types.Part.from_text(text=get_prompt("dp_classify_document", filename=filename))
+        )
 
         try:
             response = self.client.models.generate_content(
@@ -186,30 +192,54 @@ class DocumentProcessor:
                 "summary": f"Error processing {filename}",
                 "key_insights": [],
                 "estimated_annual_cost": 0.0,
-                "one_time_costs": 0.0
+                "one_time_costs": 0.0,
             }
 
-    async def process_pv_ag(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
+    async def process_pv_ag(
+        self, document: Dict[str, Any], output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Process PV d'AG document."""
-        prompt = get_prompt("dp_process_pv_ag", filename=document.get('filename', ''), output_language=output_language)
+        prompt = get_prompt(
+            "dp_process_pv_ag",
+            filename=document.get("filename", ""),
+            output_language=output_language,
+        )
         return await self._process_with_prompt(document, prompt)
 
-    async def process_diagnostic(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
+    async def process_diagnostic(
+        self, document: Dict[str, Any], output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Process diagnostic document."""
-        prompt = get_prompt("dp_process_diagnostic", filename=document.get('filename', ''), output_language=output_language)
+        prompt = get_prompt(
+            "dp_process_diagnostic",
+            filename=document.get("filename", ""),
+            output_language=output_language,
+        )
         return await self._process_with_prompt(document, prompt)
 
-    async def process_tax(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
+    async def process_tax(
+        self, document: Dict[str, Any], output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Process taxe foncière document."""
-        prompt = get_prompt("dp_process_tax", filename=document.get('filename', ''), output_language=output_language)
+        prompt = get_prompt(
+            "dp_process_tax", filename=document.get("filename", ""), output_language=output_language
+        )
         return await self._process_with_prompt(document, prompt)
 
-    async def process_charges(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
+    async def process_charges(
+        self, document: Dict[str, Any], output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Process charges document."""
-        prompt = get_prompt("dp_process_charges", filename=document.get('filename', ''), output_language=output_language)
+        prompt = get_prompt(
+            "dp_process_charges",
+            filename=document.get("filename", ""),
+            output_language=output_language,
+        )
         return await self._process_with_prompt(document, prompt)
 
-    async def process_document(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
+    async def process_document(
+        self, document: Dict[str, Any], output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Process a single document: classify and analyze."""
         filename = document.get("filename", "")
         document_id = document.get("document_id")
@@ -234,17 +264,19 @@ class DocumentProcessor:
                 "summary": f"Unable to classify {filename}",
                 "key_insights": [],
                 "estimated_annual_cost": 0.0,
-                "one_time_costs": 0.0
+                "one_time_costs": 0.0,
             }
 
         return {
             "filename": filename,
             "document_type": category,
             "result": analysis,
-            "document_id": document_id
+            "document_id": document_id,
         }
 
-    async def synthesize_results(self, results: List[Dict[str, Any]], output_language: str = "French") -> Dict[str, Any]:
+    async def synthesize_results(
+        self, results: List[Dict[str, Any]], output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Synthesize all results into overall summary."""
         logger.info(f"Synthesizing {len(results)} documents")
 
@@ -253,7 +285,9 @@ class DocumentProcessor:
             for r in results
         )
 
-        prompt = get_prompt("dp_synthesize_results", summaries=summaries, output_language=output_language)
+        prompt = get_prompt(
+            "dp_synthesize_results", summaries=summaries, output_language=output_language
+        )
 
         try:
             response = self.client.models.generate_content(
@@ -271,14 +305,18 @@ class DocumentProcessor:
                 "total_one_time_costs": 0.0,
                 "risk_level": "unknown",
                 "key_findings": ["All documents processed"],
-                "recommendations": ["Review individual documents"]
+                "recommendations": ["Review individual documents"],
             }
 
-    async def process_bulk_upload(self, documents: List[Dict[str, Any]], property_id: int, output_language: str = "French") -> Dict[str, Any]:
+    async def process_bulk_upload(
+        self, documents: List[Dict[str, Any]], property_id: int, output_language: str = "French"
+    ) -> Dict[str, Any]:
         """Process multiple documents sequentially."""
         logger.info(f"Bulk processing: {len(documents)} documents for property {property_id}")
 
-        results = [await self.process_document(doc, output_language=output_language) for doc in documents]
+        results = [
+            await self.process_document(doc, output_language=output_language) for doc in documents
+        ]
         synthesis = await self.synthesize_results(results, output_language=output_language)
 
         return {"processing_results": results, "synthesis": synthesis}

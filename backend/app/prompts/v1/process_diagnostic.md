@@ -5,6 +5,7 @@ description: Prompt for processing diagnostic documents with vision capabilities
 ---
 
 Analyze this diagnostic report and extract:
+
 - Type of diagnostic (DPE, amiante, plomb, termites, electric, gas)
 - Date of the diagnostic
 - Overall result/rating

@@ -1,9 +1,11 @@
 """Document model for uploaded files."""
 
 import uuid as uuid_lib
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Float, JSON
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from app.core.database import Base
 
 
@@ -13,7 +15,9 @@ class Document(Base):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, index=True)
-    uuid = Column(String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4()))
+    uuid = Column(
+        String(36), unique=True, index=True, nullable=True, default=lambda: str(uuid_lib.uuid4())
+    )
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     property_id = Column(Integer, ForeignKey("properties.id"), nullable=True)
 
@@ -54,7 +58,9 @@ class Document(Base):
     # Temporal workflow tracking
     workflow_id = Column(String, nullable=True, index=True)  # Temporal workflow ID
     workflow_run_id = Column(String, nullable=True)  # Temporal run ID
-    processing_status = Column(String, nullable=True, index=True)  # pending, processing, completed, failed
+    processing_status = Column(
+        String, nullable=True, index=True
+    )  # pending, processing, completed, failed
     processing_started_at = Column(DateTime, nullable=True)
     processing_completed_at = Column(DateTime, nullable=True)
     processing_error = Column(Text, nullable=True)
@@ -71,11 +77,14 @@ class Document(Base):
 
 class DocumentSummary(Base):
     """Aggregated summaries for groups of documents (e.g., all PV d'AG for a property)"""
+
     __tablename__ = "document_summaries"
 
     id = Column(Integer, primary_key=True, index=True)
     property_id = Column(Integer, ForeignKey("properties.id"), nullable=False)
-    category = Column(String, nullable=True)  # pv_ag, diags, taxe_fonciere, charges (nullable for overall summary)
+    category = Column(
+        String, nullable=True
+    )  # pv_ag, diags, taxe_fonciere, charges (nullable for overall summary)
 
     # Aggregated analysis
     summary = Column(Text, nullable=True)

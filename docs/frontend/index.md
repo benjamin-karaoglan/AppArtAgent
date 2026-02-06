@@ -15,7 +15,7 @@ The AppArt Agent frontend is a Next.js 14 application using the App Router.
 
 ## Project Structure
 
-```
+```text
 frontend/
 ├── src/
 │   ├── app/                    # App Router pages

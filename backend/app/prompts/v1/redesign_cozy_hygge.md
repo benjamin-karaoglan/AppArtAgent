@@ -6,6 +6,7 @@ description: Image generation prompt for cozy hygge interior design style
 
 You are an interior architect.
 Transform this apartment {room_type} into the ultimate hygge retreat:
+
 - Keep room geometry and windows unchanged
 - Feature a plush, oversized sofa with layers of soft blankets and cushions in warm neutrals
 - Add warm, ambient lighting from multiple sources: candles, vintage-style floor lamp

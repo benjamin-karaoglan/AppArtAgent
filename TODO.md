@@ -1,32 +1,32 @@
-## TODO:
+## TODO
 
-### Documents:
+### Documents
 
-#### Bugs: 
+#### Bugs
 
 - [ ] Loading bar disapering
 - [ ] Bulk Load failing
 
-#### Feature:
+#### Feature
 
 - [ ] Smart summary &rarr; enable to recreate
 
-### Redesign studio:
+### Redesign studio
 
-#### Bugs:
+#### Bugs
 
 - [ ] Uploading an image while running a redesign
 - [ ] Switching while running a redesign
 
-#### Feature:
+#### Feature
 
 - [ ] Multiturn redesign
 
-### Infrastructure:
+### Infrastructure
 
 - [ ] Revise naming
 - [ ] Import dvf data to CloudSQL
 
-### Various:
+### Various
 
 - [ ] Update email to use gmail workspace domain

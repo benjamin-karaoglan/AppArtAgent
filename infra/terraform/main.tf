@@ -1,7 +1,7 @@
 # =============================================================================
 # AppArt Agent - GCP Infrastructure
 # =============================================================================
-# 
+#
 # This Terraform configuration deploys:
 # - Cloud Run services for Frontend and Backend
 # - Cloud SQL PostgreSQL database
@@ -880,7 +880,7 @@ resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
 # =============================================================================
 # Custom Domain Configuration
 # =============================================================================
-# 
+#
 # This section configures:
 # 1. Cloud DNS managed zone for the domain
 # 2. Cloud Run domain mappings for frontend (apex + www) and backend (api subdomain)
@@ -1055,7 +1055,7 @@ resource "google_dns_record_set" "backend_api" {
 # =============================================================================
 # Cloud Load Balancer Configuration (when use_load_balancer = true)
 # =============================================================================
-# 
+#
 # This provides more reliable SSL certificate provisioning than Cloud Run
 # domain mappings. It uses:
 # - Global external Application Load Balancer

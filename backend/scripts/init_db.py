@@ -4,18 +4,18 @@ Automatic database initialization script.
 Runs migrations and optionally imports DVF data on first startup.
 """
 
+import logging
 import os
 import sys
 import time
-import logging
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import text, inspect
-from app.core.database import engine, SessionLocal
-from app.core.config import settings
+from sqlalchemy import inspect, text
+
+from app.core.database import SessionLocal, engine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ def check_tables_exist():
     try:
         inspector = inspect(engine)
         tables = inspector.get_table_names()
-        required_tables = ['users', 'properties', 'documents', 'dvf_records']
+        required_tables = ["users", "properties", "documents", "dvf_records"]
 
         missing_tables = [t for t in required_tables if t not in tables]
 
@@ -68,12 +68,9 @@ def run_migrations():
 
     try:
         import subprocess
+
         result = subprocess.run(
-            ["alembic", "upgrade", "head"],
-            cwd="/app",
-            capture_output=True,
-            text=True,
-            timeout=60
+            ["alembic", "upgrade", "head"], cwd="/app", capture_output=True, text=True, timeout=60
         )
 
         if result.returncode == 0:
@@ -93,20 +90,20 @@ def create_test_user():
     logger.info("Checking for test user...")
 
     try:
-        from app.models.user import User
         from app.core.security import get_password_hash
+        from app.models.user import User
 
         db = SessionLocal()
         try:
-            existing = db.query(User).filter(User.email == 'test@example.com').first()
+            existing = db.query(User).filter(User.email == "test@example.com").first()
 
             if not existing:
                 user = User(
-                    email='test@example.com',
-                    hashed_password=get_password_hash('test123'),
-                    full_name='Test User',
+                    email="test@example.com",
+                    hashed_password=get_password_hash("test123"),
+                    full_name="Test User",
                     is_active=True,
-                    is_superuser=False
+                    is_superuser=False,
                 )
                 db.add(user)
                 db.commit()
@@ -173,12 +170,13 @@ def import_dvf_data():
 
     try:
         import subprocess
+
         result = subprocess.run(
             ["python", "scripts/import_all_dvf.py"],
             cwd="/app",
             timeout=1800,  # 30 minute timeout for all files
             capture_output=False,  # Show output in real-time
-            text=True
+            text=True,
         )
 
         if result.returncode == 0:

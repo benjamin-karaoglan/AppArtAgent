@@ -5,6 +5,7 @@ description: Prompt for processing tax documents with vision capabilities
 ---
 
 Analyze this taxe foncière document and extract:
+
 - Year
 - Total amount
 - Property value (valeur cadastrale)

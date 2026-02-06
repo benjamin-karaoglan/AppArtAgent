@@ -119,7 +119,7 @@ class DVFRecord(Base):
 
 ```bash
 docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT 
+SELECT
     source_file,
     data_year,
     status,
@@ -127,7 +127,7 @@ SELECT
     inserted_records,
     duration_seconds,
     started_at
-FROM dvf_imports 
+FROM dvf_imports
 ORDER BY started_at DESC
 LIMIT 10;
 "
@@ -137,13 +137,13 @@ LIMIT 10;
 
 ```bash
 docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT 
+SELECT
     data_year,
     COUNT(*) as records,
     MIN(sale_date) as earliest,
     MAX(sale_date) as latest
-FROM dvf_records 
-GROUP BY data_year 
+FROM dvf_records
+GROUP BY data_year
 ORDER BY data_year;
 "
 ```
@@ -207,7 +207,7 @@ The database uses PostgreSQL trigram index for fuzzy address matching:
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Create GIN index
-CREATE INDEX idx_dvf_address_gin ON dvf_records 
+CREATE INDEX idx_dvf_address_gin ON dvf_records
 USING GIN (address gin_trgm_ops);
 ```
 
@@ -274,10 +274,11 @@ def filter_outliers(prices: List[float]) -> List[float]:
 **Issue**: Search returns fewer sales than expected.
 
 **Solution**: Verify data is imported:
+
 ```bash
 docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT data_year, COUNT(*) FROM dvf_records 
-WHERE postal_code = '75006' 
+SELECT data_year, COUNT(*) FROM dvf_records
+WHERE postal_code = '75006'
 GROUP BY data_year;
 "
 ```
@@ -287,9 +288,10 @@ GROUP BY data_year;
 **Issue**: Address search takes too long.
 
 **Solution**: Verify GIN index exists:
+
 ```bash
 docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT indexname FROM pg_indexes 
+SELECT indexname FROM pg_indexes
 WHERE tablename = 'dvf_records' AND indexname LIKE '%gin%';
 "
 ```
@@ -298,7 +300,8 @@ WHERE tablename = 'dvf_records' AND indexname LIKE '%gin%';
 
 **Issue**: Import crashes or hangs.
 
-**Solution**: 
+**Solution**:
+
 1. Check available memory
 2. Reduce chunk size: `--read-chunk-size 10000`
 3. Check disk space for PostgreSQL

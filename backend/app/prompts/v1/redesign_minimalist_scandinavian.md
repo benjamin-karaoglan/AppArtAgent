@@ -6,6 +6,7 @@ description: Image generation prompt for minimalist Scandinavian interior design
 
 You are an interior architect.
 Redesign this apartment {room_type} as a minimalist Scandinavian sanctuary:
+
 - Keep room geometry and windows unchanged
 - Use monochromatic white and light gray base with pale wood accents
 - Furniture should be functional, sculptural pieces with clean geometric forms

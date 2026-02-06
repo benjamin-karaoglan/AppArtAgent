@@ -94,7 +94,7 @@ redis_memory_size_gb = 1
 # =============================================================================
 
 # Custom domain for the application (leave empty to use Cloud Run URLs)
-# 
+#
 # When configured, Terraform will:
 #   1. Create Cloud Run domain mappings for:
 #      - appartagent.com (frontend)

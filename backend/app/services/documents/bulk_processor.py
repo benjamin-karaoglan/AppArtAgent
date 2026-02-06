@@ -5,11 +5,11 @@ Handles bulk document uploads with parallel processing and synthesis.
 """
 
 import asyncio
-import logging
 import base64
 import json
-from typing import List, Dict, Any, Optional
+import logging
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import fitz  # PyMuPDF
 from sqlalchemy.orm import Session
@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.document import Document, DocumentSummary
 from app.models.user import User
-from app.services.storage import get_storage_service
 from app.services.ai.document_processor import get_document_processor
+from app.services.storage import get_storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,9 @@ def pdf_bytes_to_images_base64(pdf_bytes: bytes, max_pages: int = 20) -> List[st
 
         for page_num in range(min(len(doc), max_pages)):
             page = doc[page_num]
-            pix = page.get_pixmap(matrix=fitz.Matrix(150/72, 150/72))
+            pix = page.get_pixmap(matrix=fitz.Matrix(150 / 72, 150 / 72))
             img_bytes = pix.tobytes("png")
-            images.append(base64.b64encode(img_bytes).decode('utf-8'))
+            images.append(base64.b64encode(img_bytes).decode("utf-8"))
 
         doc.close()
         logger.info(f"Converted {len(images)} pages to images")
@@ -64,7 +64,7 @@ class BulkProcessor:
         workflow_id: str,
         property_id: int,
         document_uploads: List[Dict[str, Any]],
-        output_language: str = "French"
+        output_language: str = "French",
     ) -> None:
         """Process bulk document upload asynchronously."""
         logger.info(f"Starting bulk processing: {workflow_id}, {len(document_uploads)} documents")
@@ -94,11 +94,14 @@ class BulkProcessor:
             for i, upload in enumerate(document_uploads):
                 logger.info(f"Processing {i+1}/{len(document_uploads)}: {upload['filename']}")
 
-                result = await processor.process_document({
-                    "filename": upload["filename"],
-                    "file_data_base64": images_list[i],
-                    "document_id": upload["document_id"]
-                }, output_language=output_language)
+                result = await processor.process_document(
+                    {
+                        "filename": upload["filename"],
+                        "file_data_base64": images_list[i],
+                        "document_id": upload["document_id"],
+                    },
+                    output_language=output_language,
+                )
                 results.append(result)
 
                 # Save immediately
@@ -141,6 +144,7 @@ class BulkProcessor:
 
     async def _convert_pdfs(self, file_data_list: List[bytes]) -> List[List[str]]:
         """Convert PDFs to images in parallel."""
+
         async def convert_one(file_data: bytes) -> List[str]:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, pdf_bytes_to_images_base64, file_data)
@@ -168,7 +172,9 @@ class BulkProcessor:
 
         one_time = analysis.get("one_time_costs", 0.0)
         if isinstance(one_time, (int, float)):
-            doc.one_time_costs = [{"amount": one_time, "description": "Total"}] if one_time > 0 else []
+            doc.one_time_costs = (
+                [{"amount": one_time, "description": "Total"}] if one_time > 0 else []
+            )
         else:
             doc.one_time_costs = one_time
 
@@ -184,11 +190,13 @@ class BulkProcessor:
         db.commit()
         logger.info(f"Saved document {doc_id}: {result.get('filename')}")
 
-    async def _save_synthesis(self, db: Session, synthesis: Dict[str, Any], property_id: int) -> None:
+    async def _save_synthesis(
+        self, db: Session, synthesis: Dict[str, Any], property_id: int
+    ) -> None:
         """Save synthesis to database."""
-        summary = db.query(DocumentSummary).filter(
-            DocumentSummary.property_id == property_id
-        ).first()
+        summary = (
+            db.query(DocumentSummary).filter(DocumentSummary.property_id == property_id).first()
+        )
 
         if not summary:
             summary = DocumentSummary(property_id=property_id)
@@ -211,11 +219,13 @@ class BulkProcessor:
         workflow_id: str,
         property_id: int,
         document_uploads: List[Dict[str, Any]],
-        output_language: str = "French"
+        output_language: str = "French",
     ) -> None:
         """Start background processing task."""
         task = asyncio.create_task(
-            self.process_bulk_upload(workflow_id, property_id, document_uploads, output_language=output_language)
+            self.process_bulk_upload(
+                workflow_id, property_id, document_uploads, output_language=output_language
+            )
         )
         self.active_tasks[workflow_id] = task
         logger.info(f"Started background task: {workflow_id}")

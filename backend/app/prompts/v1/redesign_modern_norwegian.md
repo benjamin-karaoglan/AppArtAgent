@@ -6,6 +6,7 @@ description: Image generation prompt for modern Norwegian interior design style
 
 You are an interior architect.
 Redesign this apartment {room_type} in a modern Norwegian style:
+
 - Keep room geometry and windows unchanged
 - Use clean lines with warm, natural wood tones (light oak or birch)
 - Flooring: warm oak wood

@@ -5,6 +5,7 @@ description: Prompt for processing PV d'AG documents with vision capabilities
 ---
 
 Analyze this PV d'AG (copropriété general assembly minutes) and extract:
+
 - Meeting date
 - Key decisions made
 - Upcoming works and their estimated costs

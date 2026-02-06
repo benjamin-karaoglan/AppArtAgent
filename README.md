@@ -41,18 +41,21 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 ## Features
 
 ### 📊 Price Analysis
+
 - Address-based property search with DVF data (2022-2025)
 - Historical sales analysis and trend projections
 - Interactive 5-year market evolution chart
 - IQR-based outlier detection for accurate pricing
 
 ### 📄 Document Analysis
+
 - **Bulk Upload**: Drag & drop multiple documents at once
 - **Auto-Classification**: AI identifies document types automatically
 - **Parallel Processing**: All documents analyzed simultaneously
 - **Synthesis**: Cross-document analysis with cost aggregation and risk assessment
 
 ### 🎨 Photo Redesign Studio
+
 - Upload apartment photos
 - AI-driven style transformation
 - Visualize renovation potential
@@ -103,7 +106,7 @@ docker-compose exec backend alembic upgrade head
 
 ## Project Structure
 
-```
+```text
 AppArtAgent/
 ├── backend/                 # FastAPI backend
 │   ├── app/
@@ -171,6 +174,7 @@ uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
+
 </details>
 
 <details>
@@ -181,6 +185,7 @@ cd frontend
 pnpm install
 pnpm dev
 ```
+
 </details>
 
 ## Environment Variables
@@ -197,6 +202,7 @@ MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 ```
+
 </details>
 
 <details>
@@ -239,6 +245,7 @@ Start with: `./dev.sh start-gcs`
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
+
 </details>
 
 ## DVF Data
@@ -285,6 +292,7 @@ For commercial use, enterprise deployments, or SaaS applications, please contact
 📧 **[benjamin.karaoglan@appartagent.com](mailto:benjamin.karaoglan@appartagent.com)**
 
 Commercial licenses include:
+
 - Full commercial usage rights
 - Priority support
 - Custom feature development

@@ -1,10 +1,11 @@
 """Unit tests for DVF service."""
 
+from datetime import date, datetime, timedelta
+from unittest.mock import Mock
+
 import pytest
-from datetime import datetime, date, timedelta
-from unittest.mock import Mock, MagicMock
+
 from app.services.dvf_service import DVFService
-from app.models.property import DVFRecord
 
 
 class TestExtractStreetInfo:
@@ -152,7 +153,7 @@ class TestCalculatePriceAnalysis:
         analysis = DVFService.calculate_price_analysis(
             asking_price=650000,  # 65m² * 10000/m²
             surface_area=65,
-            comparable_sales=comparable_sales
+            comparable_sales=comparable_sales,
         )
 
         assert "estimated_value" in analysis
@@ -174,7 +175,7 @@ class TestCalculatePriceAnalysis:
         analysis = DVFService.calculate_price_analysis(
             asking_price=650000,  # 65m² * 10000/m² = exactly market
             surface_area=65,
-            comparable_sales=comparable_sales
+            comparable_sales=comparable_sales,
         )
 
         # Should be within -5% to +5% (fair price range)
@@ -190,7 +191,7 @@ class TestCalculatePriceAnalysis:
         analysis = DVFService.calculate_price_analysis(
             asking_price=780000,  # 65m² * 12000/m² = 20% above market
             surface_area=65,
-            comparable_sales=comparable_sales
+            comparable_sales=comparable_sales,
         )
 
         # Should show positive deviation (overpriced)
@@ -207,7 +208,7 @@ class TestCalculatePriceAnalysis:
         analysis = DVFService.calculate_price_analysis(
             asking_price=520000,  # 65m² * 8000/m² = 20% below market
             surface_area=65,
-            comparable_sales=comparable_sales
+            comparable_sales=comparable_sales,
         )
 
         # Should show negative deviation (good deal)
@@ -217,9 +218,7 @@ class TestCalculatePriceAnalysis:
     def test_analysis_no_sales(self):
         """Test analysis with no comparable sales."""
         analysis = DVFService.calculate_price_analysis(
-            asking_price=650000,
-            surface_area=65,
-            comparable_sales=[]
+            asking_price=650000, surface_area=65, comparable_sales=[]
         )
 
         assert analysis["recommendation"] == "Insufficient data"
@@ -236,9 +235,7 @@ class TestCalculatePriceAnalysis:
         ]
 
         analysis = DVFService.calculate_price_analysis(
-            asking_price=650000,
-            surface_area=65,
-            comparable_sales=comparable_sales
+            asking_price=650000, surface_area=65, comparable_sales=comparable_sales
         )
 
         # Median should be 10000
@@ -260,9 +257,7 @@ class TestCalculateTrendBasedProjection:
         ]
 
         projection = DVFService.calculate_trend_based_projection(
-            exact_address_sales=exact_sales,
-            neighboring_sales=neighboring_sales,
-            surface_area=65
+            exact_address_sales=exact_sales, neighboring_sales=neighboring_sales, surface_area=65
         )
 
         assert "estimated_value_2025" in projection
@@ -274,9 +269,7 @@ class TestCalculateTrendBasedProjection:
     def test_projection_no_data(self):
         """Test projection with no data."""
         projection = DVFService.calculate_trend_based_projection(
-            exact_address_sales=[],
-            neighboring_sales=[],
-            surface_area=65
+            exact_address_sales=[], neighboring_sales=[], surface_area=65
         )
 
         assert projection["estimated_value_2025"] is None

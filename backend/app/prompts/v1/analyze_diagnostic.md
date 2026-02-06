@@ -7,6 +7,7 @@ description: Prompt for analyzing French property diagnostic documents
 Analyze the following French property diagnostic document.
 
 Extract and identify:
+
 1. DPE (Energy Performance) rating (A-G)
 2. GES (Greenhouse Gas) rating (A-G)
 3. Energy consumption (kWh/m²/year)

@@ -5,8 +5,9 @@ Handles MinIO bucket notifications and other external service callbacks.
 """
 
 import logging
-from fastapi import APIRouter, Request, HTTPException
-from typing import Dict, Any
+from typing import Dict
+
+from fastapi import APIRouter, HTTPException, Request
 
 logger = logging.getLogger(__name__)
 

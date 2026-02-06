@@ -7,7 +7,7 @@ capabilities with support for multi-turn editing conversations.
 
 import logging
 import time
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from google import genai
 from google.genai import types
@@ -38,11 +38,7 @@ class ImageGenerator:
         if self.use_vertexai:
             if not self.project or not self.location:
                 raise RuntimeError("GOOGLE_CLOUD_PROJECT and LOCATION required for Vertex AI")
-            self.client = genai.Client(
-                vertexai=True,
-                project=self.project,
-                location=self.location
-            )
+            self.client = genai.Client(vertexai=True, project=self.project, location=self.location)
         else:
             api_key = settings.GOOGLE_CLOUD_API_KEY
             if not api_key:
@@ -80,7 +76,7 @@ class ImageGenerator:
         image_data: bytes,
         prompt: str,
         aspect_ratio: str = "16:9",
-        conversation_history: Optional[List[Dict[str, Any]]] = None
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Redesign an apartment photo.
@@ -113,10 +109,9 @@ class ImageGenerator:
                         contents.append(types.Content(role=turn["role"], parts=parts))
 
             # Add current request
-            contents.append(types.Content(
-                role="user",
-                parts=[image_part, types.Part.from_text(text=prompt)]
-            ))
+            contents.append(
+                types.Content(role="user", parts=[image_part, types.Part.from_text(text=prompt)])
+            )
 
             config = types.GenerateContentConfig(
                 response_modalities=["TEXT", "IMAGE"],
@@ -151,7 +146,7 @@ class ImageGenerator:
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
                 "model": self.model,
-                "text_response": text_response
+                "text_response": text_response,
             }
 
         except Exception as e:
@@ -162,7 +157,7 @@ class ImageGenerator:
         self,
         base_style: str,
         room_type: str = "living room",
-        additional_details: Optional[str] = None
+        additional_details: Optional[str] = None,
     ) -> str:
         """
         Create a detailed prompt for apartment redesign.

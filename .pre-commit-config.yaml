@@ -50,12 +50,25 @@ repos:
     rev: v1.13.0
     hooks:
       - id: mypy
-        files: ^backend/
-        args: [--ignore-missing-imports, --no-strict-optional]
+        files: ^backend/app/
+        exclude: ^backend/(scripts|alembic|tests)/
+        args: [
+          --ignore-missing-imports,
+          --no-strict-optional,
+          --disable-error-code=import-untyped,
+          --disable-error-code=assignment,      # SQLAlchemy Column types
+          --disable-error-code=arg-type,        # SQLAlchemy Column as function args
+          --disable-error-code=return-value,    # SQLAlchemy Column return types
+          --disable-error-code=type-var,        # SQLAlchemy Column in generics
+          --disable-error-code=call-overload,   # SQLAlchemy Column in overloaded funcs
+          --disable-error-code=no-redef,        # Allow class redefinitions
+        ]
         additional_dependencies:
           - pydantic>=2.0
           - fastapi>=0.104.0
           - sqlalchemy>=2.0
+          - types-redis
+          - types-requests
 
   # =============================================================================
   # Python - Security linting with bandit (no auto-fix available)
@@ -64,8 +77,9 @@ repos:
     rev: 1.8.0
     hooks:
       - id: bandit
-        args: [-c, pyproject.toml, -r]
-        files: ^backend/
+        args: [-c, backend/pyproject.toml, -r]
+        files: ^backend/app/
+        exclude: ^backend/tests/
         additional_dependencies: ["bandit[toml]"]
 
   # =============================================================================

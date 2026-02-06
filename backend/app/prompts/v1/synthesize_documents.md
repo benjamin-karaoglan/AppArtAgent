@@ -10,6 +10,7 @@ Documents processed:
 {documents_json}
 
 Create a comprehensive synthesis that:
+
 1. Aggregates costs across all documents (annual costs, one-time costs)
 2. Identifies key risks and concerns
 3. Provides overall property assessment

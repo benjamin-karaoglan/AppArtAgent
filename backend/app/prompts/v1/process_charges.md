@@ -5,6 +5,7 @@ description: Prompt for processing charges documents with vision capabilities
 ---
 
 Analyze this charges/copropriété fees document and extract:
+
 - Period covered
 - Total charges
 - Breakdown by category (if available)

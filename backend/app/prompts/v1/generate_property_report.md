@@ -16,6 +16,7 @@ Documents Analysis:
 {documents_analysis}
 
 Create a detailed report with:
+
 1. Executive Summary (recommend buy/don't buy/further investigation)
 2. Property Overview
 3. Price Analysis and Market Comparison
