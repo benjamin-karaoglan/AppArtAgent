@@ -1,20 +1,20 @@
-# Custom Non-Commercial License
+Custom Non-Commercial License
 
 Copyright (c) 2026 Benjamin Karaoglan
 
-## Terms and Conditions
+Terms and Conditions
 
-### 1. Definitions
+1. Definitions
 
 - **"Software"** refers to AppArt Agent and all associated source code, documentation, and assets.
 - **"Commercial Use"** means any use of the Software that is primarily intended for or directed toward commercial advantage or monetary compensation.
 - **"Non-Commercial Use"** means personal, educational, research, or other use that is not primarily intended for commercial advantage.
 
-### 2. Grant of License
+2. Grant of License
 
 Subject to the terms of this License, the copyright holders grant you a non-exclusive, worldwide, royalty-free license to:
 
-#### 2.1 Non-Commercial Use (Permitted)
+2.1 Non-Commercial Use (Permitted)
 
 - ✅ Use, copy, and modify the Software for personal projects
 - ✅ Use the Software for educational and academic purposes
@@ -22,7 +22,7 @@ Subject to the terms of this License, the copyright holders grant you a non-excl
 - ✅ Share modifications under this same license
 - ✅ Fork and contribute to the project
 
-#### 2.2 Commercial Use (Requires Separate License)
+2.2 Commercial Use (Requires Separate License)
 
 The following uses require a separate commercial license:
 
@@ -32,27 +32,27 @@ The following uses require a separate commercial license:
 - ❌ Integrating the Software into proprietary applications
 - ❌ Any use generating direct or indirect revenue
 
-### 3. Conditions
+3. Conditions
 
-#### 3.1 Attribution
+3.1 Attribution
 
 You must:
 - Retain all copyright notices in the Software
 - Provide attribution to the original authors
 - Include a copy of this License with any distribution
 
-#### 3.2 Share-Alike
+3.2 Share-Alike
 
 If you modify and distribute the Software:
 - Modifications must be licensed under compatible terms
 - You must clearly indicate changes made
 - You must not imply endorsement by the original authors
 
-#### 3.3 No Trademark Rights
+3.3 No Trademark Rights
 
 This License does not grant permission to use trade names, trademarks, service marks, or product names of the copyright holders.
 
-### 4. Commercial Licensing
+4. Commercial Licensing
 
 For commercial use, please contact:
 
@@ -65,25 +65,25 @@ Commercial licenses are available with:
 - Service level agreements (SLA)
 - Indemnification
 
-### 5. Disclaimer of Warranty
+5. Disclaimer of Warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
 
-### 6. Limitation of Liability
+6. Limitation of Liability
 
 IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-### 7. Termination
+7. Termination
 
 This License automatically terminates if you violate any of its terms. Upon termination, you must cease all use and destroy all copies of the Software.
 
-### 8. Governing Law
+8. Governing Law
 
 This License shall be governed by and construed in accordance with the laws of France, without regard to its conflict of law provisions.
 
 ---
 
-## Quick Reference
+Quick Reference
 
 | Use Case | Permitted? |
 |----------|------------|
