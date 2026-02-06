@@ -107,3 +107,7 @@ infra/terraform/.terraform.lock.hcl
 deployer-key.json
 *-key.json
 *.pem
+
+# Cache
+.ruff_cache/
+.mypy_cache/
