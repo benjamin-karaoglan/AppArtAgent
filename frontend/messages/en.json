@@ -1,0 +1,417 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "back": "Back",
+    "loading": "Loading...",
+    "close": "Close",
+    "upload": "Upload",
+    "download": "Download",
+    "error": "Error",
+    "success": "Success",
+    "deleting": "Deleting...",
+    "or": "Or",
+    "rooms": "{count, plural, one {# room} other {# rooms}}",
+    "sales": "{count, plural, one {# sale} other {# sales}}",
+    "documents": "{count, plural, one {# document} other {# documents}}"
+  },
+  "header": {
+    "dashboard": "Dashboard",
+    "properties": "Properties",
+    "logout": "Logout",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "appName": "AppArt Agent"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "orRegister": "create a new account",
+      "email": "Email address",
+      "emailPlaceholder": "Email address",
+      "password": "Password",
+      "passwordPlaceholder": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "errors": {
+        "emailRequired": "Email is required",
+        "emailInvalid": "Invalid email address",
+        "passwordRequired": "Password is required",
+        "passwordMinLength": "Password must be at least {min} characters",
+        "invalidCredentials": "Invalid email or password"
+      }
+    },
+    "register": {
+      "title": "Create your account",
+      "orLogin": "sign in to your account",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "John Doe",
+      "email": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Create account",
+      "submitting": "Creating account...",
+      "errors": {
+        "fullNameRequired": "Full name is required",
+        "fullNameMinLength": "Name must be at least {min} characters",
+        "emailRequired": "Email is required",
+        "emailInvalid": "Invalid email address",
+        "passwordRequired": "Password is required",
+        "passwordMinLength": "Password must be at least {min} characters",
+        "confirmPasswordRequired": "Please confirm your password",
+        "passwordsMismatch": "Passwords do not match",
+        "registrationFailed": "Registration failed. Please try again."
+      }
+    }
+  },
+  "home": {
+    "hero": {
+      "title": "AppArt Agent",
+      "subtitle": "Make smarter apartment purchasing decisions with AI-powered insights",
+      "getStarted": "Get Started",
+      "signIn": "Sign In"
+    },
+    "features": {
+      "priceAnalysis": {
+        "title": "Price Analysis",
+        "description": "Compare asking prices with real market data from French DVF records. Know if you're getting a fair deal."
+      },
+      "documentAnalysis": {
+        "title": "Document Analysis",
+        "description": "AI-powered analysis of PV d'AG, diagnostics, and financial documents to uncover hidden costs."
+      },
+      "riskAssessment": {
+        "title": "Risk Assessment",
+        "description": "Identify potential issues like amiante, plomb, and poor DPE ratings before you commit."
+      },
+      "costCalculator": {
+        "title": "Cost Calculator",
+        "description": "Comprehensive annual cost estimates including charges, taxes, and upcoming works."
+      },
+      "styleVisualization": {
+        "title": "Style Visualization",
+        "description": "Upload photos and use AI to visualize renovation potential and style transformations."
+      },
+      "investmentScore": {
+        "title": "Investment Score",
+        "description": "Get a comprehensive investment score and data-driven recommendations for each property."
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": { "title": "Enter Address", "description": "Input the apartment address and basic details" },
+      "step2": { "title": "Upload Documents", "description": "Upload PV d'AG, diagnostics, and financial documents" },
+      "step3": { "title": "AI Analysis", "description": "Our AI analyzes everything and compares with market data" },
+      "step4": { "title": "Get Insights", "description": "Receive comprehensive report and recommendation" }
+    },
+    "cta": {
+      "title": "Ready to make smarter property decisions?",
+      "subtitle": "Join thousands of smart buyers in France",
+      "button": "Start Your Free Analysis"
+    },
+    "footer": {
+      "copyright": "© 2026 AppArt Agent. All rights reserved.",
+      "tagline": "Helping you make informed property decisions in France"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome back, {name}!",
+    "subtitle": "Manage your properties and analyze potential investments",
+    "stats": {
+      "totalProperties": "Total Properties",
+      "documentsAnalyzed": "Documents Analyzed",
+      "redesignsGenerated": "Redesigns Generated",
+      "dvfRecords": "DVF Records Available"
+    },
+    "properties": {
+      "title": "Your Properties",
+      "addProperty": "Add Property",
+      "loading": "Loading properties...",
+      "empty": {
+        "title": "No properties",
+        "description": "Get started by adding your first property."
+      },
+      "deleteTitle": "Delete Property",
+      "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
+      "deleteFailed": "Failed to delete property. Please try again.",
+      "deleteTooltip": "Delete property"
+    }
+  },
+  "propertyForm": {
+    "backToDashboard": "Back to Dashboard",
+    "title": "Add New Property",
+    "subtitle": "Enter the property details to start your analysis",
+    "location": {
+      "title": "Property Location",
+      "address": "Address",
+      "addressRequired": "Address is required",
+      "addressPlaceholder": "Start typing address...",
+      "postalCode": "Postal Code",
+      "city": "City",
+      "department": "Department",
+      "noAddressesFound": "No addresses found. Please try a different search term.",
+      "salesCount": "{count} sales"
+    },
+    "details": {
+      "title": "Property Details",
+      "propertyType": "Property Type",
+      "selectType": "Select type",
+      "appartement": "Apartment",
+      "maison": "House",
+      "askingPrice": "Asking Price (€)",
+      "surfaceArea": "Surface Area (m²)",
+      "rooms": "Number of Rooms",
+      "floor": "Floor",
+      "buildingYear": "Building Year"
+    },
+    "submit": "Create Property",
+    "submitting": "Creating...",
+    "failed": "Failed to create property. Please try again."
+  },
+  "property": {
+    "backToDashboard": "Back to Dashboard",
+    "notFound": "Property not found",
+    "loadFailed": "Failed to load property details",
+    "info": {
+      "title": "Property Information",
+      "type": "Type",
+      "askingPrice": "Asking Price",
+      "surfaceArea": "Surface Area",
+      "rooms": "Rooms",
+      "floor": "Floor",
+      "buildingYear": "Building Year",
+      "pricePerSqm": "Price per m²"
+    },
+    "analysis": {
+      "title": "Price Analysis",
+      "simpleAnalysis": "Simple Analysis",
+      "trendAnalysis": "Trend Analysis (2025 Projection)",
+      "analyzing": "Analyzing...",
+      "manageDocuments": "Manage Documents",
+      "redesignStudio": "Apartment Redesign Studio",
+      "simpleTooltip": {
+        "title": "Simple Analysis",
+        "whatItDoes": "Shows only sales at the exact same address (same building).",
+        "howItWorks": "How it works:",
+        "steps": {
+          "findSales": "Finds all historical sales at your building number",
+          "groupTransactions": "Groups multi-unit transactions correctly",
+          "detectOutliers": "Detects and flags outliers using IQR method",
+          "calculateAvg": "Calculates average market price per m²",
+          "rawPrices": "Uses raw historical prices (no time adjustment)"
+        },
+        "bestFor": "Best for: Buildings with recent sales history. Shows true transaction prices in your building."
+      },
+      "trendTooltip": {
+        "title": "Trend Analysis",
+        "whatItDoes": "Projects 2025 value using market trends from neighboring addresses.",
+        "howItWorks": "How it works:",
+        "steps": {
+          "takeSale": "Takes most recent sale at your exact address",
+          "analyzeNeighboring": "Analyzes sales from neighboring buildings (±2, ±4, ±6, etc.)",
+          "calculateTrend": "Calculates year-over-year market trend",
+          "projectForward": "Projects historical price forward to 2025",
+          "accountTime": "Accounts for time and market evolution"
+        },
+        "bestFor": "Best for: Properties with older sales data. Estimates current value based on neighborhood trends."
+      },
+      "estimatedValue": "Estimated Value",
+      "priceDeviation": "Price Deviation",
+      "comparableSales": "Comparable Sales",
+      "recommendation": "Recommendation:"
+    },
+    "trend": {
+      "title": "2025 Trend Projection",
+      "projectedValue": "Projected 2025 Value",
+      "marketTrend": "Market Trend",
+      "basedOnSales": "Based on {count} neighboring sales",
+      "neighboringSalesTitle": "Neighboring Sales Used for Trend ({count})",
+      "baseSale": "Base Sale",
+      "date": "Date:",
+      "pricePerSqm": "Price/m²:"
+    },
+    "comparables": {
+      "title": "Comparable Sales ({total} total, {included} included)",
+      "include": "Include",
+      "saleDate": "Date",
+      "address": "Address",
+      "surface": "Surface",
+      "salePrice": "Sale Price",
+      "pricePerSqm": "Price/m²",
+      "outlier": "Outlier",
+      "outlierDetected": "Outlier detected (IQR method)",
+      "includeInTrend": "Include in trend analysis",
+      "includeInAnalysis": "Include in analysis",
+      "units": "{count} units",
+      "individualUnits": "Individual Units ({count} lots in this transaction)",
+      "unit": "Unit",
+      "rooms": "Rooms",
+      "individualPricePerSqm": "Individual Price/m²",
+      "groupedNote": "Note: Individual prices/m² shown above are calculated per lot. The grouped price/m² ({price}) is the correct market price for the entire transaction.",
+      "grouped": "Grouped",
+      "marketAvgPrice": "Market Average Price/m²",
+      "yourPrice": "Your Price/m²",
+      "marketMedianPrice": "Market Median Price/m²"
+    },
+    "marketTrend": {
+      "title": "Market Price Evolution",
+      "basedOnSales": "Based on {count} sales",
+      "outliersExcluded": "{count, plural, one {# outlier excluded} other {# outliers excluded}} for accuracy",
+      "noData": "No market trend data available",
+      "loadFailed": "Failed to load market trend data",
+      "positiveGrowth": "Positive Growth",
+      "positiveGrowthDesc": "Price increased vs previous year",
+      "negativeGrowth": "Negative Growth",
+      "negativeGrowthDesc": "Price decreased vs previous year",
+      "trendLine": "Trend Line",
+      "trendLineDesc": "Overall market trajectory",
+      "marketSummary": "Market Summary",
+      "earliestPrice": "Earliest price ({year}):",
+      "latestPrice": "Latest price ({year}):",
+      "totalChange": "Total change:",
+      "totalSalesAnalyzed": "Total sales analyzed:"
+    },
+    "deleteTitle": "Delete Property",
+    "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
+    "analyzeFailed": "Failed to analyze price",
+    "recalculateFailed": "Failed to recalculate analysis",
+    "recalculateTrendFailed": "Failed to recalculate trend analysis",
+    "deleteFailed": "Failed to delete property"
+  },
+  "documents": {
+    "backToProperty": "Back to Property",
+    "title": "Document Management",
+    "subtitle": "Upload and manage property documents. Documents are automatically analyzed using AI.",
+    "smartUpload": {
+      "title": "Smart Upload - AI Agent",
+      "subtitle": "Drop all your documents at once. AI will automatically classify, analyze, and summarize everything!",
+      "dropzone": "Drop all your documents here",
+      "browse": "or click to browse files",
+      "autoClassification": "Auto-classification",
+      "parallelProcessing": "Parallel processing",
+      "smartSynthesis": "Smart synthesis",
+      "processing": "Processing Documents",
+      "processingSubtitle": "AI agent is classifying and analyzing your documents...",
+      "complete": "{completed} / {total} complete",
+      "processingComplete": "Processing Complete!",
+      "documentsAnalyzed": "{count} documents analyzed successfully",
+      "uploadMore": "Upload More Documents"
+    },
+    "synthesis": {
+      "title": "AI Synthesis",
+      "riskLevel": "Risk Level:",
+      "high": "HIGH",
+      "medium": "MEDIUM",
+      "low": "LOW",
+      "keyFindings": "Key Findings:",
+      "recommendations": "Recommendations:",
+      "totalAnnualCosts": "Total Annual Costs",
+      "totalOneTimeCosts": "Total One-Time Costs"
+    },
+    "propertySynthesis": {
+      "title": "AI Property Analysis",
+      "risk": "Risk: {level}",
+      "keyFindings": "Key Findings",
+      "recommendations": "Recommendations"
+    },
+    "manualUpload": "Or upload manually by category",
+    "categories": {
+      "pv_ag": { "label": "PV d'AG", "description": "Assembly meeting minutes" },
+      "diags": { "label": "Diagnostics", "description": "Diagnostic documents" },
+      "taxe_fonciere": { "label": "Taxe Foncière", "description": "Property tax documents" },
+      "charges": { "label": "Charges", "description": "Condominium charges" }
+    },
+    "documentCount": "{count, plural, one {# document} other {# documents}}",
+    "uploadDocuments": "Upload Documents",
+    "chooseFiles": "Choose {type} files",
+    "uploadingAnalyzing": "Uploading & Analyzing...",
+    "comprehensiveSummary": "Comprehensive Summary",
+    "diagnosticSummary": "Diagnostic Summary",
+    "regenerate": "Regenerate",
+    "regenerating": "Regenerating...",
+    "keyFindings": "Key Findings",
+    "annualCosts": "Annual Costs",
+    "oneTimeCosts": "One-Time Costs",
+    "coproInsights": "Copropriété Insights",
+    "paymentIssues": "Payment Issues:",
+    "upcomingWorks": "Upcoming Works:",
+    "criticalIssues": "Critical Issues",
+    "uploaded": "Uploaded {date}",
+    "keyInsights": "Key Insights:",
+    "costs": "Costs:",
+    "noDocuments": "No documents uploaded yet",
+    "bulkFailed": "Bulk processing failed. Check individual document errors.",
+    "processingTimeout": "Processing is taking longer than expected. Please check back later.",
+    "confirmDelete": "Are you sure you want to delete this document?"
+  },
+  "photos": {
+    "backToProperty": "Back to Property",
+    "title": "Apartment Redesign Studio",
+    "uploadPhoto": "Upload Photo",
+    "roomType": "Room Type",
+    "roomTypes": {
+      "living room": "Living Room",
+      "bedroom": "Bedroom",
+      "kitchen": "Kitchen",
+      "bathroom": "Bathroom",
+      "dining room": "Dining Room",
+      "home office": "Home Office"
+    },
+    "choosePhoto": "Choose Photo",
+    "selectImage": "Select Image",
+    "uploading": "Uploading...",
+    "yourPhotos": "Your Photos ({count})",
+    "noPhotos": "No photos uploaded yet",
+    "noRoomType": "No room type",
+    "redesignCount": "{count} redesigns",
+    "selectPhotoPrompt": "Upload or select a photo to get started",
+    "newThread": "New",
+    "allGallery": "All",
+    "noRedesigns": "No redesigns yet",
+    "noRedesignsDesc": "Start a conversation to generate your first redesign.",
+    "startConversation": "Start a new redesign conversation",
+    "startConversationDesc": "Choose a style preset or write a custom prompt below to generate your first redesign.",
+    "showLess": "Show less",
+    "showMore": "Show more",
+    "clickToView": "Click to view fullscreen",
+    "refinePlaceholder": "Describe refinements...",
+    "promptPlaceholder": "Describe your desired redesign...",
+    "refineHint": "Refine the previous result. The AI remembers the conversation context.",
+    "promptHint": "Choose a style preset or write a custom prompt. Enter to send, Shift+Enter for newline.",
+    "deletePhotoTitle": "Delete photo",
+    "deletePhotoMessage": "Delete \"{filename}\" and all its redesigns? This cannot be undone.",
+    "deletePhoto": "Delete photo",
+    "original": "Original",
+    "redesign": "Redesign",
+    "compareTooltip": "Compare with original",
+    "fullscreenTooltip": "Fullscreen redesign",
+    "prompt": "Prompt",
+    "clickToRename": "Click to rename",
+    "doubleClickToRename": "Double-click to rename",
+    "selectPhotoFirst": "Please select a photo first",
+    "selectPresetOrPrompt": "Please select a preset or enter a custom prompt",
+    "redesignGenerated": "Redesign generated",
+    "uploadFailed": "Failed to upload photo",
+    "generateFailed": "Failed to generate redesign",
+    "deleteFailed": "Failed to delete photo",
+    "renameFailed": "Failed to rename photo",
+    "roomTypeFailed": "Failed to update room type",
+    "timeAgo": {
+      "justNow": "just now",
+      "minutesAgo": "{n}m ago",
+      "hoursAgo": "{n}h ago",
+      "daysAgo": "{n}d ago"
+    },
+    "thread": "Thread",
+    "custom": "Custom",
+    "imageError": "Image Error"
+  },
+  "metadata": {
+    "title": "AppArt Agent - Smart Property Decisions",
+    "description": "AI-powered platform to help you make informed apartment purchasing decisions in France",
+    "ogTitle": "AppArt Agent - Smart Property Decisions",
+    "ogDescription": "AI-powered platform to help you make informed apartment purchasing decisions in France"
+  }
+}

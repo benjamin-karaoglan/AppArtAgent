@@ -11,11 +11,13 @@ Analyze this taxe foncière document and extract:
 - Any exemptions or reductions
 
 Return a JSON object with these fields:
-{
+{{
   "summary": "Brief summary",
   "year": 2024,
   "total_amount": 1234.56,
   "property_value": 50000,
   "estimated_annual_cost": 1234.56,
   "key_insights": ["insight 1"]
-}
+}}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

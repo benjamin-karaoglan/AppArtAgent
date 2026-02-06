@@ -145,33 +145,33 @@ class DocumentAnalyzer:
             logger.error(f"Error in vision analysis: {e}", exc_info=True)
             raise
 
-    async def analyze_pvag_document(self, document_text: str) -> Dict[str, Any]:
+    async def analyze_pvag_document(self, document_text: str, output_language: str = "French") -> Dict[str, Any]:
         """Analyze PV d'AG (Assembly General Meeting Minutes)."""
         logger.info(f"Analyzing PV d'AG, length: {len(document_text)}")
-        prompt = get_prompt("analyze_pvag", document_text=document_text)
+        prompt = get_prompt("analyze_pvag", document_text=document_text, output_language=output_language)
         response_text = await self.generate_text(prompt)
         return self._parse_json_response(response_text)
 
-    async def analyze_diagnostic_document(self, document_text: str) -> Dict[str, Any]:
+    async def analyze_diagnostic_document(self, document_text: str, output_language: str = "French") -> Dict[str, Any]:
         """Analyze diagnostic documents (DPE, amiante, plomb)."""
         logger.info(f"Analyzing diagnostic, length: {len(document_text)}")
-        prompt = get_prompt("analyze_diagnostic", document_text=document_text)
+        prompt = get_prompt("analyze_diagnostic", document_text=document_text, output_language=output_language)
         response_text = await self.generate_text(prompt)
         return self._parse_json_response(response_text)
 
-    async def analyze_tax_charges_document(self, document_text: str, document_type: str) -> Dict[str, Any]:
+    async def analyze_tax_charges_document(self, document_text: str, document_type: str, output_language: str = "French") -> Dict[str, Any]:
         """Analyze tax or charges documents."""
         logger.info(f"Analyzing {document_type}, length: {len(document_text)}")
-        prompt = get_prompt("analyze_tax_charges", document_text=document_text, document_type=document_type)
+        prompt = get_prompt("analyze_tax_charges", document_text=document_text, document_type=document_type, output_language=output_language)
         response_text = await self.generate_text(prompt)
         result = self._parse_json_response(response_text)
         result["document_type"] = document_type
         return result
 
-    async def analyze_property_photos(self, image_data: bytes, transformation_request: str) -> Dict[str, Any]:
+    async def analyze_property_photos(self, image_data: bytes, transformation_request: str, output_language: str = "French") -> Dict[str, Any]:
         """Analyze property photos for style transformation suggestions."""
         logger.info(f"Analyzing property photo, size: {len(image_data)} bytes")
-        prompt = get_prompt("analyze_photo", transformation_request=transformation_request)
+        prompt = get_prompt("analyze_photo", transformation_request=transformation_request, output_language=output_language)
 
         parts = [
             types.Part.from_bytes(data=image_data, mime_type="image/jpeg"),
@@ -193,7 +193,8 @@ class DocumentAnalyzer:
         self,
         property_data: Dict[str, Any],
         price_analysis: Dict[str, Any],
-        documents_analysis: List[Dict[str, Any]]
+        documents_analysis: List[Dict[str, Any]],
+        output_language: str = "French"
     ) -> str:
         """Generate comprehensive property analysis report."""
         logger.info("Generating property report")
@@ -201,7 +202,8 @@ class DocumentAnalyzer:
             "generate_property_report",
             property_data=json.dumps(property_data, indent=2),
             price_analysis=json.dumps(price_analysis, indent=2),
-            documents_analysis=json.dumps(documents_analysis, indent=2)
+            documents_analysis=json.dumps(documents_analysis, indent=2),
+            output_language=output_language
         )
         return await self.generate_text(prompt, max_tokens=8192)
 
@@ -218,12 +220,12 @@ class DocumentAnalyzer:
             logger.error(f"Error classifying {filename}: {e}")
             return {"document_type": "other", "confidence": 0.0, "error": str(e)}
 
-    async def synthesize_documents(self, documents_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def synthesize_documents(self, documents_results: List[Dict[str, Any]], output_language: str = "French") -> Dict[str, Any]:
         """Synthesize results from multiple documents."""
         logger.info(f"Synthesizing {len(documents_results)} documents")
         try:
             response_text = await self.generate_text(
-                get_prompt("synthesize_documents", documents_json=json.dumps(documents_results, indent=2)),
+                get_prompt("synthesize_documents", documents_json=json.dumps(documents_results, indent=2), output_language=output_language),
                 system_prompt=get_system_prompt("synthesis")
             )
             return self._parse_json_response(response_text)
@@ -242,7 +244,8 @@ class DocumentAnalyzer:
         images_base64: List[str],
         document_type: str,
         filename: str,
-        subtype: Optional[str] = None
+        subtype: Optional[str] = None,
+        output_language: str = "French"
     ) -> Dict[str, Any]:
         """Process a document with vision capabilities."""
         logger.info(f"Processing {document_type}: {filename}")
@@ -254,7 +257,7 @@ class DocumentAnalyzer:
         }
         result = await self.analyze_with_vision(
             images_base64=images_base64,
-            prompt=get_prompt(prompt_map.get(document_type, "process_diagnostic")),
+            prompt=get_prompt(prompt_map.get(document_type, "process_diagnostic"), output_language=output_language),
             system_prompt=get_system_prompt("document_analyzer")
         )
         return {"parsed_data": result, "model": self.model}

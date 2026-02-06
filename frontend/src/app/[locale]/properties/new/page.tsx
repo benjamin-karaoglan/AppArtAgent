@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import { api } from '@/lib/api';
 import { ArrowLeft, Search } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 
 interface PropertyFormData {
   address: string;
@@ -32,6 +33,8 @@ interface AddressSuggestion {
 
 function NewPropertyContent() {
   const router = useRouter();
+  const t = useTranslations('propertyForm');
+  const tc = useTranslations('common');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [addressQuery, setAddressQuery] = useState('');
@@ -105,7 +108,7 @@ function NewPropertyContent() {
       router.push(`/properties/${property.id}`);
     } catch (err: any) {
       console.error('Property creation error:', err);
-      setError(err.response?.data?.detail || 'Failed to create property. Please try again.');
+      setError(err.response?.data?.detail || t('failed'));
     } finally {
       setLoading(false);
     }
@@ -123,14 +126,14 @@ function NewPropertyContent() {
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            {t('backToDashboard')}
           </Link>
 
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Add New Property</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
             <p className="mt-2 text-sm text-gray-600">
-              Enter the property details to start your analysis
+              {t('subtitle')}
             </p>
           </div>
 
@@ -146,12 +149,12 @@ function NewPropertyContent() {
               {/* Address Section */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Property Location
+                  {t('location.title')}
                 </h3>
                 <div className="space-y-4">
                   <div className="relative" ref={suggestionsRef}>
                     <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      Address <span className="text-red-500">*</span>
+                      {t('location.address')} <span className="text-red-500">*</span>
                     </label>
                     <div className="relative mt-1">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -168,7 +171,7 @@ function NewPropertyContent() {
                         }}
                         onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                         className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="Start typing address..."
+                        placeholder={t('location.addressPlaceholder')}
                         autoComplete="off"
                       />
                       <input type="hidden" {...register('address', { required: 'Address is required' })} />
@@ -195,7 +198,7 @@ function NewPropertyContent() {
                               <span className="font-medium text-gray-900">{suggestion.address}</span>
                               <span className="text-sm text-gray-500">
                                 {suggestion.city} {suggestion.postal_code} - {suggestion.property_type}
-                                <span className="ml-2 text-xs text-gray-400">({suggestion.count} sales)</span>
+                                <span className="ml-2 text-xs text-gray-400">({t('location.salesCount', { count: suggestion.count })})</span>
                               </span>
                             </div>
                           </div>
@@ -204,7 +207,7 @@ function NewPropertyContent() {
                     )}
                     {showSuggestions && addressQuery.length >= 2 && suggestions.length === 0 && !loadingSuggestions && (
                       <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-3 px-4 text-sm text-gray-500">
-                        No addresses found. Please try a different search term.
+                        {t('location.noAddressesFound')}
                       </div>
                     )}
                   </div>
@@ -212,7 +215,7 @@ function NewPropertyContent() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div>
                       <label htmlFor="postal_code" className="block text-sm font-medium text-gray-700">
-                        Postal Code
+                        {t('location.postalCode')}
                       </label>
                       <input
                         id="postal_code"
@@ -225,7 +228,7 @@ function NewPropertyContent() {
 
                     <div>
                       <label htmlFor="city" className="block text-sm font-medium text-gray-700">
-                        City
+                        {t('location.city')}
                       </label>
                       <input
                         id="city"
@@ -238,7 +241,7 @@ function NewPropertyContent() {
 
                     <div>
                       <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-                        Department
+                        {t('location.department')}
                       </label>
                       <input
                         id="department"
@@ -255,27 +258,27 @@ function NewPropertyContent() {
               {/* Property Details Section */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Property Details
+                  {t('details.title')}
                 </h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label htmlFor="property_type" className="block text-sm font-medium text-gray-700">
-                      Property Type
+                      {t('details.propertyType')}
                     </label>
                     <select
                       id="property_type"
                       {...register('property_type')}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     >
-                      <option value="">Select type</option>
-                      <option value="Appartement">Appartement</option>
-                      <option value="Maison">Maison</option>
+                      <option value="">{t('details.selectType')}</option>
+                      <option value="Appartement">{t('details.appartement')}</option>
+                      <option value="Maison">{t('details.maison')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label htmlFor="asking_price" className="block text-sm font-medium text-gray-700">
-                      Asking Price (€)
+                      {t('details.askingPrice')}
                     </label>
                     <input
                       id="asking_price"
@@ -290,7 +293,7 @@ function NewPropertyContent() {
 
                   <div>
                     <label htmlFor="surface_area" className="block text-sm font-medium text-gray-700">
-                      Surface Area (m²)
+                      {t('details.surfaceArea')}
                     </label>
                     <input
                       id="surface_area"
@@ -306,7 +309,7 @@ function NewPropertyContent() {
 
                   <div>
                     <label htmlFor="rooms" className="block text-sm font-medium text-gray-700">
-                      Number of Rooms
+                      {t('details.rooms')}
                     </label>
                     <input
                       id="rooms"
@@ -321,7 +324,7 @@ function NewPropertyContent() {
 
                   <div>
                     <label htmlFor="floor" className="block text-sm font-medium text-gray-700">
-                      Floor
+                      {t('details.floor')}
                     </label>
                     <input
                       id="floor"
@@ -336,7 +339,7 @@ function NewPropertyContent() {
 
                   <div>
                     <label htmlFor="building_year" className="block text-sm font-medium text-gray-700">
-                      Building Year
+                      {t('details.buildingYear')}
                     </label>
                     <input
                       id="building_year"
@@ -358,14 +361,14 @@ function NewPropertyContent() {
                   onClick={() => router.push('/dashboard')}
                   className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  Cancel
+                  {tc('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
                   className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Creating...' : 'Create Property'}
+                  {loading ? t('submitting') : t('submit')}
                 </button>
               </div>
             </form>

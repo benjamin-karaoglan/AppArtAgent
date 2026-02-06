@@ -1,7 +1,7 @@
 """Documents API routes with comprehensive logging and multimodal support."""
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -13,6 +13,7 @@ import PyPDF2
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.config import settings
+from app.core.i18n import get_local, get_output_language, translate
 from app.models.document import Document
 from app.models.user import User
 from app.schemas.document import (
@@ -46,14 +47,14 @@ def get_doc_parser():
     return _doc_parser
 
 
-def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucket: str = None) -> str:
+def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucket: str = None, locale: str = "fr") -> str:
     """
     Extract text from PDF file.
-    
+
     Can read from local file path or from storage service if storage_key is provided.
     """
     from io import BytesIO
-    
+
     text = ""
     try:
         if storage_key:
@@ -65,19 +66,20 @@ def extract_text_from_pdf(file_path: str, storage_key: str = None, storage_bucke
             # Read from local file path (legacy support)
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
-        
+
         for page in pdf_reader.pages:
             text += page.extract_text()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to extract text from PDF: {str(e)}"
+            detail=translate("failed_extract_pdf", locale, error=str(e))
         )
     return text
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     property_id: Optional[int] = Form(None),
     document_category: str = Form(...),
@@ -95,6 +97,8 @@ async def upload_document(
     - taxe_fonciere: Property tax documents
     - charges: Condominium charges documents
     """
+    locale = get_local(request)
+
     logger.info(f"Document upload request - user: {current_user}, category: {document_category}, "
                 f"subcategory: {document_subcategory}, property_id: {property_id}, filename: {file.filename}")
 
@@ -104,7 +108,7 @@ async def upload_document(
         logger.warning(f"Invalid file type attempted: {file_ext} for file {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type {file_ext} not allowed"
+            detail=translate("file_type_not_allowed", locale, ext=file_ext)
         )
 
     # Read file content
@@ -116,7 +120,7 @@ async def upload_document(
         logger.error(f"Failed to read file {file.filename}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to read file: {str(e)}"
+            detail=translate("failed_read_file", locale, error=str(e))
         )
 
     # Calculate file hash for deduplication
@@ -125,7 +129,7 @@ async def upload_document(
     # Get user UUID for path structure
     user = db.query(User).filter(User.id == int(current_user)).first()
     if not user or not user.uuid:
-        raise HTTPException(status_code=500, detail="User UUID not found")
+        raise HTTPException(status_code=500, detail=translate("user_uuid_not_found", locale))
     user_uuid = user.uuid
 
     # Create document record first (to get UUID for storage path)
@@ -182,22 +186,23 @@ async def upload_document(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create document record: {str(e)}"
+            detail=translate("failed_create_document", locale, error=str(e))
         )
 
     # Automatically parse document if requested
     if auto_parse and property_id:
         logger.info(f"Auto-parsing enabled for document ID {document.id}")
+        output_language = get_output_language(locale)
         try:
-            await get_doc_parser().parse_document(document, db)
+            await get_doc_parser().parse_document(document, db, output_language=output_language)
 
             # Trigger aggregation if this is pv_ag or diags
             if document_category == "pv_ag":
                 logger.info(f"Triggering PV AG aggregation for property {property_id}")
-                await get_doc_parser().aggregate_pv_ag_summaries(property_id, db)
+                await get_doc_parser().aggregate_pv_ag_summaries(property_id, db, output_language=output_language)
             elif document_category == "diags":
                 logger.info(f"Triggering diagnostic aggregation for property {property_id}")
-                await get_doc_parser().aggregate_diagnostic_summaries(property_id, db)
+                await get_doc_parser().aggregate_diagnostic_summaries(property_id, db, output_language=output_language)
         except Exception as e:
             logger.error(f"Auto-parse failed for document ID {document.id}: {e}", exc_info=True)
             # Don't fail the upload if parsing fails - document is still saved
@@ -213,11 +218,14 @@ async def upload_document(
 
 @router.get("/", response_model=list[DocumentResponse])
 async def list_documents(
+    request: Request,
     property_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """List all documents for the current user."""
+    locale = get_local(request)
+
     query = db.query(Document).filter(Document.user_id == int(current_user))
 
     if property_id:
@@ -229,11 +237,14 @@ async def list_documents(
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
+    request: Request,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """Get a specific document."""
+    locale = get_local(request)
+
     document = db.query(Document).filter(
         Document.id == document_id,
         Document.user_id == int(current_user)
@@ -242,7 +253,7 @@ async def get_document(
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
+            detail=translate("document_not_found", locale)
         )
 
     return document
@@ -250,11 +261,14 @@ async def get_document(
 
 @router.post("/{document_id}/analyze-pvag", response_model=PVAGAnalysisResponse)
 async def analyze_pvag(
+    request: Request,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """Analyze PV d'AG document using Claude AI."""
+    locale = get_local(request)
+
     document = db.query(Document).filter(
         Document.id == document_id,
         Document.user_id == int(current_user)
@@ -263,7 +277,7 @@ async def analyze_pvag(
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
+            detail=translate("document_not_found", locale)
         )
 
     # Extract text from document
@@ -271,17 +285,19 @@ async def analyze_pvag(
         document_text = extract_text_from_pdf(
             document.file_path,
             storage_key=document.storage_key,
-            storage_bucket=document.storage_bucket
+            storage_bucket=document.storage_bucket,
+            locale=locale
         )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are supported for PV d'AG analysis"
+            detail=translate("only_pdf_pvag", locale)
         )
 
     # Analyze with Gemini
     gemini_service = get_gemini_llm_service()
-    analysis = await gemini_service.analyze_pvag_document(document_text)
+    output_language = get_output_language(locale)
+    analysis = await gemini_service.analyze_pvag_document(document_text, output_language=output_language)
 
     # Update document with analysis
     import json
@@ -319,11 +335,14 @@ async def analyze_pvag(
 
 @router.post("/{document_id}/analyze-diagnostic", response_model=DiagnosticAnalysisResponse)
 async def analyze_diagnostic(
+    request: Request,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """Analyze diagnostic document (DPE, amiante, plomb) using Claude AI."""
+    locale = get_local(request)
+
     document = db.query(Document).filter(
         Document.id == document_id,
         Document.user_id == int(current_user)
@@ -332,7 +351,7 @@ async def analyze_diagnostic(
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
+            detail=translate("document_not_found", locale)
         )
 
     # Extract text
@@ -340,17 +359,19 @@ async def analyze_diagnostic(
         document_text = extract_text_from_pdf(
             document.file_path,
             storage_key=document.storage_key,
-            storage_bucket=document.storage_bucket
+            storage_bucket=document.storage_bucket,
+            locale=locale
         )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are supported"
+            detail=translate("only_pdf_supported", locale)
         )
 
     # Analyze with Gemini
     gemini_service = get_gemini_llm_service()
-    analysis = await gemini_service.analyze_diagnostic_document(document_text)
+    output_language = get_output_language(locale)
+    analysis = await gemini_service.analyze_diagnostic_document(document_text, output_language=output_language)
 
     # Update document
     import json
@@ -374,11 +395,14 @@ async def analyze_diagnostic(
 
 @router.post("/{document_id}/analyze-tax-charges", response_model=TaxChargesAnalysisResponse)
 async def analyze_tax_charges(
+    request: Request,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """Analyze tax or charges document using Claude AI."""
+    locale = get_local(request)
+
     document = db.query(Document).filter(
         Document.id == document_id,
         Document.user_id == int(current_user)
@@ -387,7 +411,7 @@ async def analyze_tax_charges(
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
+            detail=translate("document_not_found", locale)
         )
 
     # Extract text
@@ -395,12 +419,13 @@ async def analyze_tax_charges(
         document_text = extract_text_from_pdf(
             document.file_path,
             storage_key=document.storage_key,
-            storage_bucket=document.storage_bucket
+            storage_bucket=document.storage_bucket,
+            locale=locale
         )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are supported"
+            detail=translate("only_pdf_supported", locale)
         )
 
     # Determine document type from category
@@ -408,7 +433,8 @@ async def analyze_tax_charges(
 
     # Analyze with Gemini
     gemini_service = get_gemini_llm_service()
-    analysis = await gemini_service.analyze_tax_charges_document(document_text, doc_type)
+    output_language = get_output_language(locale)
+    analysis = await gemini_service.analyze_tax_charges_document(document_text, doc_type, output_language=output_language)
 
     # Update document
     import json
@@ -431,11 +457,14 @@ async def analyze_tax_charges(
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
+    request: Request,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """Delete a document."""
+    locale = get_local(request)
+
     document = db.query(Document).filter(
         Document.id == document_id,
         Document.user_id == int(current_user)
@@ -444,7 +473,7 @@ async def delete_document(
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
+            detail=translate("document_not_found", locale)
         )
 
     # Delete file from storage service
@@ -466,6 +495,7 @@ async def delete_document(
 
 @router.get("/summaries/{property_id}")
 async def get_document_summaries(
+    request: Request,
     property_id: int,
     category: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -480,6 +510,8 @@ async def get_document_summaries(
     - taxe_fonciere: Tax information
     - charges: Charges information
     """
+    locale = get_local(request)
+
     from app.models.property import Property
 
     # Verify property belongs to user
@@ -491,7 +523,7 @@ async def get_document_summaries(
     if not property:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Property not found"
+            detail=translate("property_not_found", locale)
         )
 
     query = db.query(DocumentSummary).filter(
@@ -532,6 +564,7 @@ async def get_document_summaries(
 
 @router.get("/synthesis/{property_id}")
 async def get_property_synthesis(
+    request: Request,
     property_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
@@ -541,6 +574,8 @@ async def get_property_synthesis(
 
     Returns the comprehensive analysis that covers all uploaded documents.
     """
+    locale = get_local(request)
+
     from app.models.property import Property
 
     # Verify property belongs to user
@@ -552,7 +587,7 @@ async def get_property_synthesis(
     if not property:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Property not found"
+            detail=translate("property_not_found", locale)
         )
 
     # Get synthesis (category is NULL for overall synthesis)
@@ -579,6 +614,7 @@ async def get_property_synthesis(
 
 @router.post("/summaries/{property_id}/regenerate")
 async def regenerate_summaries(
+    request: Request,
     property_id: int,
     category: str,
     db: Session = Depends(get_db),
@@ -589,6 +625,8 @@ async def regenerate_summaries(
 
     Useful after uploading multiple documents.
     """
+    locale = get_local(request)
+
     from app.models.property import Property
 
     # Verify property belongs to user
@@ -600,24 +638,25 @@ async def regenerate_summaries(
     if not property:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Property not found"
+            detail=translate("property_not_found", locale)
         )
 
+    output_language = get_output_language(locale)
     try:
         if category == "pv_ag":
-            summary = await get_doc_parser().aggregate_pv_ag_summaries(property_id, db)
+            summary = await get_doc_parser().aggregate_pv_ag_summaries(property_id, db, output_language=output_language)
         elif category == "diags":
-            summary = await get_doc_parser().aggregate_diagnostic_summaries(property_id, db)
+            summary = await get_doc_parser().aggregate_diagnostic_summaries(property_id, db, output_language=output_language)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Aggregation not supported for category: {category}"
+                detail=translate("aggregation_not_supported", locale, category=category)
             )
 
         if not summary:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No documents found to aggregate"
+                detail=translate("no_documents_to_aggregate", locale)
             )
 
         return {
@@ -640,12 +679,13 @@ async def regenerate_summaries(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to regenerate summary: {str(e)}"
+            detail=translate("failed_regenerate_summary", locale, error=str(e))
         )
 
 
 @router.post("/upload-async", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document_async(
+    request: Request,
     file: UploadFile = File(...),
     property_id: Optional[int] = Form(None),
     document_category: str = Form(...),
@@ -667,6 +707,8 @@ async def upload_document_async(
     - taxe_fonciere: Property tax documents
     - charges: Condominium charges documents
     """
+    locale = get_local(request)
+
     logger.info(f"Async document upload - user: {current_user}, category: {document_category}, "
                 f"subcategory: {document_subcategory}, property_id: {property_id}, filename: {file.filename}")
 
@@ -676,7 +718,7 @@ async def upload_document_async(
         logger.warning(f"Invalid file type: {file_ext} for file {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type {file_ext} not allowed"
+            detail=translate("file_type_not_allowed", locale, ext=file_ext)
         )
 
     # Read file content
@@ -688,7 +730,7 @@ async def upload_document_async(
         logger.error(f"Failed to read file {file.filename}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to read file: {str(e)}"
+            detail=translate("failed_read_file", locale, error=str(e))
         )
 
     # Calculate file hash
@@ -697,7 +739,7 @@ async def upload_document_async(
     # Get user UUID for path structure
     user = db.query(User).filter(User.id == int(current_user)).first()
     if not user or not user.uuid:
-        raise HTTPException(status_code=500, detail="User UUID not found")
+        raise HTTPException(status_code=500, detail=translate("user_uuid_not_found", locale))
     user_uuid = user.uuid
 
     # Create document record first (to get UUID)
@@ -776,12 +818,13 @@ async def upload_document_async(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload document: {str(e)}"
+            detail=translate("failed_upload_document", locale, error=str(e))
         )
 
 
 @router.get("/{document_id}/status")
 async def get_document_status(
+    request: Request,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
@@ -795,6 +838,8 @@ async def get_document_status(
     - is_analyzed: Whether analysis is complete
     - processing_error: Error message if failed
     """
+    locale = get_local(request)
+
     logger.info(f"Status check for document {document_id}")
 
     document = db.query(Document).filter(
@@ -805,7 +850,7 @@ async def get_document_status(
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
+            detail=translate("document_not_found", locale)
         )
 
     return {
@@ -823,6 +868,7 @@ async def get_document_status(
 
 @router.post("/bulk-upload", status_code=status.HTTP_202_ACCEPTED)
 async def bulk_upload_documents(
+    request: Request,
     files: list[UploadFile] = File(...),
     property_id: int = Form(...),
     db: Session = Depends(get_db),
@@ -842,6 +888,8 @@ async def bulk_upload_documents(
     - document_ids: List of created document IDs
     - status: "processing"
     """
+    locale = get_local(request)
+
     logger.info(
         f"Bulk upload initiated - user: {current_user}, property_id: {property_id}, "
         f"{len(files)} files"
@@ -850,13 +898,13 @@ async def bulk_upload_documents(
     if not files or len(files) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No files provided"
+            detail=translate("no_files_provided", locale)
         )
 
     if len(files) > 50:  # Reasonable limit
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum 50 files per bulk upload"
+            detail=translate("max_files_exceeded", locale)
         )
 
     # Verify property belongs to user
@@ -869,13 +917,13 @@ async def bulk_upload_documents(
     if not property:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Property not found"
+            detail=translate("property_not_found", locale)
         )
 
     # Get user UUID for path structure
     user = db.query(User).filter(User.id == int(current_user)).first()
     if not user or not user.uuid:
-        raise HTTPException(status_code=500, detail="User UUID not found")
+        raise HTTPException(status_code=500, detail=translate("user_uuid_not_found", locale))
     user_uuid = user.uuid
 
     uploaded_documents = []
@@ -962,11 +1010,13 @@ async def bulk_upload_documents(
                 db.commit()
 
                 # Start background processing
+                output_language = get_output_language(locale)
                 processor = get_bulk_processor()
                 processor.start_background_task(
                     workflow_id=workflow_id,
                     property_id=property_id,
-                    document_uploads=document_uploads_info
+                    document_uploads=document_uploads_info,
+                    output_language=output_language
                 )
 
                 logger.info(f"Started async bulk processing: {workflow_id}")
@@ -993,7 +1043,7 @@ async def bulk_upload_documents(
 
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to start processing: {str(e)}"
+                    detail=translate("failed_start_processing", locale, error=str(e))
                 )
         else:
             return {
@@ -1011,12 +1061,13 @@ async def bulk_upload_documents(
         logger.error(f"Bulk upload failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Bulk upload failed: {str(e)}"
+            detail=translate("bulk_upload_failed", locale, error=str(e))
         )
 
 
 @router.get("/bulk-status/{workflow_id}")
 async def get_bulk_processing_status(
+    request: Request,
     workflow_id: str,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
@@ -1030,6 +1081,8 @@ async def get_bulk_processing_status(
     - synthesis: Final synthesis (if complete)
     - progress: Processing progress
     """
+    locale = get_local(request)
+
     logger.info(f"Bulk status check for workflow {workflow_id}")
 
     # Get all documents for this workflow
@@ -1041,7 +1094,7 @@ async def get_bulk_processing_status(
     if not documents:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workflow not found or no documents associated"
+            detail=translate("workflow_not_found", locale)
         )
 
     property_id = documents[0].property_id

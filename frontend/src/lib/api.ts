@@ -9,12 +9,21 @@ export const api = axios.create({
   },
 })
 
-// Add auth token to requests
+// Add auth token and locale to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // Send current locale as Accept-Language header
+  if (typeof document !== 'undefined') {
+    const htmlLang = document.documentElement.lang
+    if (htmlLang) {
+      config.headers['Accept-Language'] = htmlLang
+    }
+  }
+
   return config
 })
 

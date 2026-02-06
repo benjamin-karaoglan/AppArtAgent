@@ -18,7 +18,8 @@ import {
   Clock,
   CheckCircle2
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 
 interface Document {
   id: number;
@@ -95,41 +96,43 @@ interface BulkUploadStatus {
   };
 }
 
-const DOCUMENT_CATEGORIES = [
-  {
-    id: 'pv_ag',
-    label: "PV d'AG",
-    description: 'Assembly meeting minutes',
-    icon: FileText,
-    acceptedTypes: '.pdf',
-  },
-  {
-    id: 'diags',
-    label: 'Diagnostics',
-    description: 'Diagnostic documents',
-    icon: FileText,
-    acceptedTypes: '.pdf',
-  },
-  {
-    id: 'taxe_fonciere',
-    label: 'Taxe Foncière',
-    description: 'Property tax documents',
-    icon: FileText,
-    acceptedTypes: '.pdf',
-  },
-  {
-    id: 'charges',
-    label: 'Charges',
-    description: 'Condominium charges',
-    icon: FileText,
-    acceptedTypes: '.pdf',
-  },
-];
-
 function DocumentsPageContent() {
+  const t = useTranslations('documents');
+  const tc = useTranslations('common');
   const params = useParams();
   const router = useRouter();
   const propertyId = params.id as string;
+
+  const DOCUMENT_CATEGORIES = [
+    {
+      id: 'pv_ag',
+      label: t('categories.pv_ag.label'),
+      description: t('categories.pv_ag.description'),
+      icon: FileText,
+      acceptedTypes: '.pdf',
+    },
+    {
+      id: 'diags',
+      label: t('categories.diags.label'),
+      description: t('categories.diags.description'),
+      icon: FileText,
+      acceptedTypes: '.pdf',
+    },
+    {
+      id: 'taxe_fonciere',
+      label: t('categories.taxe_fonciere.label'),
+      description: t('categories.taxe_fonciere.description'),
+      icon: FileText,
+      acceptedTypes: '.pdf',
+    },
+    {
+      id: 'charges',
+      label: t('categories.charges.label'),
+      description: t('categories.charges.description'),
+      icon: FileText,
+      acceptedTypes: '.pdf',
+    },
+  ];
 
   const [documents, setDocuments] = useState<Record<string, Document[]>>({});
   const [summaries, setSummaries] = useState<Record<string, DocumentSummary>>({});
@@ -250,7 +253,7 @@ function DocumentsPageContent() {
   };
 
   const handleDeleteDocument = async (documentId: number, category: string) => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+    if (!confirm(t('confirmDelete'))) return;
 
     try {
       await api.delete(`/api/documents/${documentId}`);
@@ -338,7 +341,7 @@ function DocumentsPageContent() {
         // Check if workflow failed
         if (status.status === 'failed') {
           setBulkUploading(false);
-          setError('Bulk processing failed. Check individual document errors.');
+          setError(t('bulkFailed'));
           return;
         }
 
@@ -348,7 +351,7 @@ function DocumentsPageContent() {
           setTimeout(poll, 2000); // Poll every 2 seconds
         } else if (pollCount >= maxPolls) {
           setBulkUploading(false);
-          setError('Processing is taking longer than expected. Please check back later.');
+          setError(t('processingTimeout'));
         }
       } catch (err: any) {
         console.error('Status poll error:', err);
@@ -415,13 +418,13 @@ function DocumentsPageContent() {
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Property
+            {t('backToProperty')}
           </Link>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Document Management</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
             <p className="mt-2 text-sm text-gray-600">
-              Upload and manage property documents. Documents are automatically analyzed using AI.
+              {t('subtitle')}
             </p>
           </div>
 
@@ -437,9 +440,9 @@ function DocumentsPageContent() {
               <div className="flex items-center">
                 <Sparkles className="h-6 w-6 text-yellow-300 mr-3" />
                 <div>
-                  <h2 className="text-xl font-bold text-white">Smart Upload - AI Agent</h2>
+                  <h2 className="text-xl font-bold text-white">{t('smartUpload.title')}</h2>
                   <p className="text-sm text-indigo-100">
-                    Drop all your documents at once. AI will automatically classify, analyze, and summarize everything!
+                    {t('smartUpload.subtitle')}
                   </p>
                 </div>
               </div>
@@ -467,18 +470,18 @@ function DocumentsPageContent() {
                   />
                   <Sparkles className="h-16 w-16 mx-auto mb-4 text-purple-500" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Drop all your documents here
+                    {t('smartUpload.dropzone')}
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    or click to browse files
+                    {t('smartUpload.browse')}
                   </p>
                   <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span>Auto-classification</span>
+                    <span>{t('smartUpload.autoClassification')}</span>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span>Parallel processing</span>
+                    <span>{t('smartUpload.parallelProcessing')}</span>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span>Smart synthesis</span>
+                    <span>{t('smartUpload.smartSynthesis')}</span>
                   </div>
                 </div>
               )}
@@ -489,9 +492,9 @@ function DocumentsPageContent() {
                     <div className="flex items-center">
                       <Loader2 className="h-6 w-6 text-purple-600 animate-spin mr-3" />
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Processing Documents</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{t('smartUpload.processing')}</h3>
                         <p className="text-sm text-gray-600">
-                          AI agent is classifying and analyzing your documents...
+                          {t('smartUpload.processingSubtitle')}
                         </p>
                       </div>
                     </div>
@@ -500,7 +503,7 @@ function DocumentsPageContent() {
                         {bulkStatus.progress.percentage}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        {bulkStatus.progress.completed} / {bulkStatus.progress.total} complete
+                        {t('smartUpload.complete', { completed: bulkStatus.progress.completed, total: bulkStatus.progress.total })}
                       </div>
                     </div>
                   </div>
@@ -565,9 +568,9 @@ function DocumentsPageContent() {
                   <div className="flex items-center mb-4">
                     <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Processing Complete!</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{t('smartUpload.processingComplete')}</h3>
                       <p className="text-sm text-gray-600">
-                        {bulkStatus.progress.completed} documents analyzed successfully
+                        {t('smartUpload.documentsAnalyzed', { count: bulkStatus.progress.completed })}
                       </p>
                     </div>
                   </div>
@@ -576,7 +579,7 @@ function DocumentsPageContent() {
                     <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
                       <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center">
                         <Sparkles className="h-5 w-5 text-purple-500 mr-2" />
-                        AI Synthesis
+                        {t('synthesis.title')}
                       </h4>
 
                       {bulkStatus.synthesis.summary && (
@@ -585,24 +588,26 @@ function DocumentsPageContent() {
 
                       {bulkStatus.synthesis.risk_level && (
                         <div className="mb-3">
-                          <span className="text-xs font-medium text-gray-700">Risk Level: </span>
+                          <span className="text-xs font-medium text-gray-700">{t('synthesis.riskLevel')}: </span>
                           <span className={`text-xs px-2 py-1 rounded ${
                             bulkStatus.synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
                             bulkStatus.synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                             'bg-green-100 text-green-700'
                           }`}>
-                            {bulkStatus.synthesis.risk_level.toUpperCase()}
+                            {bulkStatus.synthesis.risk_level === 'high' ? t('synthesis.high') :
+                             bulkStatus.synthesis.risk_level === 'medium' ? t('synthesis.medium') :
+                             t('synthesis.low')}
                           </span>
                         </div>
                       )}
 
                       {bulkStatus.synthesis.key_findings && bulkStatus.synthesis.key_findings.length > 0 && (
                         <div className="mb-3">
-                          <p className="text-xs font-medium text-gray-700 mb-2">Key Findings:</p>
+                          <p className="text-xs font-medium text-gray-700 mb-2">{t('synthesis.keyFindings')}:</p>
                           <ul className="space-y-1">
                             {bulkStatus.synthesis.key_findings.map((finding, idx) => (
                               <li key={idx} className="text-sm text-gray-700 flex items-start">
-                                <span className="text-purple-500 mr-2">•</span>
+                                <span className="text-purple-500 mr-2">&bull;</span>
                                 {finding}
                               </li>
                             ))}
@@ -612,11 +617,11 @@ function DocumentsPageContent() {
 
                       {bulkStatus.synthesis.recommendations && bulkStatus.synthesis.recommendations.length > 0 && (
                         <div className="mb-3">
-                          <p className="text-xs font-medium text-gray-700 mb-2">Recommendations:</p>
+                          <p className="text-xs font-medium text-gray-700 mb-2">{t('synthesis.recommendations')}:</p>
                           <ul className="space-y-1">
                             {bulkStatus.synthesis.recommendations.map((rec, idx) => (
                               <li key={idx} className="text-sm text-gray-700 flex items-start">
-                                <span className="text-pink-500 mr-2">→</span>
+                                <span className="text-pink-500 mr-2">&rarr;</span>
                                 {rec}
                               </li>
                             ))}
@@ -628,7 +633,7 @@ function DocumentsPageContent() {
                         <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-purple-200">
                           {bulkStatus.synthesis.total_annual_cost && (
                             <div>
-                              <dt className="text-xs font-medium text-gray-500">Total Annual Costs</dt>
+                              <dt className="text-xs font-medium text-gray-500">{t('synthesis.totalAnnualCosts')}</dt>
                               <dd className="mt-1 text-lg font-semibold text-gray-900">
                                 {new Intl.NumberFormat('fr-FR', {
                                   style: 'currency',
@@ -640,7 +645,7 @@ function DocumentsPageContent() {
                           )}
                           {bulkStatus.synthesis.total_one_time_cost && (
                             <div>
-                              <dt className="text-xs font-medium text-gray-500">Total One-Time Costs</dt>
+                              <dt className="text-xs font-medium text-gray-500">{t('synthesis.totalOneTimeCosts')}</dt>
                               <dd className="mt-1 text-lg font-semibold text-gray-900">
                                 {new Intl.NumberFormat('fr-FR', {
                                   style: 'currency',
@@ -659,7 +664,7 @@ function DocumentsPageContent() {
                     onClick={() => setBulkStatus(null)}
                     className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
-                    Upload More Documents
+                    {t('smartUpload.uploadMore')}
                   </button>
                 </div>
               )}
@@ -674,14 +679,14 @@ function DocumentsPageContent() {
                   <svg className="w-8 h-8 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  AI Property Analysis
+                  {t('propertySynthesis.title')}
                 </h2>
                 <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
                   synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
                   synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                   'bg-green-100 text-green-700'
                 }`}>
-                  Risk: {synthesis.risk_level.toUpperCase()}
+                  {t('propertySynthesis.risk', { level: synthesis.risk_level.toUpperCase() })}
                 </span>
               </div>
 
@@ -689,7 +694,7 @@ function DocumentsPageContent() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="bg-white rounded-lg p-4 shadow">
-                  <dt className="text-sm font-medium text-gray-500">Total Annual Costs</dt>
+                  <dt className="text-sm font-medium text-gray-500">{t('synthesis.totalAnnualCosts')}</dt>
                   <dd className="mt-2 text-3xl font-bold text-gray-900">
                     {new Intl.NumberFormat('fr-FR', {
                       style: 'currency',
@@ -699,7 +704,7 @@ function DocumentsPageContent() {
                   </dd>
                 </div>
                 <div className="bg-white rounded-lg p-4 shadow">
-                  <dt className="text-sm font-medium text-gray-500">Total One-Time Costs</dt>
+                  <dt className="text-sm font-medium text-gray-500">{t('synthesis.totalOneTimeCosts')}</dt>
                   <dd className="mt-2 text-3xl font-bold text-gray-900">
                     {new Intl.NumberFormat('fr-FR', {
                       style: 'currency',
@@ -712,7 +717,7 @@ function DocumentsPageContent() {
 
               {synthesis.key_findings && synthesis.key_findings.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Findings</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('propertySynthesis.keyFindings')}</h3>
                   <ul className="space-y-2">
                     {synthesis.key_findings.map((finding, idx) => (
                       <li key={idx} className="flex items-start text-gray-700">
@@ -728,7 +733,7 @@ function DocumentsPageContent() {
 
               {synthesis.recommendations && synthesis.recommendations.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Recommendations</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('propertySynthesis.recommendations')}</h3>
                   <ul className="space-y-2">
                     {synthesis.recommendations.map((rec, idx) => (
                       <li key={idx} className="flex items-start text-gray-700">
@@ -747,7 +752,7 @@ function DocumentsPageContent() {
           {/* Manual Upload Section Divider */}
           <div className="mb-6 flex items-center">
             <div className="flex-1 border-t border-gray-300"></div>
-            <div className="px-4 text-sm text-gray-500 font-medium">Or upload manually by category</div>
+            <div className="px-4 text-sm text-gray-500 font-medium">{t('manualUpload')}</div>
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
@@ -769,7 +774,7 @@ function DocumentsPageContent() {
                         </div>
                       </div>
                       <div className="text-white text-sm">
-                        {categoryDocs.length} document{categoryDocs.length !== 1 ? 's' : ''}
+                        {t('documentCount', { count: categoryDocs.length })}
                       </div>
                     </div>
                   </div>
@@ -779,7 +784,7 @@ function DocumentsPageContent() {
                       <div className="flex items-start gap-4">
                         <div className="flex-1">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Upload Documents
+                            {t('uploadDocuments')}
                           </label>
                           <label className="relative cursor-pointer">
                             <input
@@ -798,13 +803,13 @@ function DocumentsPageContent() {
                               {uploading === category.id ? (
                                 <>
                                   <Loader2 className="h-5 w-5 mr-2 animate-spin text-blue-600" />
-                                  <span className="text-sm text-blue-600">Uploading & Analyzing...</span>
+                                  <span className="text-sm text-blue-600">{t('uploadingAnalyzing')}</span>
                                 </>
                               ) : (
                                 <>
                                   <Upload className="h-5 w-5 mr-2 text-blue-600" />
                                   <span className="text-sm text-blue-600">
-                                    Choose {category.acceptedTypes} files
+                                    {t('chooseFiles', { type: category.acceptedTypes })}
                                   </span>
                                 </>
                               )}
@@ -818,7 +823,7 @@ function DocumentsPageContent() {
                       <div className="mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {category.id === 'pv_ag' ? 'Comprehensive Summary' : 'Diagnostic Summary'}
+                            {category.id === 'pv_ag' ? t('comprehensiveSummary') : t('diagnosticSummary')}
                           </h3>
                           <button
                             onClick={() => handleRegenerateSummary(category.id)}
@@ -828,12 +833,12 @@ function DocumentsPageContent() {
                             {regenerating === category.id ? (
                               <>
                                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Regenerating...
+                                {t('regenerating')}
                               </>
                             ) : (
                               <>
                                 <RefreshCw className="h-3 w-3 mr-1" />
-                                Regenerate
+                                {t('regenerate')}
                               </>
                             )}
                           </button>
@@ -847,11 +852,11 @@ function DocumentsPageContent() {
 
                         {categorySummary.key_findings && categorySummary.key_findings.length > 0 && (
                           <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Key Findings</h4>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">{t('keyFindings')}</h4>
                             <ul className="space-y-1">
                               {categorySummary.key_findings.map((finding, idx) => (
                                 <li key={idx} className="text-sm text-gray-700 flex items-start">
-                                  <span className="text-purple-500 mr-2">•</span>
+                                  <span className="text-purple-500 mr-2">&bull;</span>
                                   {finding}
                                 </li>
                               ))}
@@ -863,7 +868,7 @@ function DocumentsPageContent() {
                           <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-purple-200">
                             {categorySummary.total_estimated_annual_cost && (
                               <div>
-                                <dt className="text-xs font-medium text-gray-500">Annual Costs</dt>
+                                <dt className="text-xs font-medium text-gray-500">{t('annualCosts')}</dt>
                                 <dd className="mt-1 text-lg font-semibold text-gray-900">
                                   {new Intl.NumberFormat('fr-FR', {
                                     style: 'currency',
@@ -875,7 +880,7 @@ function DocumentsPageContent() {
                             )}
                             {categorySummary.total_one_time_costs && (
                               <div>
-                                <dt className="text-xs font-medium text-gray-500">One-Time Costs</dt>
+                                <dt className="text-xs font-medium text-gray-500">{t('oneTimeCosts')}</dt>
                                 <dd className="mt-1 text-lg font-semibold text-gray-900">
                                   {new Intl.NumberFormat('fr-FR', {
                                     style: 'currency',
@@ -890,16 +895,16 @@ function DocumentsPageContent() {
 
                         {category.id === 'pv_ag' && categorySummary.copropriete_insights && (
                           <div className="mt-4 pt-4 border-t border-purple-200">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Copropriété Insights</h4>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">{t('coproInsights')}</h4>
                             {categorySummary.copropriete_insights.payment_issues && (
                               <div className="mb-2">
-                                <p className="text-xs font-medium text-gray-700">Payment Issues:</p>
+                                <p className="text-xs font-medium text-gray-700">{t('paymentIssues')}:</p>
                                 <p className="text-sm text-gray-600">{categorySummary.copropriete_insights.payment_issues}</p>
                               </div>
                             )}
                             {categorySummary.copropriete_insights.upcoming_works && (
                               <div className="mb-2">
-                                <p className="text-xs font-medium text-gray-700">Upcoming Works:</p>
+                                <p className="text-xs font-medium text-gray-700">{t('upcomingWorks')}:</p>
                                 <p className="text-sm text-gray-600">{categorySummary.copropriete_insights.upcoming_works}</p>
                               </div>
                             )}
@@ -908,7 +913,7 @@ function DocumentsPageContent() {
 
                         {category.id === 'diags' && categorySummary.diagnostic_issues && (
                           <div className="mt-4 pt-4 border-t border-purple-200">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Critical Issues</h4>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">{t('criticalIssues')}</h4>
                             {categorySummary.diagnostic_issues.critical_issues && (
                               <ul className="space-y-1">
                                 {categorySummary.diagnostic_issues.critical_issues.map((issue: string, idx: number) => (
@@ -949,7 +954,7 @@ function DocumentsPageContent() {
                                       {doc.document_subcategory.toUpperCase()}
                                     </span>
                                   )}
-                                  <span>Uploaded {new Date(doc.upload_date).toLocaleDateString('fr-FR')}</span>
+                                  <span>{t('uploaded', { date: new Date(doc.upload_date).toLocaleDateString('fr-FR') })}</span>
                                   <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
                                 </div>
 
@@ -959,11 +964,11 @@ function DocumentsPageContent() {
 
                                     {doc.key_insights && doc.key_insights.length > 0 && (
                                       <div className="mt-2">
-                                        <p className="text-xs font-medium text-gray-700 mb-1">Key Insights:</p>
+                                        <p className="text-xs font-medium text-gray-700 mb-1">{t('keyInsights')}:</p>
                                         <ul className="space-y-1">
                                           {doc.key_insights.map((insight, idx) => (
                                             <li key={idx} className="text-xs text-gray-600 flex items-start">
-                                              <span className="text-blue-500 mr-1">•</span>
+                                              <span className="text-blue-500 mr-1">&bull;</span>
                                               {insight}
                                             </li>
                                           ))}
@@ -973,7 +978,7 @@ function DocumentsPageContent() {
 
                                     {doc.one_time_costs && doc.one_time_costs.length > 0 && (
                                       <div className="mt-2">
-                                        <p className="text-xs font-medium text-gray-700 mb-1">Costs:</p>
+                                        <p className="text-xs font-medium text-gray-700 mb-1">{t('costs')}:</p>
                                         <ul className="space-y-1">
                                           {doc.one_time_costs.map((cost, idx) => (
                                             <li key={idx} className="text-xs text-gray-600">
@@ -1004,7 +1009,7 @@ function DocumentsPageContent() {
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                        <p className="text-sm">No documents uploaded yet</p>
+                        <p className="text-sm">{t('noDocuments')}</p>
                       </div>
                     )}
                   </div>

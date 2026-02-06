@@ -1,17 +1,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import InfoTooltip from '@/components/InfoTooltip';
 import MarketTrendChart from '@/components/MarketTrendChart';
 import { api } from '@/lib/api';
 import { ArrowLeft, TrendingUp, FileText, Upload, Loader2, Trash2, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { Property } from '@/types';
 
 function PropertyDetailContent() {
+  const t = useTranslations('property');
+  const tc = useTranslations('common');
   const params = useParams();
   const router = useRouter();
   const propertyId = params.id as string;
@@ -38,7 +42,7 @@ function PropertyDetailContent() {
       setProperty(response.data);
     } catch (error) {
       console.error('Failed to load property:', error);
-      setError('Failed to load property details');
+      setError(t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +80,7 @@ function PropertyDetailContent() {
       await loadProperty();
     } catch (err: any) {
       console.error('Price analysis error:', err);
-      setError(err.response?.data?.detail || 'Failed to analyze price');
+      setError(err.response?.data?.detail || t('analyzeFailed'));
     } finally {
       setAnalyzing(false);
     }
@@ -138,7 +142,7 @@ function PropertyDetailContent() {
       });
     } catch (err) {
       console.error('Failed to recalculate:', err);
-      setError('Failed to recalculate analysis');
+      setError(t('recalculateFailed'));
     }
   };
 
@@ -180,7 +184,7 @@ function PropertyDetailContent() {
       });
     } catch (err) {
       console.error('Failed to recalculate trend:', err);
-      setError('Failed to recalculate trend analysis');
+      setError(t('recalculateTrendFailed'));
     }
   };
 
@@ -194,7 +198,7 @@ function PropertyDetailContent() {
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Delete error:', err);
-      setError(err.response?.data?.detail || 'Failed to delete property');
+      setError(err.response?.data?.detail || t('deleteFailed'));
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -216,7 +220,7 @@ function PropertyDetailContent() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="max-w-7xl mx-auto py-6 px-4">
-          <p className="text-red-600">Property not found</p>
+          <p className="text-red-600">{t('notFound')}</p>
         </div>
       </div>
     );
@@ -234,7 +238,7 @@ function PropertyDetailContent() {
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            {t('backToDashboard')}
           </Link>
 
           {/* Header */}
@@ -250,7 +254,7 @@ function PropertyDetailContent() {
               className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete Property
+              {tc('delete')}
             </button>
           </div>
 
@@ -264,17 +268,17 @@ function PropertyDetailContent() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
             {/* Property Info Card */}
             <div className="bg-white shadow rounded-lg p-6 lg:col-span-2">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Property Information</h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">{t('info.title')}</h2>
               <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                 {property.property_type && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Type</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.type')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">{property.property_type}</dd>
                   </div>
                 )}
                 {property.asking_price && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Asking Price</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.askingPrice')}</dt>
                     <dd className="mt-1 text-sm text-gray-900 font-semibold">
                       {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
@@ -285,31 +289,31 @@ function PropertyDetailContent() {
                 )}
                 {property.surface_area && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Surface Area</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.surfaceArea')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">{property.surface_area} m²</dd>
                   </div>
                 )}
                 {property.rooms && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Rooms</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.rooms')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">{property.rooms} pièces</dd>
                   </div>
                 )}
                 {property.floor !== null && property.floor !== undefined && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Floor</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.floor')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">{property.floor}</dd>
                   </div>
                 )}
                 {property.building_year && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Building Year</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.buildingYear')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">{property.building_year}</dd>
                   </div>
                 )}
                 {property.price_per_sqm && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Price per m²</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('info.pricePerSqm')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">
                       {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
@@ -323,7 +327,7 @@ function PropertyDetailContent() {
 
             {/* Quick Actions Card */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Price Analysis</h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.title')}</h2>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <button
@@ -334,30 +338,30 @@ function PropertyDetailContent() {
                     {analyzing ? (
                       <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Analyzing...
+                        {t('analysis.analyzing')}
                       </>
                     ) : (
                       <>
                         <TrendingUp className="h-5 w-5 mr-2" />
-                        Simple Analysis
+                        {t('analysis.simpleAnalysis')}
                       </>
                     )}
                   </button>
                   <InfoTooltip
-                    title="Simple Analysis"
+                    title={t('analysis.simpleTooltip.title')}
                     content={
                       <div className="space-y-2">
-                        <p><strong>What it does:</strong> Shows only sales at the exact same address (same building).</p>
-                        <p><strong>How it works:</strong></p>
+                        <p><strong>{t('analysis.simpleTooltip.whatItDoes')}</strong></p>
+                        <p><strong>{t('analysis.simpleTooltip.howItWorks')}</strong></p>
                         <ul className="list-disc pl-4 space-y-1 text-xs">
-                          <li>Finds all historical sales at your building number</li>
-                          <li>Groups multi-unit transactions correctly</li>
-                          <li>Detects and flags outliers using IQR method</li>
-                          <li>Calculates average market price per m²</li>
-                          <li>Uses raw historical prices (no time adjustment)</li>
+                          <li>{t('analysis.simpleTooltip.steps.findSales')}</li>
+                          <li>{t('analysis.simpleTooltip.steps.groupTransactions')}</li>
+                          <li>{t('analysis.simpleTooltip.steps.detectOutliers')}</li>
+                          <li>{t('analysis.simpleTooltip.steps.calculateAverage')}</li>
+                          <li>{t('analysis.simpleTooltip.steps.rawPrices')}</li>
                         </ul>
                         <p className="text-xs text-gray-600 mt-2">
-                          <strong>Best for:</strong> Buildings with recent sales history. Shows true transaction prices in your building.
+                          <strong>{t('analysis.simpleTooltip.bestFor')}</strong>
                         </p>
                       </div>
                     }
@@ -373,30 +377,30 @@ function PropertyDetailContent() {
                     {analyzing ? (
                       <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Analyzing...
+                        {t('analysis.analyzing')}
                       </>
                     ) : (
                       <>
                         <TrendingUp className="h-5 w-5 mr-2" />
-                        Trend Analysis (2025 Projection)
+                        {t('analysis.trendAnalysis')}
                       </>
                     )}
                   </button>
                   <InfoTooltip
-                    title="Trend Analysis"
+                    title={t('analysis.trendTooltip.title')}
                     content={
                       <div className="space-y-2">
-                        <p><strong>What it does:</strong> Projects 2025 value using market trends from neighboring addresses.</p>
-                        <p><strong>How it works:</strong></p>
+                        <p><strong>{t('analysis.trendTooltip.whatItDoes')}</strong></p>
+                        <p><strong>{t('analysis.trendTooltip.howItWorks')}</strong></p>
                         <ul className="list-disc pl-4 space-y-1 text-xs">
-                          <li>Takes most recent sale at your exact address</li>
-                          <li>Analyzes sales from neighboring buildings (±2, ±4, ±6, etc.)</li>
-                          <li>Calculates year-over-year market trend</li>
-                          <li>Projects historical price forward to 2025</li>
-                          <li>Accounts for time and market evolution</li>
+                          <li>{t('analysis.trendTooltip.steps.takeSale')}</li>
+                          <li>{t('analysis.trendTooltip.steps.analyzeSales')}</li>
+                          <li>{t('analysis.trendTooltip.steps.calculateTrend')}</li>
+                          <li>{t('analysis.trendTooltip.steps.projectPrice')}</li>
+                          <li>{t('analysis.trendTooltip.steps.accountTime')}</li>
                         </ul>
                         <p className="text-xs text-gray-600 mt-2">
-                          <strong>Best for:</strong> Properties with older sales data. Estimates current value based on neighborhood trends.
+                          <strong>{t('analysis.trendTooltip.bestFor')}</strong>
                         </p>
                       </div>
                     }
@@ -408,7 +412,7 @@ function PropertyDetailContent() {
                   className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <FileText className="h-5 w-5 mr-2" />
-                  Manage Documents
+                  {t('analysis.manageDocuments')}
                 </button>
 
                 <button
@@ -416,7 +420,7 @@ function PropertyDetailContent() {
                   className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <Upload className="h-5 w-5 mr-2" />
-                  Apartment Redesign Studio
+                  {t('analysis.redesignStudio')}
                 </button>
               </div>
             </div>
@@ -432,12 +436,12 @@ function PropertyDetailContent() {
           {/* Price Analysis Results */}
           {priceAnalysis && (
             <div className="bg-white shadow rounded-lg p-6 mb-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Price Analysis</h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.title')}</h2>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-6">
                 {priceAnalysis.estimated_value && (
                   <div className="border-l-4 border-blue-500 pl-4">
-                    <dt className="text-sm font-medium text-gray-500">Estimated Value</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('analysis.estimatedValue')}</dt>
                     <dd className="mt-1 text-2xl font-semibold text-gray-900">
                       {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
@@ -449,7 +453,7 @@ function PropertyDetailContent() {
 
                 {priceAnalysis?.price_deviation_percent !== undefined && (
                   <div className="border-l-4 border-yellow-500 pl-4">
-                    <dt className="text-sm font-medium text-gray-500">Price Deviation</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('analysis.priceDeviation')}</dt>
                     <dd className={`mt-1 text-2xl font-semibold ${
                       priceAnalysis.price_deviation_percent > 0 ? 'text-red-600' : 'text-green-600'
                     }`}>
@@ -461,7 +465,7 @@ function PropertyDetailContent() {
 
                 {priceAnalysis?.comparable_sales && (
                   <div className="border-l-4 border-green-500 pl-4">
-                    <dt className="text-sm font-medium text-gray-500">Comparable Sales</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('analysis.comparableSales')}</dt>
                     <dd className="mt-1 text-2xl font-semibold text-gray-900">
                       {priceAnalysis.comparables_count || priceAnalysis.comparable_sales.length}
                     </dd>
@@ -472,7 +476,7 @@ function PropertyDetailContent() {
               {priceAnalysis?.recommendation && (
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
                   <p className="text-sm text-blue-800">
-                    <span className="font-medium">Recommendation:</span> {priceAnalysis.recommendation}
+                    <span className="font-medium">{t('analysis.recommendation')}</span> {priceAnalysis.recommendation}
                   </p>
                 </div>
               )}
@@ -482,11 +486,11 @@ function PropertyDetailContent() {
           {/* Trend Projection Results */}
           {priceAnalysis?.trend_projection && (
             <div className="bg-gradient-to-r from-purple-50 to-indigo-50 shadow rounded-lg p-6 mb-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">2025 Trend Projection</h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">{t('trend.title')}</h2>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-6">
                 <div className="border-l-4 border-purple-500 pl-4 bg-white p-4 rounded">
-                  <dt className="text-sm font-medium text-gray-500">Projected 2025 Value</dt>
+                  <dt className="text-sm font-medium text-gray-500">{t('trend.projectedValue')}</dt>
                   <dd className="mt-1 text-2xl font-semibold text-purple-600">
                     {new Intl.NumberFormat('fr-FR', {
                       style: 'currency',
@@ -504,7 +508,7 @@ function PropertyDetailContent() {
                 </div>
 
                 <div className="border-l-4 border-indigo-500 pl-4 bg-white p-4 rounded">
-                  <dt className="text-sm font-medium text-gray-500">Market Trend</dt>
+                  <dt className="text-sm font-medium text-gray-500">{t('trend.marketTrend')}</dt>
                   <dd className={`mt-1 text-2xl font-semibold ${
                     priceAnalysis.trend_projection.trend_used > 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
@@ -516,7 +520,7 @@ function PropertyDetailContent() {
                       onClick={() => setShowNeighboringSales(!showNeighboringSales)}
                       className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                     >
-                      Based on {priceAnalysis.trend_projection.trend_sample_size} neighboring sales
+                      {t('trend.basedOnSales', { count: priceAnalysis.trend_projection.trend_sample_size })}
                       {showNeighboringSales ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                   </dd>
@@ -526,18 +530,18 @@ function PropertyDetailContent() {
               {showNeighboringSales && priceAnalysis.trend_projection.neighboring_sales && (
                 <div className="bg-white p-4 rounded mb-4">
                   <h3 className="text-sm font-medium text-gray-700 mb-3">
-                    Neighboring Sales Used for Trend ({priceAnalysis.trend_projection.neighboring_sales.length})
+                    {t('trend.neighboringSalesTitle', { count: priceAnalysis.trend_projection.neighboring_sales.length })}
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Include</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Surface</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price/m²</th>
+                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.include')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.saleDate')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.address')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.surface')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.salePrice')}</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.pricePerSqm')}</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -552,10 +556,10 @@ function PropertyDetailContent() {
                                 checked={!excludedNeighboringOutliers.has(idx)}
                                 onChange={() => toggleNeighboringOutlierInclusion(idx)}
                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                                title={sale.is_outlier ? 'Outlier detected (IQR method)' : 'Include in trend analysis'}
+                                title={sale.is_outlier ? t('comparables.outlierDetected') : t('comparables.includeInTrend')}
                               />
                               {sale.is_outlier && (
-                                <div className="text-xs text-yellow-600 mt-1">Outlier</div>
+                                <div className="text-xs text-yellow-600 mt-1">{t('comparables.outlier')}</div>
                               )}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-gray-900">
@@ -586,16 +590,16 @@ function PropertyDetailContent() {
               )}
 
               <div className="bg-white p-4 rounded">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Base Sale</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">{t('trend.baseSale')}</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Date:</span>
+                    <span className="text-gray-500">{t('trend.date')}</span>
                     <span className="ml-2 font-medium text-gray-900">
                       {new Date(priceAnalysis.trend_projection.base_sale_date).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Price/m²:</span>
+                    <span className="text-gray-500">{t('trend.pricePerSqm')}</span>
                     <span className="ml-2 font-medium text-gray-900">
                       {new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
@@ -613,29 +617,29 @@ function PropertyDetailContent() {
           {priceAnalysis?.comparable_sales && priceAnalysis.comparable_sales.length > 0 && (
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">
-                Comparable Sales ({priceAnalysis.comparable_sales.length} total, {priceAnalysis.comparables_count || priceAnalysis.comparable_sales.length} included)
+                {t('comparables.title', { total: priceAnalysis.comparable_sales.length, included: priceAnalysis.comparables_count || priceAnalysis.comparable_sales.length })}
               </h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Include
+                        {t('comparables.include')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
+                        {t('comparables.saleDate')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Address
+                        {t('comparables.address')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Surface
+                        {t('comparables.surface')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Sale Price
+                        {t('comparables.salePrice')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price/m²
+                        {t('comparables.pricePerSqm')}
                       </th>
                     </tr>
                   </thead>
@@ -660,10 +664,10 @@ function PropertyDetailContent() {
                                 checked={!excludedOutliers.has(index)}
                                 onChange={() => toggleOutlierInclusion(index)}
                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                                title={sale.is_outlier ? 'Outlier detected (IQR method)' : 'Include in analysis'}
+                                title={sale.is_outlier ? t('comparables.outlierDetected') : t('comparables.includeInAnalysis')}
                               />
                               {sale.is_outlier && (
-                                <div className="text-xs text-yellow-600 mt-1">Outlier</div>
+                                <div className="text-xs text-yellow-600 mt-1">{t('comparables.outlier')}</div>
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -682,7 +686,7 @@ function PropertyDetailContent() {
                                     title="Multi-unit sale - click to see details"
                                   >
                                     <Building2 className="h-3 w-3" />
-                                    {sale.unit_count} units
+                                    {t('comparables.units', { count: sale.unit_count })}
                                     {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                                   </button>
                                 )}
@@ -691,7 +695,7 @@ function PropertyDetailContent() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {displaySurface?.toFixed(2)} m²
                               {isMultiUnit && displayRooms && (
-                                <div className="text-xs text-gray-500">{displayRooms} rooms total</div>
+                                <div className="text-xs text-gray-500">{t('comparables.rooms')}: {displayRooms}</div>
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
@@ -708,7 +712,7 @@ function PropertyDetailContent() {
                                 maximumFractionDigits: 0,
                               }).format(displayPricePerSqm)}
                               {isMultiUnit && (
-                                <div className="text-xs text-blue-600 font-medium">Grouped</div>
+                                <div className="text-xs text-blue-600 font-medium">{t('comparables.grouped')}</div>
                               )}
                             </td>
                           </tr>
@@ -716,21 +720,21 @@ function PropertyDetailContent() {
                           {isMultiUnit && isExpanded && sale.lots_detail && (
                             <tr key={`${index}-detail`} className="bg-blue-50">
                               <td colSpan={6} className="px-6 py-4">
-                                <div className="text-xs font-medium text-gray-700 mb-2 uppercase">Individual Units ({sale.unit_count} lots in this transaction)</div>
+                                <div className="text-xs font-medium text-gray-700 mb-2 uppercase">{t('comparables.individualUnits', { count: sale.unit_count })}</div>
                                 <div className="bg-white rounded border border-blue-200 overflow-hidden">
                                   <table className="min-w-full text-xs">
                                     <thead className="bg-gray-50">
                                       <tr>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">Unit</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">Surface</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">Rooms</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">Individual Price/m²</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.unit')}</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.surface')}</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.rooms')}</th>
+                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.individualPricePerSqm')}</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
                                       {sale.lots_detail.map((lot: any, lotIdx: number) => (
                                         <tr key={lotIdx} className="hover:bg-gray-50">
-                                          <td className="px-3 py-2 text-gray-700">Unit {lotIdx + 1}</td>
+                                          <td className="px-3 py-2 text-gray-700">{t('comparables.unit')} {lotIdx + 1}</td>
                                           <td className="px-3 py-2 text-gray-900">{lot.surface_area} m²</td>
                                           <td className="px-3 py-2 text-gray-900">{lot.rooms || '-'}</td>
                                           <td className="px-3 py-2 text-gray-900">
@@ -745,11 +749,11 @@ function PropertyDetailContent() {
                                     </tbody>
                                   </table>
                                   <div className="px-3 py-2 bg-gray-50 text-xs text-gray-600 border-t border-gray-200">
-                                    Note: Individual prices/m² shown above are calculated per lot. The grouped price/m² ({new Intl.NumberFormat('fr-FR', {
+                                    {t('comparables.groupedNote', { price: new Intl.NumberFormat('fr-FR', {
                                       style: 'currency',
                                       currency: 'EUR',
                                       maximumFractionDigits: 0,
-                                    }).format(displayPricePerSqm)}) is the correct market price for the entire transaction.
+                                    }).format(displayPricePerSqm) })}
                                   </div>
                                 </div>
                               </td>
@@ -767,7 +771,7 @@ function PropertyDetailContent() {
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Market Average Price/m²</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('comparables.marketAvgPrice')}</dt>
                       <dd className="mt-1 text-lg font-semibold text-gray-900">
                         {new Intl.NumberFormat('fr-FR', {
                           style: 'currency',
@@ -777,7 +781,7 @@ function PropertyDetailContent() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Your Price/m²</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('comparables.yourPrice')}</dt>
                       <dd className="mt-1 text-lg font-semibold text-gray-900">
                         {new Intl.NumberFormat('fr-FR', {
                           style: 'currency',
@@ -787,7 +791,7 @@ function PropertyDetailContent() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Market Median Price/m²</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('comparables.marketMedianPrice')}</dt>
                       <dd className="mt-1 text-lg font-semibold text-gray-900">
                         {new Intl.NumberFormat('fr-FR', {
                           style: 'currency',
@@ -824,11 +828,11 @@ function PropertyDetailContent() {
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                       <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        Delete Property
+                        {t('deleteTitle')}
                       </h3>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.
+                          {t('deleteMessage')}
                         </p>
                       </div>
                     </div>
@@ -843,10 +847,10 @@ function PropertyDetailContent() {
                       {deleting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Deleting...
+                          {tc('deleting')}
                         </>
                       ) : (
-                        'Delete'
+                        tc('delete')
                       )}
                     </button>
                     <button
@@ -855,7 +859,7 @@ function PropertyDetailContent() {
                       onClick={() => setShowDeleteConfirm(false)}
                       className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Cancel
+                      {tc('cancel')}
                     </button>
                   </div>
                 </div>

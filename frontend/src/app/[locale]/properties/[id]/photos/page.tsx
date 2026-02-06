@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import { ArrowLeft, Upload, Sparkles, Image as ImageIcon, Download, Trash2, X, Columns, Maximize2, Send, Plus, MessageSquare, Clock, Pencil, Check, LayoutGrid } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import api from '@/lib/api';
 
 interface Photo {
@@ -47,6 +48,9 @@ interface StylePreset {
 }
 
 function PhotosContent() {
+  const t = useTranslations('photos');
+  const tc = useTranslations('common');
+
   const params = useParams();
   const propertyId = params.id as string;
 
@@ -120,8 +124,9 @@ function PhotosContent() {
     if (!selectedPreset) return;
     const preset = stylePresets.find((item) => item.id === selectedPreset);
     if (!preset?.prompt_template) return;
-    setCustomPrompt(preset.prompt_template.replace(/\{room_type\}/g, roomType));
-  }, [selectedPreset, roomType, stylePresets]);
+    const translatedRoomType = t(`roomTypes.${roomType}`);
+    setCustomPrompt(preset.prompt_template.replace(/\{room_type\}/g, translatedRoomType));
+  }, [selectedPreset, roomType, stylePresets, t]);
 
   // Build threads from redesigns
   const buildThreads = (redesignsList: Redesign[]): Thread[] => {
@@ -219,7 +224,7 @@ function PhotosContent() {
       );
     } catch (error: any) {
       console.error('Error renaming photo:', error);
-      alert(error.response?.data?.detail || 'Failed to rename photo');
+      alert(error.response?.data?.detail || t('renameFailed'));
     } finally {
       setEditingPhotoName(false);
     }
@@ -279,7 +284,7 @@ function PhotosContent() {
       );
     } catch (error: any) {
       console.error('Error updating room type:', error);
-      alert(error.response?.data?.detail || 'Failed to update room type');
+      alert(error.response?.data?.detail || t('roomTypeFailed'));
     } finally {
       setSavingRoomType(false);
     }
@@ -310,7 +315,7 @@ function PhotosContent() {
       event.target.value = '';
     } catch (error: any) {
       console.error('Error uploading photo:', error);
-      alert(error.response?.data?.detail || 'Failed to upload photo');
+      alert(error.response?.data?.detail || t('uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -318,16 +323,16 @@ function PhotosContent() {
 
   const handleGenerateRedesign = async () => {
     if (!selectedPhoto) {
-      alert('Please select a photo first');
+      alert(t('selectPhotoFirst'));
       return;
     }
 
     if (!selectedPreset && !customPrompt) {
-      alert('Please select a preset or enter a custom prompt');
+      alert(t('selectPresetOrPrompt'));
       return;
     }
 
-    const activeThread = threads.find((t) => t.id === activeThreadId);
+    const activeThread = threads.find((th) => th.id === activeThreadId);
     const isFollowUp = activeThread && activeThread.messages.length > 0;
     const parentId = isFollowUp ? activeThread.messages[activeThread.messages.length - 1].id : undefined;
 
@@ -363,12 +368,12 @@ function PhotosContent() {
       setSelectedPreset('');
       setCustomPrompt('');
       setOptimisticPrompt(null);
-      setToastMessage('Redesign generated');
+      setToastMessage(t('redesignGenerated'));
       setTimeout(() => setToastMessage(null), 3000);
     } catch (error: any) {
       console.error('Error generating redesign:', error);
       setOptimisticPrompt(null);
-      alert(error.response?.data?.detail || 'Failed to generate redesign');
+      alert(error.response?.data?.detail || t('generateFailed'));
     } finally {
       setGenerating(false);
     }
@@ -389,7 +394,7 @@ function PhotosContent() {
       }
     } catch (error: any) {
       console.error('Error deleting photo:', error);
-      alert(error.response?.data?.detail || 'Failed to delete photo');
+      alert(error.response?.data?.detail || t('deleteFailed'));
     } finally {
       setDeletingPhotoId(null);
       setPhotoToDelete(null);
@@ -407,46 +412,46 @@ function PhotosContent() {
             className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Property
+            {t('backToProperty')}
           </Link>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Apartment Redesign Studio
+            {t('title')}
           </h1>
 
           {/* Upload Section */}
           <div className="bg-white shadow rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
               <Upload className="h-5 w-5 mr-2 text-indigo-600" />
-              Upload Photo
+              {t('uploadPhoto')}
             </h2>
 
             <div className="flex gap-4 items-end">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Room Type
+                  {t('roomType')}
                 </label>
                 <select
                   value={roomType}
                   onChange={(e) => setRoomType(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="living room">Living Room</option>
-                  <option value="bedroom">Bedroom</option>
-                  <option value="kitchen">Kitchen</option>
-                  <option value="bathroom">Bathroom</option>
-                  <option value="dining room">Dining Room</option>
-                  <option value="home office">Home Office</option>
+                  <option value="living room">{t('roomTypes.living room')}</option>
+                  <option value="bedroom">{t('roomTypes.bedroom')}</option>
+                  <option value="kitchen">{t('roomTypes.kitchen')}</option>
+                  <option value="bathroom">{t('roomTypes.bathroom')}</option>
+                  <option value="dining room">{t('roomTypes.dining room')}</option>
+                  <option value="home office">{t('roomTypes.home office')}</option>
                 </select>
               </div>
 
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Choose Photo
+                  {t('choosePhoto')}
                 </label>
                 <label className="flex items-center justify-center px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 cursor-pointer">
                   <Upload className="h-4 w-4 mr-2" />
-                  {uploading ? 'Uploading...' : 'Select Image'}
+                  {uploading ? t('uploading') : t('selectImage')}
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -466,7 +471,7 @@ function PhotosContent() {
               <div className="bg-white shadow rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <ImageIcon className="h-5 w-5 mr-2 text-indigo-600" />
-                  Your Photos ({photos.length})
+                  {t('yourPhotos', { count: photos.length })}
                 </h2>
 
                 {loading ? (
@@ -475,7 +480,7 @@ function PhotosContent() {
                   </div>
                 ) : photos.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
-                    No photos uploaded yet
+                    {t('noPhotos')}
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -501,7 +506,7 @@ function PhotosContent() {
                             className="w-full h-32 object-cover"
                             onError={(e) => {
                               console.error('Failed to load image:', photo.presigned_url);
-                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23ddd" width="200" height="200"/><text x="50%" y="50%" text-anchor="middle" fill="%23999">Image Error</text></svg>';
+                              e.currentTarget.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23ddd" width="200" height="200"/><text x="50%" y="50%" text-anchor="middle" fill="%23999">${encodeURIComponent(t('imageError'))}</text></svg>`;
                             }}
                           />
                           <button
@@ -512,8 +517,8 @@ function PhotosContent() {
                             }}
                             disabled={deletingPhotoId === photo.id}
                             className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-gray-600 shadow hover:text-red-600 disabled:opacity-60"
-                            aria-label={`Delete ${photo.filename}`}
-                            title="Delete photo"
+                            aria-label={`${t('deletePhoto')} ${photo.filename}`}
+                            title={t('deletePhoto')}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -523,7 +528,7 @@ function PhotosContent() {
                             {photo.filename}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {photo.room_type || 'No room type'} • {photo.redesign_count} redesigns
+                            {photo.room_type || t('noRoomType')} • {t('redesignCount', { count: photo.redesign_count })}
                           </p>
                         </div>
                       </div>
@@ -538,7 +543,7 @@ function PhotosContent() {
               {!selectedPhoto ? (
                 <div className="bg-white shadow rounded-lg p-12 text-center">
                   <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Upload or select a photo to get started</p>
+                  <p className="text-gray-500">{t('selectPhotoPrompt')}</p>
                 </div>
               ) : (
                 <div className="bg-white shadow rounded-lg flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '600px' }}>
@@ -572,7 +577,7 @@ function PhotosContent() {
                         <button
                           onClick={() => { setEditingPhotoName(true); setPhotoNameDraft(selectedPhoto.filename); }}
                           className="flex items-center gap-1.5 group text-left w-full"
-                          title="Click to rename"
+                          title={t('clickToRename')}
                         >
                           <p className="text-sm font-medium text-gray-900 truncate">{selectedPhoto.filename}</p>
                           <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
@@ -585,12 +590,12 @@ function PhotosContent() {
                       disabled={savingRoomType}
                       className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                     >
-                      <option value="living room">Living Room</option>
-                      <option value="bedroom">Bedroom</option>
-                      <option value="kitchen">Kitchen</option>
-                      <option value="bathroom">Bathroom</option>
-                      <option value="dining room">Dining Room</option>
-                      <option value="home office">Home Office</option>
+                      <option value="living room">{t('roomTypes.living room')}</option>
+                      <option value="bedroom">{t('roomTypes.bedroom')}</option>
+                      <option value="kitchen">{t('roomTypes.kitchen')}</option>
+                      <option value="bathroom">{t('roomTypes.bathroom')}</option>
+                      <option value="dining room">{t('roomTypes.dining room')}</option>
+                      <option value="home office">{t('roomTypes.home office')}</option>
                     </select>
                   </div>
 
@@ -610,10 +615,10 @@ function PhotosContent() {
                       }`}
                     >
                       <Plus className="h-3 w-3" />
-                      New
+                      {t('newThread')}
                     </button>
                     {threads.map((thread, idx) => {
-                      const defaultLabel = thread.messages[0]?.style_preset?.replace(/_/g, ' ') || `Thread ${threads.length - idx}`;
+                      const defaultLabel = thread.messages[0]?.style_preset?.replace(/_/g, ' ') || `${t('thread')} ${threads.length - idx}`;
                       const displayName = threadNames[thread.id] || defaultLabel;
 
                       if (editingThreadId === thread.id) {
@@ -664,7 +669,7 @@ function PhotosContent() {
                               ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-300'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
-                          title="Double-click to rename"
+                          title={t('doubleClickToRename')}
                         >
                           <MessageSquare className="h-3 w-3" />
                           {displayName}
@@ -686,7 +691,7 @@ function PhotosContent() {
                           }`}
                         >
                           <LayoutGrid className="h-3 w-3" />
-                          All
+                          {t('allGallery')}
                           <span className="text-[10px] opacity-70">({redesigns.length})</span>
                         </button>
                       </>
@@ -699,30 +704,30 @@ function PhotosContent() {
                       {redesigns.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center py-12">
                           <ImageIcon className="h-12 w-12 text-gray-300 mb-4" />
-                          <h3 className="text-lg font-semibold text-gray-700 mb-1">No redesigns yet</h3>
+                          <h3 className="text-lg font-semibold text-gray-700 mb-1">{t('noRedesigns')}</h3>
                           <p className="text-sm text-gray-500 max-w-sm">
-                            Start a conversation to generate your first redesign.
+                            {t('noRedesignsDesc')}
                           </p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {redesigns.map((redesign) => {
-                            const parentThread = threads.find((t) =>
-                              t.messages.some((m) => m.id === redesign.id)
+                            const parentThread = threads.find((th) =>
+                              th.messages.some((m) => m.id === redesign.id)
                             );
                             const threadLabel = parentThread
-                              ? threadNames[parentThread.id] || parentThread.messages[0]?.style_preset?.replace(/_/g, ' ') || `Thread`
-                              : 'Unknown';
+                              ? threadNames[parentThread.id] || parentThread.messages[0]?.style_preset?.replace(/_/g, ' ') || t('thread')
+                              : t('thread');
 
                             const timeAgo = (() => {
                               const diff = Date.now() - new Date(redesign.created_at).getTime();
                               const mins = Math.floor(diff / 60000);
-                              if (mins < 1) return 'just now';
-                              if (mins < 60) return `${mins}m ago`;
+                              if (mins < 1) return t('timeAgo.justNow');
+                              if (mins < 60) return t('timeAgo.minutesAgo', { n: mins });
                               const hrs = Math.floor(mins / 60);
-                              if (hrs < 24) return `${hrs}h ago`;
+                              if (hrs < 24) return t('timeAgo.hoursAgo', { n: hrs });
                               const days = Math.floor(hrs / 24);
-                              return `${days}d ago`;
+                              return t('timeAgo.daysAgo', { n: days });
                             })();
 
                             return (
@@ -740,14 +745,14 @@ function PhotosContent() {
                                   {/* Hover overlay */}
                                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-start justify-between p-2 opacity-0 group-hover:opacity-100">
                                     <span className="px-1.5 py-0.5 bg-black/60 text-[10px] font-semibold text-white rounded uppercase">
-                                      {redesign.style_preset?.replace(/_/g, ' ') || 'Custom'}
+                                      {redesign.style_preset?.replace(/_/g, ' ') || t('custom')}
                                     </span>
                                     <a
                                       href={redesign.presigned_url}
                                       download
                                       onClick={(e) => e.stopPropagation()}
                                       className="p-1 bg-black/60 rounded text-white hover:bg-black/80 transition-colors"
-                                      title="Download"
+                                      title={tc('download')}
                                     >
                                       <Download className="h-3.5 w-3.5" />
                                     </a>
@@ -784,15 +789,15 @@ function PhotosContent() {
                       {/* 7c: Conversation Timeline */}
                       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                         {(() => {
-                          const activeThread = threads.find((t) => t.id === activeThreadId);
+                          const activeThread = threads.find((th) => th.id === activeThreadId);
                           if (!activeThread || activeThread.messages.length === 0) {
                             // Welcome / empty state
                             return (
                               <div className="flex flex-col items-center justify-center h-full text-center py-12">
                                 <Sparkles className="h-12 w-12 text-purple-300 mb-4" />
-                                <h3 className="text-lg font-semibold text-gray-700 mb-1">Start a new redesign conversation</h3>
+                                <h3 className="text-lg font-semibold text-gray-700 mb-1">{t('startConversation')}</h3>
                                 <p className="text-sm text-gray-500 max-w-sm">
-                                  Choose a style preset or write a custom prompt below to generate your first redesign.
+                                  {t('startConversationDesc')}
                                 </p>
                               </div>
                             );
@@ -821,7 +826,7 @@ function PhotosContent() {
                                       }}
                                       className="text-[11px] text-white/70 hover:text-white underline mt-1"
                                     >
-                                      {isExpanded ? 'Show less' : 'Show more'}
+                                      {isExpanded ? t('showLess') : t('showMore')}
                                     </button>
                                   )}
                                   <div className="flex items-center gap-2 mt-2">
@@ -853,7 +858,7 @@ function PhotosContent() {
                                   />
                                   <div className="flex items-center justify-between mt-2 px-1">
                                     <span className="text-[10px] text-gray-500">
-                                      Click to view fullscreen
+                                      {t('clickToView')}
                                     </span>
                                     <a
                                       href={redesign.presigned_url}
@@ -861,7 +866,7 @@ function PhotosContent() {
                                       className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-700"
                                     >
                                       <Download className="h-3 w-3 mr-1" />
-                                      Download
+                                      {tc('download')}
                                     </a>
                                   </div>
                                 </div>
@@ -899,7 +904,7 @@ function PhotosContent() {
                       {/* 7d: Input Area */}
                       <div className="border-t border-gray-200 px-4 py-3">
                         {(() => {
-                          const activeThread = threads.find((t) => t.id === activeThreadId);
+                          const activeThread = threads.find((th) => th.id === activeThreadId);
                           const isFollowUp = activeThread && activeThread.messages.length > 0;
 
                           return (
@@ -914,8 +919,9 @@ function PhotosContent() {
                                         onClick={() => {
                                           setSelectedPreset(preset.id);
                                           if (preset.prompt_template) {
+                                            const translatedRoomType = t(`roomTypes.${roomType}`);
                                             setCustomPrompt(
-                                              preset.prompt_template.replace(/\{room_type\}/g, roomType)
+                                              preset.prompt_template.replace(/\{room_type\}/g, translatedRoomType)
                                             );
                                           } else {
                                             setCustomPrompt('');
@@ -951,7 +957,7 @@ function PhotosContent() {
                                       }
                                     }
                                   }}
-                                  placeholder={isFollowUp ? 'Describe refinements...' : 'Describe your desired redesign...'}
+                                  placeholder={isFollowUp ? t('refinePlaceholder') : t('promptPlaceholder')}
                                   rows={1}
                                   style={{ minHeight: '40px', maxHeight: '200px' }}
                                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-y-auto"
@@ -973,8 +979,8 @@ function PhotosContent() {
 
                               <p className="text-[11px] text-gray-400 mt-1.5">
                                 {isFollowUp
-                                  ? 'Refine the previous result. The AI remembers the conversation context.'
-                                  : 'Choose a style preset or write a custom prompt. Enter to send, Shift+Enter for newline.'}
+                                  ? t('refineHint')
+                                  : t('promptHint')}
                               </p>
                             </>
                           );
@@ -992,9 +998,9 @@ function PhotosContent() {
       {photoToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">Delete photo</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t('deletePhotoTitle')}</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Delete &quot;{photoToDelete.filename}&quot; and all its redesigns? This cannot be undone.
+              {t('deletePhotoMessage', { filename: photoToDelete.filename })}
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -1003,7 +1009,7 @@ function PhotosContent() {
                 className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                 disabled={deletingPhotoId === photoToDelete.id}
               >
-                Cancel
+                {tc('cancel')}
               </button>
               <button
                 type="button"
@@ -1011,7 +1017,7 @@ function PhotosContent() {
                 className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                 disabled={deletingPhotoId === photoToDelete.id}
               >
-                {deletingPhotoId === photoToDelete.id ? 'Deleting...' : 'Delete photo'}
+                {deletingPhotoId === photoToDelete.id ? tc('deleting') : t('deletePhoto')}
               </button>
             </div>
           </div>
@@ -1031,7 +1037,7 @@ function PhotosContent() {
               <button
                 onClick={() => setShowComparison(!showComparison)}
                 className="rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"
-                title={showComparison ? 'Fullscreen redesign' : 'Compare with original'}
+                title={showComparison ? t('fullscreenTooltip') : t('compareTooltip')}
               >
                 {showComparison ? <Maximize2 className="h-5 w-5" /> : <Columns className="h-5 w-5" />}
               </button>
@@ -1045,7 +1051,7 @@ function PhotosContent() {
             {showComparison ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="mb-2 text-center text-sm font-semibold text-white/80">Original</p>
+                  <p className="mb-2 text-center text-sm font-semibold text-white/80">{t('original')}</p>
                   <img
                     src={selectedPhoto.presigned_url}
                     alt={selectedPhoto.filename}
@@ -1053,7 +1059,7 @@ function PhotosContent() {
                   />
                 </div>
                 <div>
-                  <p className="mb-2 text-center text-sm font-semibold text-white/80">Redesign</p>
+                  <p className="mb-2 text-center text-sm font-semibold text-white/80">{t('redesign')}</p>
                   <img
                     src={selectedRedesign.presigned_url}
                     alt={`Redesign ${selectedRedesign.id}`}
@@ -1070,7 +1076,7 @@ function PhotosContent() {
             )}
             <div className="mt-4 max-h-40 overflow-auto rounded-lg bg-white/95 p-4 text-sm text-gray-700">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Prompt
+                {t('prompt')}
               </p>
               <p className="mt-2 whitespace-pre-line">{selectedRedesign.prompt}</p>
             </div>

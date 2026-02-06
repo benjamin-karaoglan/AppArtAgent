@@ -10,6 +10,7 @@ import statistics
 import re
 
 from app.models.property import DVFRecord, DVFGroupedTransaction, Property
+from app.core.i18n import translate
 
 
 class DVFService:
@@ -586,7 +587,8 @@ class DVFService:
         surface_area: float,
         comparable_sales: List[DVFRecord],
         exclude_indices: Optional[List[int]] = None,
-        apply_time_adjustment: bool = False
+        apply_time_adjustment: bool = False,
+        locale: str = "fr"
     ) -> Dict[str, Any]:
         """
         Calculate comprehensive price analysis based on comparable sales.
@@ -597,6 +599,7 @@ class DVFService:
             comparable_sales: List of comparable sales
             exclude_indices: Optional list of indices to exclude from calculation (for outliers)
             apply_time_adjustment: Whether to adjust prices for time (default False for simple analysis)
+            locale: Language for recommendation strings ('fr' or 'en')
         """
         if not comparable_sales:
             return {
@@ -604,7 +607,7 @@ class DVFService:
                 "price_per_sqm": asking_price / surface_area if surface_area else 0,
                 "market_avg_price_per_sqm": 0,
                 "price_deviation_percent": 0,
-                "recommendation": "Insufficient data",
+                "recommendation": translate("insufficient_data", locale),
                 "confidence_score": 0,
                 "market_trend_annual": 0,
             }
@@ -619,7 +622,7 @@ class DVFService:
                 "price_per_sqm": asking_price / surface_area if surface_area else 0,
                 "market_avg_price_per_sqm": 0,
                 "price_deviation_percent": 0,
-                "recommendation": "Insufficient data (all sales excluded)",
+                "recommendation": translate("insufficient_data_excluded", locale),
                 "confidence_score": 0,
                 "market_trend_annual": 0,
             }
@@ -649,7 +652,7 @@ class DVFService:
                 "price_per_sqm": asking_price / surface_area if surface_area else 0,
                 "market_avg_price_per_sqm": 0,
                 "price_deviation_percent": 0,
-                "recommendation": "Insufficient data",
+                "recommendation": translate("insufficient_data", locale),
                 "confidence_score": 0,
                 "market_trend_annual": 0,
             }
@@ -670,17 +673,17 @@ class DVFService:
 
         # Generate recommendation
         if price_deviation_percent < -10:
-            recommendation = "Excellent deal - Below market price"
+            recommendation = translate("excellent_deal", locale)
         elif price_deviation_percent < -5:
-            recommendation = "Good deal - Slightly below market"
+            recommendation = translate("good_deal", locale)
         elif price_deviation_percent < 5:
-            recommendation = "Fair price - At market value"
+            recommendation = translate("fair_price", locale)
         elif price_deviation_percent < 10:
-            recommendation = "Slightly overpriced - Room for negotiation"
+            recommendation = translate("slightly_overpriced", locale)
         elif price_deviation_percent < 20:
-            recommendation = "Overpriced - Significant negotiation needed"
+            recommendation = translate("overpriced", locale)
         else:
-            recommendation = "Heavily overpriced - Reconsider or negotiate heavily"
+            recommendation = translate("heavily_overpriced", locale)
 
         # Confidence score based on number of comparables (20 is ideal)
         confidence_score = min(100, (len(filtered_sales) / 20) * 100)

@@ -15,6 +15,7 @@ from google import genai
 from google.genai import types
 
 from app.core.config import settings
+from app.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -135,15 +136,7 @@ class DocumentProcessor:
             return "unknown"
 
         parts = self._build_image_parts(images[:3])
-        parts.append(types.Part.from_text(text=f"""Classify this French property document: {filename}
-
-Return ONLY ONE of these categories:
-- pv_ag: Procès-verbal d'assemblée générale (meeting minutes)
-- diags: Diagnostic technique (DPE, amiante, plomb, etc.)
-- taxe_fonciere: Property tax notice
-- charges: Copropriété charges (service fees)
-
-Respond with ONLY the category name."""))
+        parts.append(types.Part.from_text(text=get_prompt("dp_classify_document", filename=filename)))
 
         try:
             response = self.client.models.generate_content(
@@ -196,68 +189,27 @@ Respond with ONLY the category name."""))
                 "one_time_costs": 0.0
             }
 
-    async def process_pv_ag(self, document: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_pv_ag(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
         """Process PV d'AG document."""
-        return await self._process_with_prompt(document, f"""Analyze this PV AG: {document.get('filename', '')}
+        prompt = get_prompt("dp_process_pv_ag", filename=document.get('filename', ''), output_language=output_language)
+        return await self._process_with_prompt(document, prompt)
 
-Extract JSON:
-{{
-  "summary": "Brief summary",
-  "key_insights": ["insight1", "insight2"],
-  "meeting_date": "YYYY-MM-DD or null",
-  "decisions": ["decision1", "decision2"],
-  "votes": [{{"topic": "...", "result": "approved/rejected"}}],
-  "estimated_annual_cost": 0.0,
-  "one_time_costs": 0.0
-}}""")
-
-    async def process_diagnostic(self, document: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_diagnostic(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
         """Process diagnostic document."""
-        return await self._process_with_prompt(document, f"""Analyze this diagnostic: {document.get('filename', '')}
+        prompt = get_prompt("dp_process_diagnostic", filename=document.get('filename', ''), output_language=output_language)
+        return await self._process_with_prompt(document, prompt)
 
-Extract JSON:
-{{
-  "summary": "Brief summary",
-  "subcategory": "DPE/amiante/plomb/termites/gaz/electricite",
-  "key_insights": ["insight1", "insight2"],
-  "diagnostic_date": "YYYY-MM-DD or null",
-  "issues_found": ["issue1", "issue2"],
-  "recommendations": ["recommendation1"],
-  "estimated_annual_cost": 0.0,
-  "one_time_costs": 0.0
-}}""")
-
-    async def process_tax(self, document: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_tax(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
         """Process taxe foncière document."""
-        return await self._process_with_prompt(document, f"""Analyze this taxe foncière: {document.get('filename', '')}
+        prompt = get_prompt("dp_process_tax", filename=document.get('filename', ''), output_language=output_language)
+        return await self._process_with_prompt(document, prompt)
 
-Extract JSON:
-{{
-  "summary": "Brief summary",
-  "key_insights": ["insight1", "insight2"],
-  "tax_year": "YYYY or null",
-  "total_amount": 0.0,
-  "due_date": "YYYY-MM-DD or null",
-  "estimated_annual_cost": 0.0,
-  "one_time_costs": 0.0
-}}""")
-
-    async def process_charges(self, document: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_charges(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
         """Process charges document."""
-        return await self._process_with_prompt(document, f"""Analyze this charges document: {document.get('filename', '')}
+        prompt = get_prompt("dp_process_charges", filename=document.get('filename', ''), output_language=output_language)
+        return await self._process_with_prompt(document, prompt)
 
-Extract JSON:
-{{
-  "summary": "Brief summary",
-  "key_insights": ["insight1", "insight2"],
-  "period": "Q1 2024 or similar",
-  "total_amount": 0.0,
-  "breakdown": [{{"category": "...", "amount": 0.0}}],
-  "estimated_annual_cost": 0.0,
-  "one_time_costs": 0.0
-}}""")
-
-    async def process_document(self, document: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_document(self, document: Dict[str, Any], output_language: str = "French") -> Dict[str, Any]:
         """Process a single document: classify and analyze."""
         filename = document.get("filename", "")
         document_id = document.get("document_id")
@@ -276,7 +228,7 @@ Extract JSON:
 
         processor = processors.get(category)
         if processor:
-            analysis = await processor(document)
+            analysis = await processor(document, output_language=output_language)
         else:
             analysis = {
                 "summary": f"Unable to classify {filename}",
@@ -292,7 +244,7 @@ Extract JSON:
             "document_id": document_id
         }
 
-    async def synthesize_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def synthesize_results(self, results: List[Dict[str, Any]], output_language: str = "French") -> Dict[str, Any]:
         """Synthesize all results into overall summary."""
         logger.info(f"Synthesizing {len(results)} documents")
 
@@ -301,19 +253,7 @@ Extract JSON:
             for r in results
         )
 
-        prompt = f"""Synthesize these property documents:
-
-{summaries}
-
-Return JSON:
-{{
-  "summary": "Overall summary (2-3 sentences)",
-  "total_annual_costs": 0.0,
-  "total_one_time_costs": 0.0,
-  "risk_level": "low/medium/high",
-  "key_findings": ["finding1", "finding2", "finding3"],
-  "recommendations": ["recommendation1", "recommendation2"]
-}}"""
+        prompt = get_prompt("dp_synthesize_results", summaries=summaries, output_language=output_language)
 
         try:
             response = self.client.models.generate_content(
@@ -334,12 +274,12 @@ Return JSON:
                 "recommendations": ["Review individual documents"]
             }
 
-    async def process_bulk_upload(self, documents: List[Dict[str, Any]], property_id: int) -> Dict[str, Any]:
+    async def process_bulk_upload(self, documents: List[Dict[str, Any]], property_id: int, output_language: str = "French") -> Dict[str, Any]:
         """Process multiple documents sequentially."""
         logger.info(f"Bulk processing: {len(documents)} documents for property {property_id}")
 
-        results = [await self.process_document(doc) for doc in documents]
-        synthesis = await self.synthesize_results(results)
+        results = [await self.process_document(doc, output_language=output_language) for doc in documents]
+        synthesis = await self.synthesize_results(results, output_language=output_language)
 
         return {"processing_results": results, "synthesis": synthesis}
 

@@ -27,3 +27,5 @@ Create a detailed report with:
 9. Recommendations
 
 Make the report clear, actionable, and data-driven.
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

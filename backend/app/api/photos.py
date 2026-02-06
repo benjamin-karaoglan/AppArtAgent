@@ -1,6 +1,6 @@
 """Photos API routes for AI-powered apartment redesign using Gemini 2.5 Flash."""
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File, Form
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import uuid
 
 from app.core.database import get_db
+from app.core.i18n import get_local, translate
 from app.core.security import get_current_user
 from app.models.photo import Photo, PhotoRedesign
 from app.models.property import Property
@@ -35,13 +36,36 @@ router = APIRouter()
 
 
 @router.get("/presets")
-async def get_style_presets() -> StylePresetsResponse:
+async def get_style_presets(request: Request) -> StylePresetsResponse:
     """Get available design style presets."""
-    return StylePresetsResponse()
+    locale = get_local(request)
+
+    # Build the default presets list but with translated name/description
+    presets = StylePresetsResponse()
+    translated_presets = []
+    for preset in presets.presets:
+        preset_id = preset["id"]
+        translated = dict(preset)
+        if preset_id == "modern_norwegian":
+            translated["name"] = translate("preset_modern_norwegian_name", locale)
+            translated["description"] = translate("preset_modern_norwegian_desc", locale)
+            translated["prompt_template"] = translate("preset_modern_norwegian_prompt", locale)
+        elif preset_id == "minimalist_scandinavian":
+            translated["name"] = translate("preset_minimalist_scandinavian_name", locale)
+            translated["description"] = translate("preset_minimalist_scandinavian_desc", locale)
+            translated["prompt_template"] = translate("preset_minimalist_scandinavian_prompt", locale)
+        elif preset_id == "cozy_hygge":
+            translated["name"] = translate("preset_cozy_hygge_name", locale)
+            translated["description"] = translate("preset_cozy_hygge_desc", locale)
+            translated["prompt_template"] = translate("preset_cozy_hygge_prompt", locale)
+        translated_presets.append(translated)
+
+    return StylePresetsResponse(presets=translated_presets)
 
 
 @router.post("/upload", response_model=PhotoResponse)
 async def upload_photo(
+    request: Request,
     file: UploadFile = File(...),
     property_id: Optional[int] = Form(None),
     room_type: Optional[str] = Form(None),
@@ -61,12 +85,14 @@ async def upload_photo(
     Returns:
         Uploaded photo details with presigned URL
     """
+    locale = get_local(request)
+
     # Validate file type
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
     if not file.content_type or file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be an image (JPEG, JPG, PNG, or WebP)"
+            detail=translate("file_must_be_image", locale)
         )
 
     # Validate property ownership if provided
@@ -79,7 +105,7 @@ async def upload_photo(
         if not property:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Property not found"
+                detail=translate("property_not_found", locale)
             )
 
     try:
@@ -90,7 +116,7 @@ async def upload_photo(
         # Get user UUID for path structure
         user = db.query(User).filter(User.id == int(current_user)).first()
         if not user or not user.uuid:
-            raise HTTPException(status_code=500, detail="User UUID not found")
+            raise HTTPException(status_code=500, detail=translate("user_uuid_not_found", locale))
         user_uuid = user.uuid
 
         # Generate UUID for the photo path
@@ -153,14 +179,15 @@ async def upload_photo(
         logger.error(f"Error uploading photo: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload photo: {str(e)}"
+            detail=translate("failed_upload_photo", locale, error=str(e))
         )
 
 
 @router.post("/{photo_id}/redesign", response_model=RedesignResponse)
 async def create_redesign(
     photo_id: int,
-    request: RedesignRequest,
+    redesign_request: RedesignRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
@@ -169,11 +196,13 @@ async def create_redesign(
 
     Args:
         photo_id: ID of the original photo
-        request: Redesign parameters (style_preset or custom_prompt)
+        redesign_request: Redesign parameters (style_preset or custom_prompt)
 
     Returns:
         Generated redesign details with presigned URL
     """
+    locale = get_local(request)
+
     # Get original photo
     photo = db.query(Photo).filter(
         Photo.id == photo_id,
@@ -183,20 +212,20 @@ async def create_redesign(
     if not photo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Photo not found"
+            detail=translate("photo_not_found", locale)
         )
 
     # Get user UUID for path structure
     user = db.query(User).filter(User.id == int(current_user)).first()
     if not user or not user.uuid:
-        raise HTTPException(status_code=500, detail="User UUID not found")
+        raise HTTPException(status_code=500, detail=translate("user_uuid_not_found", locale))
     user_uuid = user.uuid
 
     # Validate request
-    if not request.style_preset and not request.custom_prompt:
+    if not redesign_request.style_preset and not redesign_request.custom_prompt:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either style_preset or custom_prompt must be provided"
+            detail=translate("style_or_prompt_required", locale)
         )
 
     try:
@@ -205,23 +234,23 @@ async def create_redesign(
         # Build prompt
         gemini_service = get_gemini_service()
 
-        if request.style_preset:
+        if redesign_request.style_preset:
             prompt = gemini_service.create_detailed_prompt(
-                base_style=request.style_preset,
-                room_type=request.room_type or photo.room_type or "living room",
-                additional_details=request.additional_details
+                base_style=redesign_request.style_preset,
+                room_type=redesign_request.room_type or photo.room_type or "living room",
+                additional_details=redesign_request.additional_details
             )
         else:
-            prompt = request.custom_prompt
+            prompt = redesign_request.custom_prompt
 
         # Handle multi-turn if parent redesign specified
         conversation_history = None
         is_multi_turn = False
         input_image_data = None
 
-        if request.parent_redesign_id:
+        if redesign_request.parent_redesign_id:
             parent = db.query(PhotoRedesign).filter(
-                PhotoRedesign.id == request.parent_redesign_id,
+                PhotoRedesign.id == redesign_request.parent_redesign_id,
                 PhotoRedesign.photo_id == photo_id
             ).first()
 
@@ -251,7 +280,7 @@ async def create_redesign(
         result = await gemini_service.redesign_apartment(
             image_data=input_image_data,
             prompt=prompt,
-            aspect_ratio=request.aspect_ratio,
+            aspect_ratio=redesign_request.aspect_ratio,
             conversation_history=conversation_history
         )
 
@@ -288,13 +317,13 @@ async def create_redesign(
             storage_key=storage_key,
             storage_bucket="photos",
             file_size=len(result["image_data"]),
-            style_preset=request.style_preset,
+            style_preset=redesign_request.style_preset,
             prompt=prompt,
-            aspect_ratio=request.aspect_ratio,
+            aspect_ratio=redesign_request.aspect_ratio,
             model_used=result["model"],
             conversation_history=new_conversation_history,
             is_multi_turn=is_multi_turn,
-            parent_redesign_id=request.parent_redesign_id,
+            parent_redesign_id=redesign_request.parent_redesign_id,
             generation_time_ms=generation_time_ms
         )
 
@@ -340,12 +369,13 @@ async def create_redesign(
         logger.error(f"Error creating redesign: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate redesign: {str(e)}"
+            detail=translate("failed_generate_redesign", locale, error=str(e))
         )
 
 
 @router.get("/", response_model=PhotoListResponse)
 async def list_photos(
+    request: Request,
     property_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
@@ -359,6 +389,8 @@ async def list_photos(
     Returns:
         List of photos with presigned URLs
     """
+    locale = get_local(request)
+
     query = db.query(Photo).filter(Photo.user_id == int(current_user))
 
     if property_id:
@@ -413,6 +445,7 @@ async def list_photos(
 @router.get("/{photo_id}/redesigns", response_model=RedesignListResponse)
 async def list_redesigns(
     photo_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
@@ -425,6 +458,8 @@ async def list_redesigns(
     Returns:
         List of redesigns with presigned URLs
     """
+    locale = get_local(request)
+
     # Verify photo ownership
     photo = db.query(Photo).filter(
         Photo.id == photo_id,
@@ -434,7 +469,7 @@ async def list_redesigns(
     if not photo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Photo not found"
+            detail=translate("photo_not_found", locale)
         )
 
     redesigns = db.query(PhotoRedesign).filter(
@@ -480,6 +515,7 @@ async def list_redesigns(
 @router.delete("/{photo_id}")
 async def delete_photo(
     photo_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
@@ -492,6 +528,8 @@ async def delete_photo(
     Returns:
         Success message
     """
+    locale = get_local(request)
+
     photo = db.query(Photo).filter(
         Photo.id == photo_id,
         Photo.user_id == int(current_user)
@@ -500,7 +538,7 @@ async def delete_photo(
     if not photo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Photo not found"
+            detail=translate("photo_not_found", locale)
         )
 
     try:
@@ -535,7 +573,7 @@ async def delete_photo(
         logger.error(f"Error deleting photo: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete photo: {str(e)}"
+            detail=translate("failed_delete_photo", locale, error=str(e))
         )
 
 
@@ -543,12 +581,15 @@ async def delete_photo(
 async def update_photo(
     photo_id: int,
     update: PhotoUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     """
     Update photo metadata.
     """
+    locale = get_local(request)
+
     photo = db.query(Photo).filter(
         Photo.id == photo_id,
         Photo.user_id == int(current_user)
@@ -557,7 +598,7 @@ async def update_photo(
     if not photo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Photo not found"
+            detail=translate("photo_not_found", locale)
         )
 
     if update.room_type is not None:

@@ -63,7 +63,8 @@ class BulkProcessor:
         self,
         workflow_id: str,
         property_id: int,
-        document_uploads: List[Dict[str, Any]]
+        document_uploads: List[Dict[str, Any]],
+        output_language: str = "French"
     ) -> None:
         """Process bulk document upload asynchronously."""
         logger.info(f"Starting bulk processing: {workflow_id}, {len(document_uploads)} documents")
@@ -97,7 +98,7 @@ class BulkProcessor:
                     "filename": upload["filename"],
                     "file_data_base64": images_list[i],
                     "document_id": upload["document_id"]
-                })
+                }, output_language=output_language)
                 results.append(result)
 
                 # Save immediately
@@ -106,7 +107,7 @@ class BulkProcessor:
 
             # Step 4: Synthesize
             logger.info("Synthesizing results...")
-            synthesis = await processor.synthesize_results(results)
+            synthesis = await processor.synthesize_results(results, output_language=output_language)
 
             # Step 5: Save synthesis
             await self._save_synthesis(db, synthesis, property_id)
@@ -209,11 +210,12 @@ class BulkProcessor:
         self,
         workflow_id: str,
         property_id: int,
-        document_uploads: List[Dict[str, Any]]
+        document_uploads: List[Dict[str, Any]],
+        output_language: str = "French"
     ) -> None:
         """Start background processing task."""
         task = asyncio.create_task(
-            self.process_bulk_upload(workflow_id, property_id, document_uploads)
+            self.process_bulk_upload(workflow_id, property_id, document_uploads, output_language=output_language)
         )
         self.active_tasks[workflow_id] = task
         logger.info(f"Started background task: {workflow_id}")

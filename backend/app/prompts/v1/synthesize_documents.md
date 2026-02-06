@@ -31,3 +31,5 @@ Return a JSON object with this structure:
     "charges": {{"count": 0, "summary": ""}}
   }}
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

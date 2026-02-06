@@ -34,3 +34,5 @@ Provide your analysis in JSON format with the following structure:
     "key_findings": ["finding 1", "finding 2"],
     "recommendations": ["recommendation 1", "recommendation 2"]
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

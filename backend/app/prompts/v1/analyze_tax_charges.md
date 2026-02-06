@@ -26,3 +26,5 @@ Provide your analysis in JSON format:
     }},
     "summary": "Brief summary"
 }}
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

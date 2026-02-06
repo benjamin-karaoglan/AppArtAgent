@@ -12,3 +12,5 @@ Analyze this apartment photo and provide:
 5. Style transformation description
 
 Provide detailed, actionable recommendations.
+
+IMPORTANT: Generate all text output (summary, key_findings, recommendations, issues, descriptions) in {output_language}.

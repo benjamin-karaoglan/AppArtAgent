@@ -16,6 +16,7 @@ from google.genai import types
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.prompts import get_prompt
 from app.models.document import Document, DocumentSummary
 from app.models.user import User
 from app.services.storage import get_storage_service
@@ -155,7 +156,7 @@ class DocumentParser:
 
         return json.loads(json_text)
 
-    async def parse_pv_ag_multimodal(self, pdf_path: str, storage_key: str = None, storage_bucket: str = None) -> Dict[str, Any]:
+    async def parse_pv_ag_multimodal(self, pdf_path: str, storage_key: str = None, storage_bucket: str = None, output_language: str = "French") -> Dict[str, Any]:
         """Parse PV d'AG using multimodal approach."""
         logger.info(f"Parsing PV d'AG: {pdf_path}, storage_key: {storage_key}")
         images = self.pdf_to_images_base64(pdf_path, max_pages=15, storage_key=storage_key, storage_bucket=storage_bucket)
@@ -163,22 +164,12 @@ class DocumentParser:
             return {"error": "Could not extract images", "summary": "Failed to parse"}
 
         try:
-            return await self._analyze_with_images(images, """Analyze this PV d'AG and return JSON:
-{
-    "meeting_date": "YYYY-MM-DD or null",
-    "summary": "2-3 sentence summary",
-    "key_insights": ["insight1", "insight2", "insight3"],
-    "upcoming_works": [{"description": "...", "estimated_cost": 0, "timeline": "...", "urgency": "high/medium/low"}],
-    "financial_health": {"annual_budget": 0, "reserves": 0, "outstanding_debts": 0, "health_status": "good/fair/poor"},
-    "estimated_annual_cost": 0,
-    "one_time_costs": [{"item": "...", "amount": 0, "timeline": "..."}],
-    "risk_assessment": {"overall_risk": "low/medium/high", "risk_factors": [], "recommendations": []}
-}""")
+            return await self._analyze_with_images(images, get_prompt("parse_pv_ag", output_language=output_language))
         except Exception as e:
             logger.error(f"PV d'AG parsing error: {e}")
             return {"error": str(e), "summary": "Failed to parse", "key_insights": []}
 
-    async def parse_diagnostic_multimodal(self, pdf_path: str, subcategory: str, storage_key: str = None, storage_bucket: str = None) -> Dict[str, Any]:
+    async def parse_diagnostic_multimodal(self, pdf_path: str, subcategory: str, storage_key: str = None, storage_bucket: str = None, output_language: str = "French") -> Dict[str, Any]:
         """Parse diagnostic document."""
         logger.info(f"Parsing diagnostic ({subcategory}): {pdf_path}, storage_key: {storage_key}")
         images = self.pdf_to_images_base64(pdf_path, max_pages=10, storage_key=storage_key, storage_bucket=storage_bucket)
@@ -186,23 +177,12 @@ class DocumentParser:
             return {"error": "Could not extract images", "summary": "Failed to parse"}
 
         try:
-            return await self._analyze_with_images(images, f"""Analyze this {subcategory} diagnostic and return JSON:
-{{
-    "diagnostic_date": "YYYY-MM-DD or null",
-    "summary": "2-3 sentence summary",
-    "key_insights": ["insight1", "insight2", "insight3"],
-    "compliance_status": "compliant/non-compliant/needs-work",
-    "issues_found": [{{"issue": "...", "severity": "critical/major/minor", "estimated_fix_cost": 0}}],
-    "ratings": {{"dpe_rating": "A-G or null", "ges_rating": "A-G or null"}},
-    "estimated_annual_cost": 0,
-    "one_time_costs": [{{"item": "...", "amount": 0, "urgency": "high/medium/low"}}],
-    "recommendations": []
-}}""")
+            return await self._analyze_with_images(images, get_prompt("parse_diagnostic", subcategory=subcategory, output_language=output_language))
         except Exception as e:
             logger.error(f"Diagnostic parsing error: {e}")
             return {"error": str(e), "summary": "Failed to parse", "key_insights": []}
 
-    async def parse_tax_charges_multimodal(self, pdf_path: str, category: str, storage_key: str = None, storage_bucket: str = None) -> Dict[str, Any]:
+    async def parse_tax_charges_multimodal(self, pdf_path: str, category: str, storage_key: str = None, storage_bucket: str = None, output_language: str = "French") -> Dict[str, Any]:
         """Parse tax or charges document."""
         logger.info(f"Parsing {category}: {pdf_path}, storage_key: {storage_key}")
         images = self.pdf_to_images_base64(pdf_path, max_pages=5, storage_key=storage_key, storage_bucket=storage_bucket)
@@ -211,20 +191,12 @@ class DocumentParser:
 
         doc_type = "taxe foncière" if category == "taxe_fonciere" else "charges de copropriété"
         try:
-            return await self._analyze_with_images(images, f"""Analyze this {doc_type} and return JSON:
-{{
-    "document_year": "YYYY",
-    "summary": "2-3 sentence summary",
-    "key_insights": ["insight1", "insight2"],
-    "total_annual_amount": 0,
-    "breakdown": {{}},
-    "estimated_annual_cost": 0
-}}""")
+            return await self._analyze_with_images(images, get_prompt("parse_tax_charges", doc_type=doc_type, output_language=output_language))
         except Exception as e:
             logger.error(f"Tax/charges parsing error: {e}")
             return {"error": str(e), "summary": "Failed to parse", "key_insights": []}
 
-    async def parse_document(self, document: Document, db: Session) -> Document:
+    async def parse_document(self, document: Document, db: Session, output_language: str = "French") -> Document:
         """Parse a document and update the database record."""
         logger.info(f"Parsing document ID {document.id}, category: {document.document_category}, storage_key: {document.storage_key}")
 
@@ -232,26 +204,29 @@ class DocumentParser:
         # Pass storage_key and storage_bucket for cloud storage support
         storage_key = document.storage_key
         storage_bucket = document.storage_bucket
-        
+
         if document.document_category == "pv_ag":
             parsed_data = await self.parse_pv_ag_multimodal(
-                document.file_path, 
-                storage_key=storage_key, 
-                storage_bucket=storage_bucket
+                document.file_path,
+                storage_key=storage_key,
+                storage_bucket=storage_bucket,
+                output_language=output_language
             )
         elif document.document_category == "diags":
             parsed_data = await self.parse_diagnostic_multimodal(
-                document.file_path, 
+                document.file_path,
                 document.document_subcategory or "general",
                 storage_key=storage_key,
-                storage_bucket=storage_bucket
+                storage_bucket=storage_bucket,
+                output_language=output_language
             )
         elif document.document_category in ["taxe_fonciere", "charges"]:
             parsed_data = await self.parse_tax_charges_multimodal(
-                document.file_path, 
+                document.file_path,
                 document.document_category,
                 storage_key=storage_key,
-                storage_bucket=storage_bucket
+                storage_bucket=storage_bucket,
+                output_language=output_language
             )
 
         if parsed_data and "error" not in parsed_data:
@@ -288,7 +263,7 @@ class DocumentParser:
 
         return document
 
-    async def aggregate_pv_ag_summaries(self, property_id: int, db: Session) -> Optional[DocumentSummary]:
+    async def aggregate_pv_ag_summaries(self, property_id: int, db: Session, output_language: str = "French") -> Optional[DocumentSummary]:
         """Aggregate all PV d'AG documents into one summary."""
         documents = db.query(Document).filter(
             Document.property_id == property_id,
@@ -311,19 +286,12 @@ class DocumentParser:
             return None
 
         try:
-            parts = [types.Part.from_text(text=f"""Synthesize these PV d'AG documents into JSON:
-{json.dumps(all_data, default=str)[:15000]}
-
-Return JSON:
-{{
-    "summary": "Overall summary",
-    "key_findings": [],
-    "copropriete_insights": {{}},
-    "total_estimated_annual_cost": 0,
-    "total_one_time_costs": 0,
-    "cost_breakdown": {{}},
-    "recommendations": []
-}}""")]
+            prompt = get_prompt(
+                "aggregate_pv_ag",
+                documents_json=json.dumps(all_data, default=str)[:15000],
+                output_language=output_language
+            )
+            parts = [types.Part.from_text(text=prompt)]
 
             response = self.client.models.generate_content(
                 model=self.model,
@@ -357,7 +325,7 @@ Return JSON:
             logger.error(f"Aggregation error: {e}")
             return None
 
-    async def aggregate_diagnostic_summaries(self, property_id: int, db: Session) -> Optional[DocumentSummary]:
+    async def aggregate_diagnostic_summaries(self, property_id: int, db: Session, output_language: str = "French") -> Optional[DocumentSummary]:
         """Aggregate all diagnostic documents into one summary."""
         documents = db.query(Document).filter(
             Document.property_id == property_id,
@@ -380,18 +348,12 @@ Return JSON:
             return None
 
         try:
-            parts = [types.Part.from_text(text=f"""Synthesize these diagnostics into JSON:
-{json.dumps(all_data, default=str)[:15000]}
-
-Return JSON:
-{{
-    "summary": "Overall summary",
-    "key_findings": [],
-    "diagnostic_issues": {{}},
-    "total_estimated_annual_cost": 0,
-    "total_one_time_costs": 0,
-    "recommendations": []
-}}""")]
+            prompt = get_prompt(
+                "aggregate_diagnostic",
+                documents_json=json.dumps(all_data, default=str)[:15000],
+                output_language=output_language
+            )
+            parts = [types.Part.from_text(text=prompt)]
 
             response = self.client.models.generate_content(
                 model=self.model,
