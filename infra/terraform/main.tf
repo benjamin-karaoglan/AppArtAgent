@@ -27,12 +27,8 @@ terraform {
     }
   }
 
-  # Backend configuration for state storage
-  # Uncomment and configure for team usage
-  # backend "gcs" {
-  #   bucket = "appart-agent-tfstate"
-  #   prefix = "terraform/state"
-  # }
+  # Remote state backend configured in backend.tf
+  # See backend.hcl.example for setup instructions
 }
 
 # =============================================================================
