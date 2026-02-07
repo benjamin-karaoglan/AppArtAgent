@@ -34,8 +34,12 @@ env:
   GCP_REGION: ${{ secrets.GCP_REGION || 'europe-west1' }}
   ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION || 'europe-west1' }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/appart-agent
   CLOUD_SQL_INSTANCE: ${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION || 'europe-west1' }}:appart-agent-db
-  # Cloud Run URL is STABLE - it never changes after service creation
-  BACKEND_URL: https://appart-backend-rujxdolp6a-ew.a.run.app
+  # IMPORTANT: Use the custom domain, NOT the Cloud Run URL.
+  # NEXT_PUBLIC_API_URL is baked into the frontend JS at build time.
+  # The session cookie has Domain=.appartagent.com, so API requests MUST go
+  # to api.appartagent.com (same domain) for the browser to send the cookie.
+  # Using *.run.app would cause auth to fail (different domain = no cookie).
+  BACKEND_URL: https://api.appartagent.com
 
 jobs:
   # ===========================================================================
