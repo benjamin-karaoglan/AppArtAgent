@@ -16,8 +16,10 @@ from app.core.database import get_db
 
 logger = logging.getLogger(__name__)
 
-# Better Auth cookie name
+# Better Auth cookie names
+# In production over HTTPS, Better Auth adds __Secure- prefix to cookies
 BETTER_AUTH_SESSION_COOKIE = "better-auth.session_token"
+BETTER_AUTH_SESSION_COOKIE_SECURE = "__Secure-better-auth.session_token"
 
 
 async def get_better_auth_session(request: Request) -> Optional[str]:
@@ -27,15 +29,28 @@ async def get_better_auth_session(request: Request) -> Optional[str]:
     Better Auth cookie format is "token.signature" - we only need the token
     part for database lookup.
 
+    In production (HTTPS), Better Auth uses __Secure- prefix for cookies.
+    We check both prefixed and unprefixed names for compatibility.
+
     Returns:
         Session token string or None if not present
     """
-    cookie_value = request.cookies.get(BETTER_AUTH_SESSION_COOKIE)
-    if not cookie_value:
-        return None
+    # Try __Secure- prefixed cookie first (production HTTPS)
+    cookie_value = request.cookies.get(BETTER_AUTH_SESSION_COOKIE_SECURE)
+    if cookie_value:
+        logger.info("Found session cookie with __Secure- prefix")
+        return cookie_value.split(".")[0]
 
-    # Cookie format: "token.signature" - extract just the token
-    return cookie_value.split(".")[0]
+    # Fall back to unprefixed cookie (local development or custom config)
+    cookie_value = request.cookies.get(BETTER_AUTH_SESSION_COOKIE)
+    if cookie_value:
+        logger.info("Found session cookie without prefix")
+        return cookie_value.split(".")[0]
+
+    # Log available cookies for debugging (names only, not values)
+    cookie_names = list(request.cookies.keys())
+    logger.info(f"No Better Auth session cookie found. Available cookies: {cookie_names}")
+    return None
 
 
 async def validate_session_token(session_token: str, db: Session) -> Optional[dict]:
