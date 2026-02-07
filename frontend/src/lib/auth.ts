@@ -1,6 +1,14 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 
+// Derive cookie domain from BETTER_AUTH_URL for cross-subdomain cookie sharing
+// In production: BETTER_AUTH_URL=https://appartagent.com → domain=".appartagent.com"
+// This allows the session cookie to be sent to api.appartagent.com
+const betterAuthUrl = process.env.BETTER_AUTH_URL;
+const cookieDomain = betterAuthUrl
+  ? `.${new URL(betterAuthUrl).hostname}`
+  : undefined;
+
 export const auth = betterAuth({
   database: new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -14,6 +22,20 @@ export const auth = betterAuth({
       ? { google: { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET } }
       : {}),
   },
+  // Enable cross-subdomain cookies so session is shared between
+  // appartagent.com (frontend) and api.appartagent.com (backend)
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: !!cookieDomain,
+      domain: cookieDomain || "",
+    },
+  },
+  // Trust the API subdomain for CSRF protection
+  trustedOrigins: [
+    ...(betterAuthUrl
+      ? [`https://api.${new URL(betterAuthUrl).hostname}`]
+      : []),
+  ],
   session: {
     modelName: "ba_session",
     expiresIn: 60 * 60 * 24 * 7, // 7 days
