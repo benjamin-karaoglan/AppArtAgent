@@ -204,6 +204,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Photo non trouvée",
         "en": "Photo not found",
     },
+    "redesign_not_found": {
+        "fr": "Redesign non trouvé",
+        "en": "Redesign not found",
+    },
     "failed_generate_redesign": {
         "fr": "Échec de la génération du redesign : {error}",
         "en": "Failed to generate redesign: {error}",

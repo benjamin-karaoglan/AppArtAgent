@@ -34,7 +34,6 @@ from app.services.storage import get_storage_service
 # Backward compatibility aliases
 get_gemini_llm_service = get_document_analyzer
 DocumentParsingService = DocumentParser
-get_minio_service = get_storage_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -117,6 +116,16 @@ async def _regenerate_overall_synthesis(
         existing_synthesis.risk_level = synthesis.get("risk_level", "unknown")
         existing_synthesis.key_findings = synthesis.get("key_findings", [])
         existing_synthesis.recommendations = synthesis.get("recommendations", [])
+
+        # Preserve user_overrides from previous synthesis_data when regenerating
+        if existing_synthesis.synthesis_data:
+            try:
+                old_data = json.loads(existing_synthesis.synthesis_data)
+                if "user_overrides" in old_data:
+                    synthesis["user_overrides"] = old_data["user_overrides"]
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         existing_synthesis.synthesis_data = json.dumps(synthesis)
         existing_synthesis.last_updated = datetime.utcnow()
 
@@ -807,6 +816,13 @@ async def get_property_synthesis(
     if not synthesis:
         return None
 
+    synthesis_data = None
+    if synthesis.synthesis_data:
+        try:
+            synthesis_data = json.loads(synthesis.synthesis_data)
+        except (json.JSONDecodeError, TypeError):
+            logger.warning(f"Failed to parse synthesis_data for property {property_id}")
+
     return {
         "id": synthesis.id,
         "property_id": synthesis.property_id,
@@ -817,7 +833,71 @@ async def get_property_synthesis(
         "key_findings": synthesis.key_findings,
         "recommendations": synthesis.recommendations,
         "last_updated": synthesis.last_updated,
+        "synthesis_data": synthesis_data,
     }
+
+
+@router.patch("/synthesis/{property_id}/overrides")
+async def update_synthesis_overrides(
+    request: Request,
+    property_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Save user overrides (tantièmes, etc.) into the synthesis_data JSON.
+
+    Preserves all existing synthesis data and merges user_overrides into it.
+    """
+    locale = get_local(request)
+
+    from app.models.property import Property
+
+    property = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
+
+    if not property:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
+        )
+
+    body = await request.json()
+
+    synthesis = (
+        db.query(DocumentSummary)
+        .filter(DocumentSummary.property_id == property_id, DocumentSummary.category == None)
+        .first()
+    )
+
+    if not synthesis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No synthesis found for this property"
+        )
+
+    # Parse existing synthesis_data
+    synthesis_data = {}
+    if synthesis.synthesis_data:
+        try:
+            synthesis_data = json.loads(synthesis.synthesis_data)
+        except (json.JSONDecodeError, TypeError):
+            synthesis_data = {}
+
+    # Merge user_overrides
+    user_overrides = synthesis_data.get("user_overrides", {})
+    if "lot_tantiemes" in body:
+        user_overrides["lot_tantiemes"] = body["lot_tantiemes"]
+    if "total_tantiemes" in body:
+        user_overrides["total_tantiemes"] = body["total_tantiemes"]
+
+    synthesis_data["user_overrides"] = user_overrides
+    synthesis.synthesis_data = json.dumps(synthesis_data)
+    synthesis.last_updated = datetime.utcnow()
+    db.commit()
+
+    return {"status": "ok", "user_overrides": user_overrides}
 
 
 @router.post("/summaries/{property_id}/regenerate")
@@ -936,6 +1016,13 @@ async def regenerate_overall_synthesis(
     if not synthesis:
         return None
 
+    regen_synthesis_data = None
+    if synthesis.synthesis_data:
+        try:
+            regen_synthesis_data = json.loads(synthesis.synthesis_data)
+        except (json.JSONDecodeError, TypeError):
+            logger.warning(f"Failed to parse synthesis_data for property {property_id}")
+
     return {
         "id": synthesis.id,
         "property_id": synthesis.property_id,
@@ -946,6 +1033,7 @@ async def regenerate_overall_synthesis(
         "key_findings": synthesis.key_findings,
         "recommendations": synthesis.recommendations,
         "last_updated": synthesis.last_updated,
+        "synthesis_data": regen_synthesis_data,
     }
 
 
@@ -1430,6 +1518,9 @@ async def get_bulk_processing_status(
             "risk_level": synthesis.risk_level if synthesis else None,
             "key_findings": synthesis.key_findings if synthesis else [],
             "recommendations": synthesis.recommendations if synthesis else [],
+            "synthesis_data": json.loads(synthesis.synthesis_data)
+            if synthesis and synthesis.synthesis_data
+            else None,
         }
         if synthesis
         else None,
