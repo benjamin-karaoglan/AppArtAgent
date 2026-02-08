@@ -9,7 +9,7 @@ import Header from '@/components/Header';
 import InfoTooltip from '@/components/InfoTooltip';
 import MarketTrendChart from '@/components/MarketTrendChart';
 import { api } from '@/lib/api';
-import { ArrowLeft, TrendingUp, FileText, Upload, Loader2, Trash2, ChevronDown, ChevronUp, Building2, ShieldCheck, AlertTriangle, ShieldAlert, Sparkles, Paintbrush, Image as ImageIcon, X, Columns, Pencil, Check } from 'lucide-react';
+import { ArrowLeft, TrendingUp, FileText, Loader2, Trash2, ChevronDown, ChevronUp, Building2, ShieldCheck, AlertTriangle, ShieldAlert, Sparkles, Paintbrush, Image as ImageIcon, X, Columns, Pencil, Check } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import type { Property } from '@/types';
 
@@ -318,7 +318,7 @@ function PropertyDetailContent() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
         </div>
       </div>
     );
@@ -329,7 +329,7 @@ function PropertyDetailContent() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="max-w-7xl mx-auto py-6 px-4">
-          <p className="text-red-600">{t('notFound')}</p>
+          <p className="text-danger-600">{t('notFound')}</p>
         </div>
       </div>
     );
@@ -360,7 +360,7 @@ function PropertyDetailContent() {
             </div>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              className="inline-flex items-center px-3 py-2 border border-danger-300 text-sm font-medium rounded-md text-danger-700 bg-white hover:bg-danger-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               {tc('delete')}
@@ -368,8 +368,8 @@ function PropertyDetailContent() {
           </div>
 
           {error && (
-            <div className="mb-6 rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="mb-6 rounded-md bg-danger-50 p-4">
+              <p className="text-sm text-danger-700">{error}</p>
             </div>
           )}
 
@@ -384,7 +384,7 @@ function PropertyDetailContent() {
                     <button
                       onClick={saveProperty}
                       disabled={savingProperty}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
                     >
                       {savingProperty ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -421,7 +421,7 @@ function PropertyDetailContent() {
                       type="text"
                       value={editForm.address}
                       onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -430,7 +430,7 @@ function PropertyDetailContent() {
                       type="text"
                       value={editForm.postal_code}
                       onChange={(e) => setEditForm({ ...editForm, postal_code: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -439,7 +439,7 @@ function PropertyDetailContent() {
                       type="text"
                       value={editForm.city}
                       onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -447,7 +447,7 @@ function PropertyDetailContent() {
                     <select
                       value={editForm.property_type}
                       onChange={(e) => setEditForm({ ...editForm, property_type: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     >
                       <option value="">{t('info.selectType')}</option>
                       <option value="Appartement">{t('info.appartement')}</option>
@@ -460,7 +460,7 @@ function PropertyDetailContent() {
                       type="number"
                       value={editForm.asking_price}
                       onChange={(e) => setEditForm({ ...editForm, asking_price: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -470,7 +470,7 @@ function PropertyDetailContent() {
                       step="0.01"
                       value={editForm.surface_area}
                       onChange={(e) => setEditForm({ ...editForm, surface_area: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -479,7 +479,7 @@ function PropertyDetailContent() {
                       type="number"
                       value={editForm.rooms}
                       onChange={(e) => setEditForm({ ...editForm, rooms: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -488,7 +488,7 @@ function PropertyDetailContent() {
                       type="number"
                       value={editForm.floor}
                       onChange={(e) => setEditForm({ ...editForm, floor: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -499,7 +499,7 @@ function PropertyDetailContent() {
                       type="number"
                       value={editForm.building_floors}
                       onChange={(e) => setEditForm({ ...editForm, building_floors: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -508,7 +508,7 @@ function PropertyDetailContent() {
                       type="number"
                       value={editForm.building_year}
                       onChange={(e) => setEditForm({ ...editForm, building_year: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                 </div>
@@ -587,7 +587,7 @@ function PropertyDetailContent() {
                     <button
                       onClick={() => analyzePrice('simple')}
                       disabled={analyzing || !property.asking_price || !property.surface_area}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {analyzing ? (
                         <>
@@ -626,7 +626,7 @@ function PropertyDetailContent() {
                     <button
                       onClick={() => analyzePrice('trend')}
                       disabled={analyzing || !property.asking_price || !property.surface_area}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-primary-600 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {analyzing ? (
                         <>
@@ -669,7 +669,7 @@ function PropertyDetailContent() {
                 <div className="space-y-3">
                   <button
                     onClick={() => router.push(`/properties/${propertyId}/documents`)}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                   >
                     <FileText className="h-5 w-5 mr-2" />
                     {t('analysis.manageDocuments')}
@@ -677,9 +677,9 @@ function PropertyDetailContent() {
 
                   <button
                     onClick={() => router.push(`/properties/${propertyId}/redesign-studio`)}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                   >
-                    <Upload className="h-5 w-5 mr-2" />
+                    <Paintbrush className="h-5 w-5 mr-2" />
                     {t('analysis.redesignStudio')}
                   </button>
                 </div>
@@ -689,13 +689,24 @@ function PropertyDetailContent() {
 
           {/* AI Property Analysis Card */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <Sparkles className="h-5 w-5 mr-2 text-purple-500" />
-              {t('aiAnalysis.title')}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900 flex items-center">
+                <Sparkles className="h-5 w-5 mr-2 text-accent-600" />
+                {t('aiAnalysis.title')}
+              </h2>
+              {synthesis && (
+                <button
+                  onClick={() => router.push(`/properties/${propertyId}/documents`)}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t('analysis.manageDocuments')}
+                </button>
+              )}
+            </div>
             {synthesisLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                <Loader2 className="h-6 w-6 animate-spin text-accent-600" />
               </div>
             ) : synthesis ? (() => {
               const sd = synthesis.synthesis_data;
@@ -725,25 +736,24 @@ function PropertyDetailContent() {
 
               return (
               <div className="space-y-4">
-                {/* Metrics + Manage Documents */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-8">
+                {/* Metrics */}
+                <div className="flex items-start gap-8">
                     {/* Risk Level */}
                     {synthesis.risk_level && (
                       <div>
                         <dt className="text-sm font-medium text-gray-500 mb-1">{t('aiAnalysis.riskLevel')}</dt>
                         <dd>
-                          <span className={`inline-flex items-center text-lg font-semibold px-3 py-0.5 rounded-full ${
-                            synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
-                            synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
+                          <span className={`inline-flex items-center text-sm font-medium px-2.5 py-0.5 rounded-full ${
+                            synthesis.risk_level === 'high' ? 'bg-danger-50 text-danger-700' :
+                            synthesis.risk_level === 'medium' ? 'bg-warning-50 text-warning-700' :
+                            'bg-success-50 text-success-700'
                           }`}>
                             {synthesis.risk_level === 'high' ? (
-                              <ShieldAlert className="h-5 w-5 mr-1.5" />
+                              <ShieldAlert className="h-4 w-4 mr-1" />
                             ) : synthesis.risk_level === 'medium' ? (
-                              <AlertTriangle className="h-5 w-5 mr-1.5" />
+                              <AlertTriangle className="h-4 w-4 mr-1" />
                             ) : (
-                              <ShieldCheck className="h-5 w-5 mr-1.5" />
+                              <ShieldCheck className="h-4 w-4 mr-1" />
                             )}
                             {synthesis.risk_level.toUpperCase()}
                           </span>
@@ -766,22 +776,12 @@ function PropertyDetailContent() {
                         <dd className="text-lg font-semibold text-gray-900">{fmt(oneTimeTotal)}</dd>
                       </div>
                     )}
-                  </div>
-
-                  {/* Manage Documents button — right side */}
-                  <button
-                    onClick={() => router.push(`/properties/${propertyId}/documents`)}
-                    className="inline-flex items-center px-4 py-2 border border-purple-300 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 transition-colors flex-shrink-0"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    {t('analysis.manageDocuments')}
-                  </button>
                 </div>
 
                 {/* Toggle button */}
                 <button
                   onClick={() => setShowFullAnalysis(!showFullAnalysis)}
-                  className="inline-flex items-center text-sm text-purple-600 hover:text-purple-800 font-medium"
+                  className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
                 >
                   {showFullAnalysis ? (
                     <>
@@ -858,13 +858,14 @@ function PropertyDetailContent() {
           <div className="bg-white shadow rounded-lg p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                <Paintbrush className="h-5 w-5 mr-2 text-indigo-500" />
+                <Paintbrush className="h-5 w-5 mr-2 text-accent-500" />
                 {t('designOverview.title')}
               </h2>
               <button
                 onClick={() => router.push(`/properties/${propertyId}/photos`)}
-                className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
+                <Paintbrush className="h-4 w-4 mr-2" />
                 {t('designOverview.openStudio')}
               </button>
             </div>
@@ -942,9 +943,9 @@ function PropertyDetailContent() {
                             }
                             setEditingName(false);
                           }}
-                          className="text-lg font-semibold text-gray-900 border-b-2 border-indigo-500 outline-none bg-transparent px-0 py-0"
+                          className="text-lg font-semibold text-gray-900 border-b-2 border-accent-500 outline-none bg-transparent px-0 py-0"
                         />
-                        <button type="submit" className="p-0.5 text-indigo-600 hover:text-indigo-800">
+                        <button type="submit" className="p-0.5 text-accent-600 hover:text-accent-700">
                           <Check className="h-4 w-4" />
                         </button>
                       </form>
@@ -959,18 +960,21 @@ function PropertyDetailContent() {
                     )}
 
                     {/* Room type selector */}
-                    <select
-                      value={previewPhoto.room_type || 'living room'}
-                      onChange={(e) => handleUpdatePhoto(previewPhoto.id, { room_type: e.target.value })}
-                      className="text-xs font-medium rounded-full px-2.5 py-1 bg-indigo-100 text-indigo-700 border-none outline-none cursor-pointer hover:bg-indigo-200 transition-colors appearance-auto"
-                    >
-                      {roomTypeOptions.map((rt) => (
-                        <option key={rt} value={rt}>{tp(`roomTypes.${rt}`)}</option>
-                      ))}
-                    </select>
+                    <div className="relative inline-flex">
+                      <select
+                        value={previewPhoto.room_type || 'living room'}
+                        onChange={(e) => handleUpdatePhoto(previewPhoto.id, { room_type: e.target.value })}
+                        className="appearance-none text-xs font-medium rounded-full pl-2.5 pr-6 py-1 bg-accent-100 text-accent-700 border-none outline-none cursor-pointer hover:bg-accent-200 transition-colors"
+                      >
+                        {roomTypeOptions.map((rt) => (
+                          <option key={rt} value={rt}>{tp(`roomTypes.${rt}`)}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-accent-500" />
+                    </div>
 
                     {previewPhoto.promoted_redesign.style_preset && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 uppercase">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-100 text-accent-700 uppercase">
                         {previewPhoto.promoted_redesign.style_preset.replace(/_/g, ' ')}
                       </span>
                     )}
@@ -991,7 +995,7 @@ function PropertyDetailContent() {
                     onClick={() => setShowOriginal(!showOriginal)}
                     className={`absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-lg transition-colors ${
                       showOriginal
-                        ? 'bg-amber-500 text-white'
+                        ? 'bg-accent-600 text-white'
                         : 'bg-white/90 text-gray-700 hover:bg-white'
                     }`}
                   >
@@ -1012,7 +1016,7 @@ function PropertyDetailContent() {
                 <div className="flex justify-end p-4 border-t border-gray-200">
                   <button
                     onClick={() => { setPreviewPhoto(null); router.push(`/properties/${propertyId}/photos`); }}
-                    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
+                    className="inline-flex items-center px-4 py-2 bg-accent-600 text-white text-sm font-medium rounded-lg hover:bg-accent-700"
                   >
                     <Paintbrush className="h-4 w-4 mr-2" />
                     {t('designOverview.goToStudioAction')}
@@ -1036,7 +1040,7 @@ function PropertyDetailContent() {
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-6">
                 {priceAnalysis.estimated_value && (
-                  <div className="border-l-4 border-blue-500 pl-4">
+                  <div className="border-l-4 border-primary-500 pl-4">
                     <dt className="text-sm font-medium text-gray-500">{t('analysis.estimatedValue')}</dt>
                     <dd className="mt-1 text-2xl font-semibold text-gray-900">
                       {new Intl.NumberFormat('fr-FR', {
@@ -1048,10 +1052,10 @@ function PropertyDetailContent() {
                 )}
 
                 {priceAnalysis?.price_deviation_percent !== undefined && (
-                  <div className="border-l-4 border-yellow-500 pl-4">
+                  <div className="border-l-4 border-warning-500 pl-4">
                     <dt className="text-sm font-medium text-gray-500">{t('analysis.priceDeviation')}</dt>
                     <dd className={`mt-1 text-2xl font-semibold ${
-                      priceAnalysis.price_deviation_percent > 0 ? 'text-red-600' : 'text-green-600'
+                      priceAnalysis.price_deviation_percent > 0 ? 'text-danger-600' : 'text-success-600'
                     }`}>
                       {priceAnalysis.price_deviation_percent > 0 ? '+' : ''}
                       {priceAnalysis.price_deviation_percent.toFixed(1)}%
@@ -1060,7 +1064,7 @@ function PropertyDetailContent() {
                 )}
 
                 {priceAnalysis?.comparable_sales && (
-                  <div className="border-l-4 border-green-500 pl-4">
+                  <div className="border-l-4 border-success-500 pl-4">
                     <dt className="text-sm font-medium text-gray-500">{t('analysis.comparableSales')}</dt>
                     <dd className="mt-1 text-2xl font-semibold text-gray-900">
                       {priceAnalysis.comparables_count || priceAnalysis.comparable_sales.length}
@@ -1070,8 +1074,8 @@ function PropertyDetailContent() {
               </div>
 
               {priceAnalysis?.recommendation && (
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-                  <p className="text-sm text-blue-800">
+                <div className="bg-primary-50 border-l-4 border-primary-400 p-4">
+                  <p className="text-sm text-primary-800">
                     <span className="font-medium">{t('analysis.recommendation')}</span> {priceAnalysis.recommendation}
                   </p>
                 </div>
@@ -1081,13 +1085,13 @@ function PropertyDetailContent() {
 
           {/* Trend Projection Results */}
           {priceAnalysis?.trend_projection && (
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 shadow rounded-lg p-6 mb-8">
+            <div className="bg-gradient-to-r from-accent-50 to-primary-50 shadow rounded-lg p-6 mb-8">
               <h2 className="text-lg font-medium text-gray-900 mb-4">{t('trend.title')}</h2>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-6">
-                <div className="border-l-4 border-purple-500 pl-4 bg-white p-4 rounded">
+                <div className="border-l-4 border-accent-600 pl-4 bg-white p-4 rounded">
                   <dt className="text-sm font-medium text-gray-500">{t('trend.projectedValue')}</dt>
-                  <dd className="mt-1 text-2xl font-semibold text-purple-600">
+                  <dd className="mt-1 text-2xl font-semibold text-accent-600">
                     {new Intl.NumberFormat('fr-FR', {
                       style: 'currency',
                       currency: 'EUR',
@@ -1103,10 +1107,10 @@ function PropertyDetailContent() {
                   </dd>
                 </div>
 
-                <div className="border-l-4 border-indigo-500 pl-4 bg-white p-4 rounded">
+                <div className="border-l-4 border-accent-500 pl-4 bg-white p-4 rounded">
                   <dt className="text-sm font-medium text-gray-500">{t('trend.marketTrend')}</dt>
                   <dd className={`mt-1 text-2xl font-semibold ${
-                    priceAnalysis.trend_projection.trend_used > 0 ? 'text-green-600' : 'text-red-600'
+                    priceAnalysis.trend_projection.trend_used > 0 ? 'text-success-600' : 'text-danger-600'
                   }`}>
                     {priceAnalysis.trend_projection.trend_used > 0 ? '+' : ''}
                     {priceAnalysis.trend_projection.trend_used.toFixed(2)}% /year
@@ -1114,7 +1118,7 @@ function PropertyDetailContent() {
                   <dd className="mt-1">
                     <button
                       onClick={() => setShowNeighboringSales(!showNeighboringSales)}
-                      className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      className="text-sm text-primary-600 hover:text-primary-800 flex items-center gap-1"
                     >
                       {t('trend.basedOnSales', { count: priceAnalysis.trend_projection.trend_sample_size })}
                       {showNeighboringSales ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1144,18 +1148,18 @@ function PropertyDetailContent() {
                         {priceAnalysis.trend_projection.neighboring_sales.map((sale: any, idx: number) => (
                           <tr
                             key={idx}
-                            className={`hover:bg-gray-50 ${sale.is_outlier ? 'bg-yellow-50' : ''} ${excludedNeighboringOutliers.has(idx) ? 'opacity-50' : ''}`}
+                            className={`hover:bg-gray-50 ${sale.is_outlier ? 'bg-warning-50' : ''} ${excludedNeighboringOutliers.has(idx) ? 'opacity-50' : ''}`}
                           >
                             <td className="px-2 py-2 whitespace-nowrap text-center">
                               <input
                                 type="checkbox"
                                 checked={!excludedNeighboringOutliers.has(idx)}
                                 onChange={() => toggleNeighboringOutlierInclusion(idx)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
                                 title={sale.is_outlier ? t('comparables.outlierDetected') : t('comparables.includeInTrend')}
                               />
                               {sale.is_outlier && (
-                                <div className="text-xs text-yellow-600 mt-1">{t('comparables.outlier')}</div>
+                                <div className="text-xs text-warning-600 mt-1">{t('comparables.outlier')}</div>
                               )}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-gray-900">
@@ -1252,18 +1256,18 @@ function PropertyDetailContent() {
                         <>
                           <tr
                             key={index}
-                            className={`hover:bg-gray-50 ${sale.is_outlier ? 'bg-yellow-50' : ''} ${excludedOutliers.has(index) ? 'opacity-50' : ''} ${isMultiUnit ? 'border-l-4 border-l-blue-500' : ''}`}
+                            className={`hover:bg-gray-50 ${sale.is_outlier ? 'bg-warning-50' : ''} ${excludedOutliers.has(index) ? 'opacity-50' : ''} ${isMultiUnit ? 'border-l-4 border-l-primary-500' : ''}`}
                           >
                             <td className="px-3 py-4 whitespace-nowrap text-center">
                               <input
                                 type="checkbox"
                                 checked={!excludedOutliers.has(index)}
                                 onChange={() => toggleOutlierInclusion(index)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
                                 title={sale.is_outlier ? t('comparables.outlierDetected') : t('comparables.includeInAnalysis')}
                               />
                               {sale.is_outlier && (
-                                <div className="text-xs text-yellow-600 mt-1">{t('comparables.outlier')}</div>
+                                <div className="text-xs text-warning-600 mt-1">{t('comparables.outlier')}</div>
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1278,7 +1282,7 @@ function PropertyDetailContent() {
                                 {isMultiUnit && (
                                   <button
                                     onClick={() => toggleSaleExpansion(index)}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100"
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-700 bg-primary-50 rounded hover:bg-primary-100"
                                     title="Multi-unit sale - click to see details"
                                   >
                                     <Building2 className="h-3 w-3" />
@@ -1308,16 +1312,16 @@ function PropertyDetailContent() {
                                 maximumFractionDigits: 0,
                               }).format(displayPricePerSqm)}
                               {isMultiUnit && (
-                                <div className="text-xs text-blue-600 font-medium">{t('comparables.grouped')}</div>
+                                <div className="text-xs text-primary-600 font-medium">{t('comparables.grouped')}</div>
                               )}
                             </td>
                           </tr>
                           {/* Expandable drill-down for multi-unit sales */}
                           {isMultiUnit && isExpanded && sale.lots_detail && (
-                            <tr key={`${index}-detail`} className="bg-blue-50">
+                            <tr key={`${index}-detail`} className="bg-primary-50">
                               <td colSpan={6} className="px-6 py-4">
                                 <div className="text-xs font-medium text-gray-700 mb-2 uppercase">{t('comparables.individualUnits', { count: sale.unit_count })}</div>
-                                <div className="bg-white rounded border border-blue-200 overflow-hidden">
+                                <div className="bg-white rounded border border-primary-200 overflow-hidden">
                                   <table className="min-w-full text-xs">
                                     <thead className="bg-gray-50">
                                       <tr>
@@ -1419,8 +1423,8 @@ function PropertyDetailContent() {
                 {/* Modal panel */}
                 <div className="relative inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                   <div className="sm:flex sm:items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                      <Trash2 className="h-6 w-6 text-red-600" aria-hidden="true" />
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-danger-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <Trash2 className="h-6 w-6 text-danger-600" aria-hidden="true" />
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                       <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
@@ -1438,7 +1442,7 @@ function PropertyDetailContent() {
                       type="button"
                       disabled={deleting}
                       onClick={handleDelete}
-                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-danger-600 text-base font-medium text-white hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {deleting ? (
                         <>
@@ -1453,7 +1457,7 @@ function PropertyDetailContent() {
                       type="button"
                       disabled={deleting}
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {tc('cancel')}
                     </button>

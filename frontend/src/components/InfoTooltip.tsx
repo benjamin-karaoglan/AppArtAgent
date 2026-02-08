@@ -18,7 +18,7 @@ export default function InfoTooltip({ title, content }: InfoTooltipProps) {
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center w-5 h-5 text-blue-600 hover:text-blue-800 focus:outline-none"
+        className="inline-flex items-center justify-center w-5 h-5 text-primary-600 hover:text-primary-800 focus:outline-none"
         aria-label={title}
       >
         <Info className="h-4 w-4" />

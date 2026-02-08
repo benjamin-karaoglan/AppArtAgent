@@ -12,7 +12,7 @@ export default function HomePage() {
   const { isAuthenticated, loading } = useAuth()
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
       <Header />
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">

@@ -64,7 +64,7 @@ export default function Header() {
                 </div>
                 <button
                   onClick={logout}
-                  className="inline-flex items-center justify-center min-w-[8.5rem] px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="inline-flex items-center justify-center min-w-[8.5rem] px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   {t('logout')}

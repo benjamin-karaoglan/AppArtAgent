@@ -636,7 +636,7 @@ function PhotosContent() {
           {/* Upload Section */}
           <div className="bg-white shadow rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-              <Upload className="h-5 w-5 mr-2 text-indigo-600" />
+              <Upload className="h-5 w-5 mr-2 text-accent-600" />
               {t('uploadPhoto')}
             </h2>
 
@@ -648,7 +648,7 @@ function PhotosContent() {
                 <select
                   value={roomType}
                   onChange={(e) => setRoomType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-accent-500"
                 >
                   <option value="living room">{t('roomTypes.living room')}</option>
                   <option value="bedroom">{t('roomTypes.bedroom')}</option>
@@ -663,7 +663,7 @@ function PhotosContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('choosePhoto')}
                 </label>
-                <label className="flex items-center justify-center px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 cursor-pointer">
+                <label className="flex items-center justify-center px-6 py-2 bg-accent-600 text-white rounded-md hover:bg-accent-700 cursor-pointer">
                   <Upload className="h-4 w-4 mr-2" />
                   {uploading ? t('uploading') : t('selectImage')}
                   <input
@@ -684,13 +684,13 @@ function PhotosContent() {
             <div className="lg:col-span-1">
               <div className="bg-white shadow rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <ImageIcon className="h-5 w-5 mr-2 text-indigo-600" />
+                  <ImageIcon className="h-5 w-5 mr-2 text-accent-600" />
                   {t('yourPhotos', { count: photos.length })}
                 </h2>
 
                 {loading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-600 mx-auto"></div>
                   </div>
                 ) : photos.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
@@ -709,7 +709,7 @@ function PhotosContent() {
                         }}
                         className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
                           selectedPhoto?.id === photo.id
-                            ? 'border-indigo-600 shadow-md'
+                            ? 'border-accent-600 shadow-md'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
@@ -730,7 +730,7 @@ function PhotosContent() {
                               setPhotoToDelete(photo);
                             }}
                             disabled={deletingPhotoId === photo.id}
-                            className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-gray-600 shadow hover:text-red-600 disabled:opacity-60"
+                            className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-gray-600 shadow hover:text-danger-600 disabled:opacity-60"
                             aria-label={`${t('deletePhoto')} ${photo.filename}`}
                             title={t('deletePhoto')}
                           >
@@ -781,9 +781,9 @@ function PhotosContent() {
                             onChange={(e) => setPhotoNameDraft(e.target.value)}
                             onBlur={() => handlePhotoRename(photoNameDraft)}
                             onKeyDown={(e) => { if (e.key === 'Escape') setEditingPhotoName(false); }}
-                            className="text-sm font-medium text-gray-900 border border-gray-300 rounded px-1.5 py-0.5 w-full focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            className="text-sm font-medium text-gray-900 border border-gray-300 rounded px-1.5 py-0.5 w-full focus:outline-none focus:ring-1 focus:ring-accent-500"
                           />
-                          <button type="submit" className="text-green-600 hover:text-green-700 flex-shrink-0">
+                          <button type="submit" className="text-success-600 hover:text-success-700 flex-shrink-0">
                             <Check className="h-3.5 w-3.5" />
                           </button>
                         </form>
@@ -802,7 +802,7 @@ function PhotosContent() {
                       value={roomType}
                       onChange={(e) => handleRoomTypeChange(e.target.value)}
                       disabled={savingRoomType}
-                      className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                      className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-accent-500 disabled:bg-gray-100"
                     >
                       <option value="living room">{t('roomTypes.living room')}</option>
                       <option value="bedroom">{t('roomTypes.bedroom')}</option>
@@ -825,7 +825,7 @@ function PhotosContent() {
                         }}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                           activeThreadId === null && !showGallery
-                            ? 'bg-purple-600 text-white'
+                            ? 'bg-accent-600 text-white'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -862,9 +862,9 @@ function PhotosContent() {
                                   setEditingThreadId(null);
                                 }}
                                 onKeyDown={(e) => { if (e.key === 'Escape') setEditingThreadId(null); }}
-                                className="text-xs font-medium border border-purple-300 rounded-full px-2.5 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-purple-500 text-gray-900"
+                                className="text-xs font-medium border border-accent-300 rounded-full px-2.5 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-accent-500 text-gray-900"
                               />
-                              <button type="submit" className="text-green-600 hover:text-green-700 flex-shrink-0">
+                              <button type="submit" className="text-success-600 hover:text-success-700 flex-shrink-0">
                                 <Check className="h-3 w-3" />
                               </button>
                             </form>
@@ -887,7 +887,7 @@ function PhotosContent() {
                             }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                               activeThreadId === thread.id && !showGallery
-                                ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-300'
+                                ? 'bg-accent-100 text-accent-700 ring-1 ring-accent-300'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                             title={t('doubleClickToRename')}
@@ -908,7 +908,7 @@ function PhotosContent() {
                           onClick={() => setShowGallery(true)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                             showGallery
-                              ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300'
+                              ? 'bg-accent-100 text-accent-700 ring-1 ring-accent-300'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                         >
@@ -975,7 +975,7 @@ function PhotosContent() {
                                   {/* Promoted badge */}
                                   {isPromoted && (
                                     <div className="absolute top-2 left-2 z-10">
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400 text-[10px] font-bold text-yellow-900 rounded">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-warning-50 text-[10px] font-bold text-warning-700 rounded">
                                         <Star className="h-2.5 w-2.5 fill-current" />
                                         {t('promoted')}
                                       </span>
@@ -1000,7 +1000,7 @@ function PhotosContent() {
                                         }}
                                         className={`p-1 rounded transition-colors ${
                                           isPromoted
-                                            ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500'
+                                            ? 'bg-warning-50 text-warning-700 hover:bg-warning-500'
                                             : 'bg-black/60 text-white hover:bg-black/80'
                                         }`}
                                         title={isPromoted ? t('demoteRedesign') : t('promoteRedesign')}
@@ -1028,7 +1028,7 @@ function PhotosContent() {
                                         setActiveThreadId(parentThread.id);
                                       }
                                     }}
-                                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium truncate"
+                                    className="text-xs text-accent-600 hover:text-accent-700 font-medium truncate"
                                   >
                                     {threadLabel}
                                   </button>
@@ -1055,7 +1055,7 @@ function PhotosContent() {
                             // Welcome / empty state
                             return (
                               <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                                <Sparkles className="h-12 w-12 text-purple-300 mb-4" />
+                                <Sparkles className="h-12 w-12 text-accent-300 mb-4" />
                                 <h3 className="text-lg font-semibold text-gray-700 mb-1">{t('startConversation')}</h3>
                                 <p className="text-sm text-gray-500 max-w-sm">
                                   {t('startConversationDesc')}
@@ -1071,7 +1071,7 @@ function PhotosContent() {
                             <div key={redesign.id} className="space-y-3">
                               {/* User bubble */}
                               <div className="flex justify-end">
-                                <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-purple-600 text-white px-4 py-3">
+                                <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-accent-600 text-white px-4 py-3">
                                   <p className="text-sm whitespace-pre-wrap">
                                     {isLong && !isExpanded ? redesign.prompt.substring(0, 300) + '...' : redesign.prompt}
                                   </p>
@@ -1133,7 +1133,7 @@ function PhotosContent() {
                                       onClick={() => setSelectedRedesign(redesign)}
                                     />
                                     {selectedPhoto?.promoted_redesign?.id === redesign.id && (
-                                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 bg-yellow-400 text-[10px] font-bold text-yellow-900 rounded">
+                                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 bg-warning-50 text-[10px] font-bold text-warning-700 rounded">
                                         <Star className="h-2.5 w-2.5 fill-current" />
                                         {t('promoted')}
                                       </span>
@@ -1155,8 +1155,8 @@ function PhotosContent() {
                                         }}
                                         className={`inline-flex items-center text-xs ${
                                           selectedPhoto?.promoted_redesign?.id === redesign.id
-                                            ? 'text-yellow-600 hover:text-yellow-700'
-                                            : 'text-gray-400 hover:text-yellow-600'
+                                            ? 'text-warning-600 hover:text-warning-700'
+                                            : 'text-gray-400 hover:text-warning-600'
                                         }`}
                                         title={selectedPhoto?.promoted_redesign?.id === redesign.id ? t('demoteRedesign') : t('promoteRedesign')}
                                       >
@@ -1165,7 +1165,7 @@ function PhotosContent() {
                                       <a
                                         href={redesign.presigned_url}
                                         download
-                                        className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-700"
+                                        className="inline-flex items-center text-xs text-accent-600 hover:text-accent-700"
                                       >
                                         <Download className="h-3 w-3 mr-1" />
                                         {tc('download')}
@@ -1183,7 +1183,7 @@ function PhotosContent() {
                         {generating && optimisticPrompt && ((activeThreadId === null && generatingThreadId === 'new') || generatingThreadId === activeThreadId) && (
                           <div className="space-y-3">
                             <div className="flex justify-end">
-                              <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-purple-600 text-white px-4 py-3">
+                              <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-accent-600 text-white px-4 py-3">
                                 <p className="text-sm whitespace-pre-wrap">
                                   {optimisticPrompt.length > 300 ? optimisticPrompt.substring(0, 300) + '...' : optimisticPrompt}
                                 </p>
@@ -1245,7 +1245,7 @@ function PhotosContent() {
                                         }}
                                         className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                                           selectedPreset === preset.id
-                                            ? 'bg-purple-600 text-white'
+                                            ? 'bg-accent-600 text-white'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                         title={preset.description}
@@ -1267,7 +1267,7 @@ function PhotosContent() {
                                         alt="Reference"
                                         onClick={() => setPreviewImageUrl(ref.previewUrl)}
                                         className={`h-14 w-14 rounded-lg object-cover border-2 cursor-pointer ${
-                                          ref.status === 'error' ? 'border-red-400' : ref.status === 'uploading' ? 'border-yellow-400' : 'border-green-400'
+                                          ref.status === 'error' ? 'border-danger-400' : ref.status === 'uploading' ? 'border-warning-50' : 'border-success-200'
                                         }`}
                                       />
                                       {ref.status === 'uploading' && (
@@ -1283,7 +1283,7 @@ function PhotosContent() {
                                         <X className="h-3 w-3" />
                                       </button>
                                       {ref.status === 'error' && (
-                                        <p className="text-[9px] text-red-500 mt-0.5 max-w-[56px] truncate">{ref.errorMessage}</p>
+                                        <p className="text-[9px] text-danger-500 mt-0.5 max-w-[56px] truncate">{ref.errorMessage}</p>
                                       )}
                                     </div>
                                   ))}
@@ -1302,7 +1302,7 @@ function PhotosContent() {
                                 <button
                                   onClick={() => referenceInputRef.current?.click()}
                                   disabled={referenceImages.length >= 2}
-                                  className="flex-shrink-0 p-2.5 text-gray-500 hover:text-purple-600 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                                  className="flex-shrink-0 p-2.5 text-gray-500 hover:text-accent-600 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
                                   title={referenceImages.length >= 2 ? t('maxReferenceImages') : t('attachReference')}
                                 >
                                   <Paperclip className="h-5 w-5" />
@@ -1326,12 +1326,12 @@ function PhotosContent() {
                                   placeholder={isFollowUp ? t('refinePlaceholder') : t('promptPlaceholder')}
                                   rows={1}
                                   style={{ minHeight: '40px', maxHeight: '200px' }}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-y-auto"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-accent-500 resize-none overflow-y-auto"
                                 />
                                 <button
                                   onClick={handleGenerateRedesign}
                                   disabled={generating || (!selectedPreset && !customPrompt)}
-                                  className="flex-shrink-0 p-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                  className="flex-shrink-0 p-2.5 bg-accent-600 text-white rounded-lg hover:bg-accent-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                                 >
                                   {generating ? (
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
@@ -1380,7 +1380,7 @@ function PhotosContent() {
               <button
                 type="button"
                 onClick={handleDeletePhoto}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                className="rounded-md bg-danger-600 px-4 py-2 text-sm font-semibold text-white hover:bg-danger-700 disabled:opacity-60"
                 disabled={deletingPhotoId === photoToDelete.id}
               >
                 {deletingPhotoId === photoToDelete.id ? tc('deleting') : t('deletePhoto')}

@@ -59,7 +59,7 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {tc('or')}{' '}
-            <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
               {t('register.orLogin')}
             </Link>
           </p>
@@ -73,7 +73,7 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
                 type="button"
                 onClick={handleGoogleSignup}
                 disabled={googleLoading || loading}
-                className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -110,8 +110,8 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-md bg-danger-50 p-4">
+              <p className="text-sm text-danger-700">{error}</p>
             </div>
           )}
 
@@ -130,11 +130,11 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
                     message: t('register.errors.fullNameMinLength', { min: 2 }),
                   },
                 })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 placeholder={t('register.fullNamePlaceholder')}
               />
               {errors.full_name && (
-                <p className="mt-1 text-sm text-red-600">{errors.full_name.message}</p>
+                <p className="mt-1 text-sm text-danger-600">{errors.full_name.message}</p>
               )}
             </div>
 
@@ -153,11 +153,11 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
                     message: t('register.errors.emailInvalid'),
                   },
                 })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 placeholder={t('register.emailPlaceholder')}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="mt-1 text-sm text-danger-600">{errors.email.message}</p>
               )}
             </div>
 
@@ -176,11 +176,11 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
                     message: t('register.errors.passwordMinLength', { min: 8 }),
                   },
                 })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 placeholder="••••••••"
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="mt-1 text-sm text-danger-600">{errors.password.message}</p>
               )}
             </div>
 
@@ -196,11 +196,11 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
                   required: t('register.errors.confirmPasswordRequired'),
                   validate: (value) => value === password || t('register.errors.passwordsMismatch'),
                 })}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 placeholder="••••••••"
               />
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                <p className="mt-1 text-sm text-danger-600">{errors.confirmPassword.message}</p>
               )}
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function RegisterForm({ googleAuthEnabled }: { googleAuthEnabled:
             <button
               type="submit"
               disabled={loading || googleLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? t('register.submitting') : t('register.submit')}
             </button>
