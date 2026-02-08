@@ -18,9 +18,9 @@ flowchart TB
 
         subgraph Components["Reusable Components"]
             C1["Header / Navigation"]
-            C2["Charts (Recharts)"]
-            C3["Forms & Inputs"]
-            C4["Modals & Tooltips"]
+            C2["Design System (ui/)"]
+            C3["Charts (Custom SVG)"]
+            C4["Forms & Tooltips"]
         end
 
         subgraph APIClient["API Client"]
@@ -103,7 +103,7 @@ flowchart LR
 |-----------|---------|
 | `src/app/[locale]/` | Locale-scoped App Router pages |
 | `src/app/api/auth/` | Better Auth API route handler |
-| `src/components/` | Reusable React components |
+| `src/components/` | Reusable React components (includes `ui/` design system) |
 | `src/contexts/` | React context providers (Auth) |
 | `src/i18n/` | Internationalization config and routing |
 | `src/lib/` | Utilities, API client, and auth config |
@@ -115,7 +115,8 @@ flowchart LR
 - **React 18** with Server Components
 - **Better Auth** for authentication (email/password + Google OAuth)
 - **next-intl** for internationalization (FR/EN)
-- **Tailwind CSS** for styling
+- **Tailwind CSS** with semantic design tokens for styling
+- **Lucide React** for icons
 - **React Query** for data fetching and caching
 - **TypeScript** for type safety
 - **pnpm** for package management
@@ -169,7 +170,7 @@ flowchart TB
 - **FastAPI** for async HTTP handling
 - **SQLAlchemy 2.0** for ORM
 - **Pydantic v2** for validation
-- **Google Generative AI SDK** for Gemini
+- **Google Generative AI SDK** (`google-genai`) for Gemini (Vertex AI or REST API)
 - **UV** for fast package management
 
 ### Data Layer

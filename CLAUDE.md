@@ -21,7 +21,7 @@
 
 - **Framework**: FastAPI with Uvicorn (ASGI)
 - **ORM**: SQLAlchemy 2.0 with Alembic migrations
-- **AI**: Google Gemini (gemini-2.5-flash for text, gemini-2.5-flash-image for images) via `google-genai` + LangChain/LangGraph
+- **AI**: Google Gemini (gemini-2.5-flash for text, gemini-2.5-flash-image for images) via `google-genai` SDK. Supports Vertex AI (production) or REST API key (development).
 - **Auth**: Better Auth (session-based, managed by frontend) with legacy JWT fallback
 - **Storage**: MinIO (local dev) / Google Cloud Storage (production) -- abstracted in `app/services/storage.py`
 - **Entry point**: `backend/app/main.py`
@@ -34,13 +34,39 @@
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript 5.3
-- **Styling**: Tailwind CSS 3.3
+- **Styling**: Tailwind CSS 3.3 with semantic design tokens
+- **UI Components**: Shared component library (`frontend/src/components/ui/`)
 - **State**: TanStack React Query v5
 - **Auth**: Better Auth 1.4 with Google OAuth support
 - **i18n**: next-intl (locales: `fr`, `en`, default: `fr`)
+- **Icons**: Lucide React
 - **API client**: Axios (`frontend/src/lib/api.ts`) hitting `NEXT_PUBLIC_API_URL`
 - **Pages**: `frontend/src/app/[locale]/` (dashboard, properties, documents, photos, redesign-studio)
 - **Package manager**: pnpm
+
+#### Design System
+
+The frontend uses a semantic color token system defined in `tailwind.config.js`. **Never use raw Tailwind color names** (e.g., `blue-600`, `red-500`). Always use the semantic tokens:
+
+| Token | Palette | Usage |
+|-------|---------|-------|
+| `primary-*` | Blue (#2563eb) | Main CTAs, links, active states, focus rings |
+| `accent-*` | Indigo (#4f46e5) | Secondary features: studio, photos, documents, AI |
+| `success-*` | Emerald (#10b981) | Positive states, confirmations |
+| `warning-*` | Amber (#f59e0b) | Warnings, outliers, caution states |
+| `danger-*` | Red (#dc2626) | Errors, destructive actions, high risk |
+
+Shared UI components live in `frontend/src/components/ui/`:
+
+| Component | Purpose |
+|-----------|---------|
+| `Button` | 6 variants (primary, secondary, accent, ghost, danger, link), 2 sizes |
+| `Badge` | 6 variants (success, warning, danger, info, accent, neutral) |
+| `Card` | Consistent card wrapper with padding options |
+| `SectionHeader` | Section title with icon and optional action |
+| `StatCard` | Dashboard stat card with icon |
+
+Utility CSS classes are defined in `globals.css` (`btn-primary`, `btn-secondary`, `badge-success`, etc.).
 
 ## Development Setup
 
@@ -177,10 +203,12 @@ Key variables (see `.env.example` for full list):
 
 | Variable | Purpose |
 |----------|---------|
-| `GOOGLE_CLOUD_API_KEY` | Gemini API access |
 | `GOOGLE_CLOUD_PROJECT` | GCP project ID |
 | `GOOGLE_CLOUD_LOCATION` | GCP region (default: us-central1) |
-| `GEMINI_USE_VERTEXAI` | Use Vertex AI vs REST API |
+| `GEMINI_USE_VERTEXAI` | Use Vertex AI (production) vs REST API key (dev) |
+| `GOOGLE_CLOUD_API_KEY` | Gemini REST API key (only needed when `GEMINI_USE_VERTEXAI=false`) |
+| `GEMINI_LLM_MODEL` | Text analysis model (default: gemini-2.5-flash) |
+| `GEMINI_IMAGE_MODEL` | Image generation model (default: gemini-2.5-flash-image) |
 | `BETTER_AUTH_SECRET` | Auth secret (32+ chars) |
 | `SECRET_KEY` | Backend secret key |
 | `DATABASE_URL` | PostgreSQL connection string |

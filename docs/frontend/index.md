@@ -39,8 +39,11 @@ frontend/
 │   │   ├── globals.css          # Global styles
 │   │   └── layout.tsx           # Root layout
 │   ├── components/              # Shared components
+│   │   ├── ui/                  # Design system (Button, Badge, Card, etc.)
 │   │   ├── Header.tsx           # Navigation + locale switcher
 │   │   ├── ProtectedRoute.tsx   # Auth guard
+│   │   ├── InfoTooltip.tsx      # Informational tooltips
+│   │   ├── AppArtLogo.tsx       # SVG logo
 │   │   └── MarketTrendChart.tsx
 │   ├── contexts/
 │   │   └── AuthContext.tsx       # Auth state (Better Auth)
@@ -152,15 +155,21 @@ Development server includes Fast Refresh:
 - State is preserved when possible
 - Errors show inline
 
-### Styling
+### Design System
 
-Using Tailwind CSS with custom configuration:
+Using Tailwind CSS with semantic color tokens defined in `tailwind.config.js`. All components use semantic tokens (`primary-*`, `accent-*`, `success-*`, `warning-*`, `danger-*`) instead of raw Tailwind colors.
+
+Shared UI components in `src/components/ui/` (Button, Badge, Card, SectionHeader, StatCard):
 
 ```tsx
-<div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
-  <h2 className="text-lg font-semibold text-gray-900">Title</h2>
-  <button className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-    Action
-  </button>
-</div>
+import { Button, Badge, Card } from '@/components/ui';
+
+<Card>
+  <div className="flex items-center justify-between p-4">
+    <h2 className="text-lg font-semibold text-gray-900">Title</h2>
+    <Button variant="primary">Action</Button>
+  </div>
+</Card>
 ```
+
+See [Components](components.md) for the full design system reference.

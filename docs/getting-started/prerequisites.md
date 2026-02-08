@@ -36,27 +36,25 @@ docker --version
 docker compose version
 ```
 
-### API Keys
+### AI Provider Setup
 
-#### Google Cloud API Key (Recommended)
+The application uses Google Gemini for document analysis and image generation. Choose one:
 
-Used for Gemini AI services (document analysis, image generation).
+#### Option A: Vertex AI (Production / Recommended)
+
+Uses GCP service account authentication — no API key needed.
+
+1. Create or select a [Google Cloud project](https://console.cloud.google.com/)
+2. Enable the Vertex AI API
+3. Set `GEMINI_USE_VERTEXAI=true` in `.env`
+4. For local dev, use [service account impersonation](configuration.md#local-development-with-gcs-service-account-impersonation)
+
+#### Option B: REST API Key (Quick Start / Development)
 
 1. Go to [Google AI Studio](https://aistudio.google.com/)
 2. Click "Get API key"
-3. Create a new project or select existing
-4. Copy the API key
-
-#### Anthropic API Key (Legacy)
-
-If you prefer Claude over Gemini:
-
-1. Sign up at [Anthropic Console](https://console.anthropic.com/)
-2. Navigate to API Keys
-3. Create a new key
-
-!!! note
-    The application defaults to Gemini. Anthropic support is maintained for backward compatibility.
+3. Copy the key and set `GOOGLE_CLOUD_API_KEY` in `.env`
+4. Set `GEMINI_USE_VERTEXAI=false`
 
 ## Required for Local Development
 

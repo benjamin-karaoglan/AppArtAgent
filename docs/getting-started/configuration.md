@@ -13,14 +13,11 @@ AppArt Agent uses environment variables for configuration. This guide covers all
 ## Root Configuration (.env)
 
 ```bash
-# AI Provider - Google Cloud (Recommended)
-GOOGLE_CLOUD_API_KEY=your_google_api_key
-GOOGLE_CLOUD_PROJECT=your_gcp_project         # For Vertex AI
-GOOGLE_CLOUD_LOCATION=us-central1             # GCP region
-GEMINI_USE_VERTEXAI=false                     # Use Vertex AI instead of API key
-
-# AI Provider - Anthropic (Legacy)
-ANTHROPIC_API_KEY=your_anthropic_key          # Optional
+# AI Provider - Google Gemini
+GEMINI_USE_VERTEXAI=true                     # true = Vertex AI (production), false = REST API key
+GOOGLE_CLOUD_PROJECT=your_gcp_project        # Required for Vertex AI
+GOOGLE_CLOUD_LOCATION=us-central1            # GCP region
+GOOGLE_CLOUD_API_KEY=your_google_api_key     # Only needed when GEMINI_USE_VERTEXAI=false
 
 # Security
 SECRET_KEY=your-secret-key-at-least-32-chars  # Required
@@ -49,14 +46,16 @@ SECRET_KEY=your-secret-key-at-least-32-chars
 
 ```bash
 # Gemini Models
-GEMINI_LLM_MODEL=gemini-2.0-flash-lite        # Text/document analysis
-GEMINI_IMAGE_MODEL=gemini-2.0-flash-exp       # Image generation
-GEMINI_USE_VERTEXAI=false                     # true for production on GCP
+GEMINI_LLM_MODEL=gemini-2.5-flash             # Text/document analysis
+GEMINI_IMAGE_MODEL=gemini-2.5-flash-image     # Image generation
+GEMINI_USE_VERTEXAI=true                      # true for Vertex AI (production), false for REST API key
 
 # Google Cloud (required for Vertex AI)
-GOOGLE_CLOUD_API_KEY=your_api_key
 GOOGLE_CLOUD_PROJECT=your_project
 GOOGLE_CLOUD_LOCATION=us-central1
+
+# REST API key (only needed when GEMINI_USE_VERTEXAI=false)
+GOOGLE_CLOUD_API_KEY=your_api_key
 ```
 
 ### Storage Configuration
@@ -263,14 +262,16 @@ print(f'AI Model: {settings.GEMINI_LLM_MODEL}')
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | Yes | - | PostgreSQL connection string |
 | `SECRET_KEY` | Yes | - | Legacy auth signing key (32+ chars) |
-| `GOOGLE_CLOUD_API_KEY` | Yes* | - | Gemini API key |
+| `GEMINI_USE_VERTEXAI` | No | `false` | `true` for Vertex AI, `false` for API key |
+| `GOOGLE_CLOUD_API_KEY` | Cond.* | - | Gemini REST API key |
+| `GOOGLE_CLOUD_PROJECT` | Cond.* | - | GCP project (for Vertex AI) |
 | `STORAGE_BACKEND` | No | `minio` | Storage: `minio` or `gcs` |
-| `GEMINI_LLM_MODEL` | No | `gemini-2.0-flash-lite` | Text analysis model |
+| `GEMINI_LLM_MODEL` | No | `gemini-2.5-flash` | Text analysis model |
 | `LOG_LEVEL` | No | `INFO` | Logging verbosity |
 | `REDIS_HOST` | No | `redis` | Redis hostname |
 | `CACHE_TTL` | No | `3600` | Cache TTL in seconds |
 
-*Required unless using Vertex AI with service account
+*`GOOGLE_CLOUD_API_KEY` required when `GEMINI_USE_VERTEXAI=false`; `GOOGLE_CLOUD_PROJECT` required when `GEMINI_USE_VERTEXAI=true`
 
 ### Frontend
 
