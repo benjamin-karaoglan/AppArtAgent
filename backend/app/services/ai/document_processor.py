@@ -3,10 +3,10 @@ Document Processor - Sequential document classification and analysis.
 
 Processes documents individually using Gemini for classification
 and type-specific analysis. Handles PV AG, diagnostics, taxes, and charges.
+Uses native PDF input and thinking capabilities for deep analysis.
 """
 
 import asyncio
-import base64
 import json
 import logging
 import re
@@ -107,52 +107,87 @@ class DocumentProcessor:
         logger.info(f"Using model: {self.model}")
 
     def _extract_text(self, response) -> str:
-        """Extract text from Gemini response."""
+        """Extract text from Gemini response, skipping thinking parts."""
         candidates = getattr(response, "candidates", None) or []
         if not candidates:
             return ""
         content = getattr(candidates[0], "content", None)
         parts = getattr(content, "parts", None) or []
-        return "\n".join(p.text for p in parts if getattr(p, "text", None)).strip()
+        # Skip thought parts — only collect text parts
+        return "\n".join(
+            p.text for p in parts if getattr(p, "text", None) and not getattr(p, "thought", False)
+        ).strip()
 
     def _get_config(
-        self, max_tokens: int = 2000, temperature: float = 0.1
+        self, max_tokens: int = 8192, temperature: float = 0.1, use_thinking: bool = False
     ) -> types.GenerateContentConfig:
-        """Get generation config."""
-        return types.GenerateContentConfig(
-            temperature=temperature, top_p=0.95, max_output_tokens=max_tokens
-        )
+        """Get generation config with explicit thinking control.
 
-    def _build_image_parts(self, images: List[str]) -> List[types.Part]:
-        """Convert base64 images to Gemini parts."""
+        gemini-2.5-flash thinks by default — we must explicitly set thinking_budget=0
+        to disable it, otherwise thinking tokens consume from max_output_tokens.
+        """
+        config_kwargs = {
+            "temperature": temperature,
+            "top_p": 0.95,
+            "max_output_tokens": max_tokens,
+        }
+        if use_thinking:
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=8192)
+        else:
+            # Explicitly disable thinking to prevent it from consuming output tokens
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+        return types.GenerateContentConfig(**config_kwargs)
+
+    def _build_document_parts(self, document: Dict[str, Any]) -> List[types.Part]:
+        """Build Gemini content parts from a document with native PDF support."""
         parts = []
-        for img_b64 in images:
-            img_bytes = base64.b64decode(img_b64)
-            parts.append(types.Part.from_bytes(data=img_bytes, mime_type="image/png"))
+        pdf_data = document.get("pdf_data")
+        extracted_text = document.get("extracted_text", "")
+        text_extractable = document.get("text_extractable", False)
+
+        # If text was extracted, prepend it for redundancy
+        if text_extractable and extracted_text:
+            parts.append(
+                types.Part.from_text(
+                    text=f"[Extracted text from PDF for reference — the full PDF is also attached below]\n\n{extracted_text}"
+                )
+            )
+
+        # Always include the native PDF
+        if pdf_data:
+            parts.append(types.Part.from_bytes(data=pdf_data, mime_type="application/pdf"))
+
         return parts
 
     async def classify_document(self, document: Dict[str, Any]) -> str:
-        """Classify document type from first few pages."""
-        filename = document.get("filename", "")
-        images = document.get("file_data_base64", [])
+        """Classify document type from the PDF.
 
-        if not images:
-            logger.warning(f"No images for: {filename}")
+        Only sends the native PDF (no extracted text) to keep classification fast and light.
+        Thinking is explicitly disabled for this simple categorization task.
+        """
+        filename = document.get("filename", "")
+        pdf_data = document.get("pdf_data")
+
+        if not pdf_data:
+            logger.warning(f"No PDF data for: {filename}")
             return "other"
 
-        parts = self._build_image_parts(images[:3])
-        parts.append(
-            types.Part.from_text(text=get_prompt("dp_classify_document", filename=filename))
-        )
+        # Only send the PDF for classification (skip extracted text — not needed)
+        parts = [
+            types.Part.from_bytes(data=pdf_data, mime_type="application/pdf"),
+            types.Part.from_text(text=get_prompt("dp_classify_document", filename=filename)),
+        ]
 
         try:
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model,
                 contents=[types.Content(role="user", parts=parts)],
-                config=self._get_config(max_tokens=50),
+                config=self._get_config(max_tokens=100, use_thinking=False),
             )
-            category = self._extract_text(response).strip().lower()
+            raw_text = self._extract_text(response)
+            category = raw_text.strip().lower()
+            logger.info(f"Classification raw response for {filename}: '{raw_text}'")
 
             valid = {"pv_ag", "diagnostic", "diags", "taxe_fonciere", "charges", "other"}
             if category not in valid:
@@ -170,11 +205,10 @@ class DocumentProcessor:
             return "other"
 
     async def _process_with_prompt(self, document: Dict[str, Any], prompt: str) -> Dict[str, Any]:
-        """Generic processing with custom prompt."""
+        """Generic processing with custom prompt and thinking enabled."""
         filename = document.get("filename", "")
-        images = document.get("file_data_base64", [])
 
-        parts = self._build_image_parts(images)
+        parts = self._build_document_parts(document)
         parts.append(types.Part.from_text(text=prompt))
 
         try:
@@ -182,12 +216,28 @@ class DocumentProcessor:
                 self.client.models.generate_content,
                 model=self.model,
                 contents=[types.Content(role="user", parts=parts)],
-                config=self._get_config(),
+                config=self._get_config(max_tokens=16384, use_thinking=True),
             )
-            response_text = _extract_json(self._extract_text(response))
+            raw_text = self._extract_text(response)
+            logger.info(f"Raw response for {filename}: {len(raw_text)} chars")
+            response_text = _extract_json(raw_text)
             if not response_text:
                 raise ValueError("Empty response")
-            return json.loads(response_text)
+
+            try:
+                return json.loads(response_text)
+            except json.JSONDecodeError as je:
+                # Log the problematic area for debugging
+                pos = je.pos if hasattr(je, "pos") else 0
+                context_start = max(0, pos - 100)
+                context_end = min(len(response_text), pos + 100)
+                logger.error(
+                    f"JSON parse error for {filename} at pos {pos}: {je.msg}\n"
+                    f"Context: ...{response_text[context_start:context_end]}..."
+                )
+                # Try a more aggressive cleanup and retry
+                response_text = _repair_json(response_text)
+                return json.loads(response_text)
 
         except Exception as e:
             logger.error(f"Processing error for {filename}: {e}")
@@ -284,11 +334,13 @@ class DocumentProcessor:
     async def synthesize_results(
         self, results: List[Dict[str, Any]], output_language: str = "French"
     ) -> Dict[str, Any]:
-        """Synthesize all results into overall summary."""
+        """Synthesize all results into overall summary with cross-document analysis."""
         logger.info(f"Synthesizing {len(results)} documents")
 
-        summaries = "\n".join(
-            f"- {r.get('document_type', 'unknown')}: {r.get('result', {}).get('summary', 'No summary')}"
+        # Pass full document results (not just summaries) for cross-referencing
+        summaries = "\n\n---\n\n".join(
+            f"**Document: {r.get('filename', 'unknown')}** (type: {r.get('document_type', 'unknown')})\n"
+            f"{json.dumps(r.get('result', {}), ensure_ascii=False, indent=2)}"
             for r in results
         )
 
@@ -301,12 +353,36 @@ class DocumentProcessor:
                 self.client.models.generate_content,
                 model=self.model,
                 contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
-                config=self._get_config(max_tokens=1500),
+                config=self._get_config(max_tokens=32768, use_thinking=True),
             )
-            return json.loads(_extract_json(self._extract_text(response)))
+            raw_text = self._extract_text(response)
+            cleaned = _extract_json(raw_text)
+            logger.info(
+                f"Synthesis raw response length: {len(raw_text)}, cleaned length: {len(cleaned)}"
+            )
+            result = json.loads(cleaned)
+
+            # Validate critical fields exist (truncation detection)
+            critical_fields = [
+                "risk_level",
+                "key_findings",
+                "recommendations",
+                "one_time_cost_breakdown",
+                "annual_cost_breakdown",
+                "buyer_action_items",
+                "cross_document_themes",
+            ]
+            missing = [f for f in critical_fields if f not in result]
+            if missing:
+                logger.warning(
+                    f"Synthesis JSON missing critical fields (possible truncation): {missing}. "
+                    f"Response length: {len(raw_text)} chars"
+                )
+
+            return result
 
         except Exception as e:
-            logger.error(f"Synthesis error: {e}")
+            logger.error(f"Synthesis error: {e}", exc_info=True)
             return {
                 "summary": "Documents processed. Synthesis unavailable.",
                 "total_annual_costs": 0.0,
@@ -314,6 +390,8 @@ class DocumentProcessor:
                 "risk_level": "unknown",
                 "key_findings": ["All documents processed"],
                 "recommendations": ["Review individual documents"],
+                "confidence_score": 0.0,
+                "confidence_reasoning": "Synthesis failed — review individual documents.",
             }
 
     async def process_bulk_upload(
