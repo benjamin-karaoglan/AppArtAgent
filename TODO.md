@@ -17,6 +17,10 @@
 
 - [ ] Tantième detection
 
+#### Bug
+
+- [ ] Bulk upload loses status when leaving or reloading
+
 ### Redesign studio
 
 #### Feature
