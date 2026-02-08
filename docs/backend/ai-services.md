@@ -6,8 +6,8 @@ AppArt Agent uses Google Gemini for document analysis, classification, and image
 
 | Service | Model | Purpose |
 |---------|-------|---------|
-| Document Analysis | `gemini-2.0-flash-lite` | Native PDF processing with thinking/reasoning |
-| Image Generation | `gemini-2.0-flash-exp` | Photo redesign and visualization |
+| Document Analysis | `gemini-2.5-flash` | Native PDF processing with thinking/reasoning |
+| Image Generation | `gemini-2.5-flash-image` | Photo redesign and visualization |
 
 ## Architecture
 
@@ -29,7 +29,7 @@ flowchart TB
     end
 
     subgraph External["External API"]
-        Gemini["Google Gemini<br/>gemini-2.0-flash-lite<br/>gemini-2.0-flash-exp"]
+        Gemini["Google Gemini<br/>gemini-2.5-flash<br/>gemini-2.5-flash-image"]
     end
 
     DA --> SDK
@@ -55,8 +55,8 @@ analyzer = DocumentAnalyzer()
 
 The analyzer automatically configures:
 
-- **API Key mode**: Uses `GOOGLE_CLOUD_API_KEY` for direct API access
-- **Vertex AI mode**: Uses service account for GCP production
+- **Vertex AI mode** (production): Uses service account or ADC for GCP
+- **API Key mode** (development): Uses `GOOGLE_CLOUD_API_KEY` for direct API access
 
 ### Document Classification
 
@@ -251,14 +251,18 @@ system = get_system_prompt("document_classifier", version="v1")
 
 ```bash
 # Model selection
-GEMINI_LLM_MODEL=gemini-2.0-flash-lite      # Text analysis
-GEMINI_IMAGE_MODEL=gemini-2.0-flash-exp     # Image generation
+GEMINI_LLM_MODEL=gemini-2.5-flash           # Text analysis
+GEMINI_IMAGE_MODEL=gemini-2.5-flash-image   # Image generation
 
-# Authentication (choose one)
-GOOGLE_CLOUD_API_KEY=your_api_key           # Direct API
-GEMINI_USE_VERTEXAI=true                    # Use Vertex AI
+# Authentication — choose one:
+# Option A: Vertex AI (production / recommended)
+GEMINI_USE_VERTEXAI=true
 GOOGLE_CLOUD_PROJECT=your_project           # Required for Vertex AI
 GOOGLE_CLOUD_LOCATION=us-central1           # Vertex AI region
+
+# Option B: REST API key (quick development)
+GEMINI_USE_VERTEXAI=false
+GOOGLE_CLOUD_API_KEY=your_api_key           # Direct API
 
 # Storage signing (production)
 GCS_SIGNING_SERVICE_ACCOUNT=sa@project.iam.gserviceaccount.com  # Explicit SA for signing
@@ -268,9 +272,9 @@ GCS_SIGNING_SERVICE_ACCOUNT=sa@project.iam.gserviceaccount.com  # Explicit SA fo
 
 | Method | Use Case | Configuration |
 |--------|----------|---------------|
-| **API Key** | Local development (simple) | `GOOGLE_CLOUD_API_KEY` |
-| **Vertex AI + Impersonation** | Local development (production parity) | See below |
 | **Vertex AI + Service Account** | Production (Cloud Run) | Automatic via attached SA |
+| **Vertex AI + Impersonation** | Local development (production parity) | See below |
+| **API Key** | Local development (quick start) | `GOOGLE_CLOUD_API_KEY` |
 
 ### Local Development with Vertex AI (Recommended)
 
@@ -331,7 +335,7 @@ except InvalidResponseError:
 
 ## Cost Optimization
 
-1. **Use appropriate models**: `flash-lite` for text, `flash-exp` for images
+1. **Use appropriate models**: `gemini-2.5-flash` for text, `gemini-2.5-flash-image` for images
 2. **Batch requests**: Process multiple pages in single API call
 3. **Cache results**: Store analysis results in database
 4. **Skip unchanged**: Use file hashes to avoid re-processing

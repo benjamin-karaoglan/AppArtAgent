@@ -20,13 +20,10 @@ cd appart-agent
 
 # Configure environment
 cp .env.example .env
-# Add your GOOGLE_CLOUD_API_KEY
+# Configure AI: set GEMINI_USE_VERTEXAI=true or add GOOGLE_CLOUD_API_KEY
 
-# Start services
+# Start services (migrations run automatically)
 docker-compose up -d
-
-# Run migrations
-docker-compose exec backend alembic upgrade head
 ```
 
 ### Services
@@ -276,8 +273,9 @@ docker-compose exec db psql -U appart -d appart_agent
 DATABASE_URL=postgresql://localhost:5432/appart_agent
 
 # AI
+GEMINI_USE_VERTEXAI=false
 GOOGLE_CLOUD_API_KEY=your_api_key
-GEMINI_LLM_MODEL=gemini-2.0-flash-lite
+GEMINI_LLM_MODEL=gemini-2.5-flash
 
 # Security
 SECRET_KEY=dev-secret-key-change-in-production

@@ -5,12 +5,11 @@ Get AppArt Agent running in 5 minutes using Docker.
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-- Google Cloud API key (for Gemini AI)
+- Google Cloud project with Vertex AI enabled, **or** a [Gemini API key](https://aistudio.google.com/) for quick start
 
-!!! tip "Getting a Google Cloud API Key"
-    1. Go to [Google AI Studio](https://aistudio.google.com/)
-    2. Click "Get API key"
-    3. Create a new API key or use an existing one
+!!! tip "AI Provider Options"
+    - **Vertex AI (recommended)**: Set `GEMINI_USE_VERTEXAI=true` with a GCP project
+    - **REST API key (quick start)**: Get a key from [Google AI Studio](https://aistudio.google.com/)
 
 ## Installation
 
@@ -29,11 +28,18 @@ cp .env.example .env
 cp frontend/.env.local.example frontend/.env.local
 ```
 
-Edit `.env` and add your API key:
+Edit `.env` and configure AI + security:
 
 ```bash
-GOOGLE_CLOUD_API_KEY=your_api_key_here
 SECRET_KEY=your-secret-key-at-least-32-characters-long
+
+# Option A: Vertex AI (production)
+GEMINI_USE_VERTEXAI=true
+GOOGLE_CLOUD_PROJECT=your-project-id
+
+# Option B: REST API key (quick start)
+GEMINI_USE_VERTEXAI=false
+GOOGLE_CLOUD_API_KEY=your_api_key_here
 ```
 
 Edit `frontend/.env.local` and set the Better Auth secret:
@@ -64,13 +70,9 @@ This starts all services:
 | API Docs | http://localhost:8000/docs | Swagger UI |
 | MinIO Console | http://localhost:9001 | Storage management |
 
-### 4. Run Database Migrations
+### 4. Verify Installation
 
-```bash
-docker-compose exec backend alembic upgrade head
-```
-
-### 5. Verify Installation
+Database migrations run automatically via the `db-migrate` service.
 
 1. Open http://localhost:3000 in your browser
 2. Register a new account
@@ -138,11 +140,12 @@ docker-compose logs db
 docker-compose restart db
 ```
 
-### API key errors
+### AI/Gemini errors
 
-1. Verify `GOOGLE_CLOUD_API_KEY` is set in `.env`
-2. Check API key has sufficient quota
-3. Ensure billing is enabled on your Google Cloud project
+1. If using API key: verify `GOOGLE_CLOUD_API_KEY` is set in `.env`
+2. If using Vertex AI: verify `GEMINI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT` is set, and ADC is configured
+3. Check API key or project has sufficient quota
+4. Ensure billing is enabled on your Google Cloud project
 
 ### Port conflicts
 

@@ -54,7 +54,7 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {tc('or')}{' '}
-            <Link href="/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/auth/register" className="font-medium text-primary-600 hover:text-primary-500">
               {t('login.orRegister')}
             </Link>
           </p>
@@ -68,7 +68,7 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={googleLoading || loading}
-                className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -105,8 +105,8 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-md bg-danger-50 p-4">
+              <p className="text-sm text-danger-700">{error}</p>
             </div>
           )}
 
@@ -126,11 +126,11 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
                     message: t('login.errors.emailInvalid'),
                   },
                 })}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 bg-white rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 bg-white rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
                 placeholder={t('login.emailPlaceholder')}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="mt-1 text-sm text-danger-600">{errors.email.message}</p>
               )}
             </div>
             <div>
@@ -148,11 +148,11 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
                     message: t('login.errors.passwordMinLength', { min: 6 }),
                   },
                 })}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 bg-white rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 bg-white rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
                 placeholder={t('login.passwordPlaceholder')}
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="mt-1 text-sm text-danger-600">{errors.password.message}</p>
               )}
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
             <button
               type="submit"
               disabled={loading || googleLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? t('login.submitting') : t('login.submit')}
             </button>

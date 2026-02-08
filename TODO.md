@@ -17,6 +17,10 @@
 
 - [ ] Tantième detection
 
+#### Bug
+
+- [ ] Bulk upload loses status when leaving or reloading
+
 ### Redesign studio
 
 #### Feature
@@ -31,5 +35,5 @@
 ### Various
 
 - [ ] Add demos (gif) + images (assets)
-- [ ] Revise the overall design (colors / typos)
+- [X] Revise the overall design (colors / typos) &rarr; Implemented semantic design system with unified color tokens (primary/accent/success/warning/danger) and shared UI components (Button, Badge, Card, SectionHeader, StatCard)
 - [ ] Add feature to export to pdf 'compte rendu' of property

@@ -6,10 +6,13 @@ Modern Next.js frontend for the AppArt Agent real estate management platform.
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS with semantic design tokens
+- **UI Components**: Shared design system (`src/components/ui/`)
 - **Icons**: Lucide React
+- **Auth**: Better Auth 1.4 (email/password + Google OAuth)
+- **i18n**: next-intl (FR/EN)
+- **State**: TanStack React Query v5
 - **HTTP Client**: Axios
-- **Charts**: Recharts
 
 ## Features
 
@@ -99,8 +102,17 @@ src/
 │   ├── layout.tsx              # Root layout
 │   └── globals.css             # Global styles
 ├── components/                 # Reusable components
+│   ├── ui/                    # Design system components
+│   │   ├── Button.tsx         # Button (primary/secondary/accent/ghost/danger/link)
+│   │   ├── Badge.tsx          # Badge (success/warning/danger/info/accent/neutral)
+│   │   ├── Card.tsx           # Card wrapper with padding options
+│   │   ├── SectionHeader.tsx  # Section title with icon + action
+│   │   ├── StatCard.tsx       # Dashboard stat card
+│   │   └── index.ts           # Barrel export
 │   ├── Header.tsx              # Navigation header + locale switcher
 │   ├── ProtectedRoute.tsx      # Auth guard
+│   ├── InfoTooltip.tsx         # Informational tooltips
+│   ├── AppArtLogo.tsx          # SVG logo component
 │   └── MarketTrendChart.tsx
 ├── contexts/
 │   └── AuthContext.tsx          # Auth state (Better Auth sessions)
@@ -161,12 +173,42 @@ Frontend -> Next.js API Routes (/api/auth/*) -> PostgreSQL (ba_* tables)
 - `src/app/api/auth/[...all]/route.ts` - API route handler
 - `src/contexts/AuthContext.tsx` - Auth state management
 
-## Styling
+## Design System
+
+The frontend uses a semantic color token system defined in `tailwind.config.js`. **Always use semantic tokens instead of raw Tailwind colors** (e.g., `primary-600` not `blue-600`).
+
+### Color Tokens
+
+| Token | Palette | Usage |
+|-------|---------|-------|
+| `primary-*` | Blue (#2563eb) | Main CTAs, links, active states, focus rings |
+| `accent-*` | Indigo (#4f46e5) | Secondary features: studio, photos, documents, AI |
+| `success-*` | Emerald (#10b981) | Positive states, confirmations |
+| `warning-*` | Amber (#f59e0b) | Warnings, outliers, caution states |
+| `danger-*` | Red (#dc2626) | Errors, destructive actions, high risk |
+
+### Shared UI Components
+
+Reusable components in `src/components/ui/`:
+
+```tsx
+import { Button, Badge, Card, SectionHeader, StatCard } from '@/components/ui';
+
+<Button variant="primary" icon={<Plus />}>Add Property</Button>
+<Button variant="secondary">Cancel</Button>
+<Badge variant="danger">HIGH</Badge>
+<Card>Content</Card>
+```
+
+### Utility CSS Classes
+
+Defined in `globals.css`: `btn-primary`, `btn-secondary`, `btn-accent`, `btn-ghost`, `btn-danger`, `btn-sm`, `badge-success`, `badge-warning`, `badge-danger`, `badge-info`, `card`, `section-heading`.
+
+### Styling Guidelines
 
 - Tailwind CSS for utility-first styling
-- Consistent color scheme: blue primary, purple for AI features
 - Responsive design for mobile and desktop
-- Dark mode compatible form inputs
+- Use `primary-*` for main actions, `accent-*` for AI/studio features, semantic tokens for status
 
 ## API Integration
 

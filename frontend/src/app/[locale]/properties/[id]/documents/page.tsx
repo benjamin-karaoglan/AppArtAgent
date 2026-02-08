@@ -147,7 +147,7 @@ function getCategoryLabel(category: string, t: (key: string) => string): string 
 }
 
 function getCategoryColor(_category: string): string {
-  return 'bg-blue-100 text-blue-700';
+  return 'bg-primary-100 text-primary-700';
 }
 
 const DIRECT_COST_KEYS = ['taxe_fonciere', 'estimated_energy'];
@@ -183,6 +183,9 @@ function DocumentsPageContent() {
   const [uploadPhase, setUploadPhase] = useState<'idle' | 'uploading' | 'processing' | 'synthesizing'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileCount, setUploadFileCount] = useState(0);
+
+  // localStorage key for persisting upload state across reloads
+  const uploadStateKey = `bulk-upload-${propertyId}`;
 
   // Document list states
   const [expandedDoc, setExpandedDoc] = useState<number | null>(null);
@@ -224,15 +227,43 @@ function DocumentsPageContent() {
         const response = await api.get(`/api/documents?property_id=${propertyId}`);
         setDocuments(response.data);
 
-        // Detect documents still being processed and resume polling
-        const processingDocs = (response.data as Document[]).filter(
-          (d) => d.processing_status === 'processing' || d.processing_status === 'pending'
-        );
-        if (processingDocs.length > 0) {
-          const workflowId = processingDocs.find((d) => d.workflow_id)?.workflow_id;
-          if (workflowId) {
-            setBulkUploading(true);
-            pollBulkStatus(workflowId);
+        // Try to restore upload state from localStorage first
+        let resumed = false;
+        try {
+          const stored = localStorage.getItem(uploadStateKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            const elapsed = Date.now() - (parsed.startTime || 0);
+            // Only restore if less than 30 minutes old
+            if (elapsed < 30 * 60 * 1000 && parsed.workflow_id) {
+              setBulkUploading(true);
+              setUploadPhase(parsed.phase || 'processing');
+              setUploadFileCount(parsed.fileCount || 0);
+              if (parsed.lastStatus) {
+                setBulkStatus(parsed.lastStatus);
+              }
+              pollBulkStatus(parsed.workflow_id);
+              resumed = true;
+            } else {
+              localStorage.removeItem(uploadStateKey);
+            }
+          }
+        } catch {
+          localStorage.removeItem(uploadStateKey);
+        }
+
+        // Fallback: detect documents still being processed from API
+        if (!resumed) {
+          const processingDocs = (response.data as Document[]).filter(
+            (d) => d.processing_status === 'processing' || d.processing_status === 'pending'
+          );
+          if (processingDocs.length > 0) {
+            const workflowId = processingDocs.find((d) => d.workflow_id)?.workflow_id;
+            if (workflowId) {
+              setBulkUploading(true);
+              setUploadPhase('processing');
+              pollBulkStatus(workflowId);
+            }
           }
         }
       } catch (error) {
@@ -423,12 +454,22 @@ function DocumentsPageContent() {
 
       setUploadPhase('processing');
       const { workflow_id } = response.data;
+
+      // Persist upload state to localStorage for reload recovery
+      localStorage.setItem(uploadStateKey, JSON.stringify({
+        workflow_id,
+        phase: 'processing',
+        fileCount: files.length,
+        startTime: Date.now(),
+      }));
+
       pollBulkStatus(workflow_id);
     } catch (err: any) {
       console.error('Bulk upload error:', err);
       setError(err.response?.data?.detail || 'Failed to upload documents');
       setBulkUploading(false);
       setUploadPhase('idle');
+      localStorage.removeItem(uploadStateKey);
     }
   };
 
@@ -436,14 +477,29 @@ function DocumentsPageContent() {
     const maxPolls = 300;
     let pollCount = 0;
 
+    const persistUploadState = (phase: string, lastStatus: BulkUploadStatus | null) => {
+      try {
+        const stored = localStorage.getItem(uploadStateKey);
+        const existing = stored ? JSON.parse(stored) : {};
+        localStorage.setItem(uploadStateKey, JSON.stringify({
+          ...existing,
+          workflow_id: workflowId,
+          phase,
+          lastStatus,
+        }));
+      } catch { /* ignore storage errors */ }
+    };
+
     const poll = async () => {
       try {
         const response = await api.get(`/api/documents/bulk-status/${workflowId}`);
         const status: BulkUploadStatus = response.data;
         setBulkStatus(status);
+        persistUploadState('processing', status);
 
         if (status.status === 'completed' || status.progress.percentage === 100) {
           setUploadPhase('synthesizing');
+          persistUploadState('synthesizing', status);
           let currentStatus = status;
           let synthesisAttempts = 0;
           const maxSynthesisAttempts = 20;
@@ -454,6 +510,7 @@ function DocumentsPageContent() {
               const synthResponse = await api.get(`/api/documents/bulk-status/${workflowId}`);
               currentStatus = synthResponse.data;
               setBulkStatus(currentStatus);
+              persistUploadState('synthesizing', currentStatus);
               if (currentStatus.synthesis) break;
               synthesisAttempts++;
             } catch (err) {
@@ -489,12 +546,14 @@ function DocumentsPageContent() {
 
           setBulkUploading(false);
           setUploadPhase('idle');
+          localStorage.removeItem(uploadStateKey);
           return;
         }
 
         if (status.status === 'failed') {
           setBulkUploading(false);
           setUploadPhase('idle');
+          localStorage.removeItem(uploadStateKey);
           setError(t('bulkFailed'));
           return;
         }
@@ -505,6 +564,7 @@ function DocumentsPageContent() {
         } else if (pollCount >= maxPolls) {
           setBulkUploading(false);
           setUploadPhase('idle');
+          localStorage.removeItem(uploadStateKey);
           setError(t('processingTimeout'));
         }
       } catch (err: any) {
@@ -515,6 +575,7 @@ function DocumentsPageContent() {
         } else {
           setBulkUploading(false);
           setUploadPhase('idle');
+          localStorage.removeItem(uploadStateKey);
           setError('Failed to check processing status');
         }
       }
@@ -581,7 +642,7 @@ function DocumentsPageContent() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
         </div>
       </div>
     );
@@ -607,19 +668,19 @@ function DocumentsPageContent() {
           </div>
 
           {error && (
-            <div className="mb-6 rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="mb-6 rounded-md bg-danger-50 p-4">
+              <p className="text-sm text-danger-700">{error}</p>
             </div>
           )}
 
           {/* Smart Upload Section */}
-          <div className="mb-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl shadow-lg overflow-hidden border-2 border-purple-200">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+          <div className="mb-8 bg-gray-50 rounded-xl shadow-lg overflow-hidden border-2 border-accent-200">
+            <div className="bg-accent-600 px-6 py-4">
               <div className="flex items-center">
-                <Sparkles className="h-6 w-6 text-yellow-300 mr-3" />
+                <Sparkles className="h-6 w-6 text-warning-200 mr-3" />
                 <div>
                   <h2 className="text-xl font-bold text-white">{t('smartUpload.title')}</h2>
-                  <p className="text-sm text-indigo-100">{t('smartUpload.subtitle')}</p>
+                  <p className="text-sm text-accent-100">{t('smartUpload.subtitle')}</p>
                 </div>
               </div>
             </div>
@@ -632,8 +693,8 @@ function DocumentsPageContent() {
                   onDrop={handleDrop}
                   className={`relative border-3 border-dashed rounded-lg p-12 text-center transition-all ${
                     isDragging
-                      ? 'border-purple-500 bg-purple-100 scale-105'
-                      : 'border-purple-300 bg-white hover:border-purple-400 hover:bg-purple-50'
+                      ? 'border-accent-500 bg-accent-100 scale-105'
+                      : 'border-gray-300 bg-white hover:border-accent-400 hover:bg-accent-50'
                   }`}
                 >
                   <input
@@ -644,28 +705,28 @@ function DocumentsPageContent() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     id="bulk-upload-input"
                   />
-                  <Sparkles className="h-16 w-16 mx-auto mb-4 text-purple-500" />
+                  <Sparkles className="h-16 w-16 mx-auto mb-4 text-accent-500" />
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     {t('smartUpload.dropzone')}
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">{t('smartUpload.browse')}</p>
                   <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success-500" />
                     <span>{t('smartUpload.autoClassification')}</span>
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success-500" />
                     <span>{t('smartUpload.parallelProcessing')}</span>
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success-500" />
                     <span>{t('smartUpload.smartSynthesis')}</span>
                   </div>
                 </div>
               )}
 
               {bulkUploading && (
-                <div className="bg-white rounded-lg p-6 border border-purple-200">
+                <div className="bg-white rounded-lg p-6 border border-accent-200">
                   {/* Step indicators */}
                   <div className="flex items-center gap-3 mb-6">
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                      uploadPhase === 'uploading' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                      uploadPhase === 'uploading' ? 'bg-accent-100 text-accent-700' : 'bg-success-100 text-success-700'
                     }`}>
                       {uploadPhase === 'uploading' ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -676,8 +737,8 @@ function DocumentsPageContent() {
                     </div>
                     <div className="h-px flex-1 bg-gray-200" />
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                      uploadPhase === 'processing' ? 'bg-purple-100 text-purple-700' :
-                      (uploadPhase === 'synthesizing') ? 'bg-green-100 text-green-700' :
+                      uploadPhase === 'processing' ? 'bg-accent-100 text-accent-700' :
+                      (uploadPhase === 'synthesizing') ? 'bg-success-100 text-success-700' :
                       'bg-gray-100 text-gray-400'
                     }`}>
                       {uploadPhase === 'processing' ? (
@@ -691,7 +752,7 @@ function DocumentsPageContent() {
                     </div>
                     <div className="h-px flex-1 bg-gray-200" />
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                      uploadPhase === 'synthesizing' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-400'
+                      uploadPhase === 'synthesizing' ? 'bg-accent-100 text-accent-700' : 'bg-gray-100 text-gray-400'
                     }`}>
                       {uploadPhase === 'synthesizing' ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -707,7 +768,7 @@ function DocumentsPageContent() {
                     <>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center">
-                          <Loader2 className="h-6 w-6 text-purple-600 animate-spin mr-3" />
+                          <Loader2 className="h-6 w-6 text-accent-600 animate-spin mr-3" />
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900">{t('smartUpload.uploading')}</h3>
                             <p className="text-sm text-gray-600">
@@ -716,14 +777,14 @@ function DocumentsPageContent() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-3xl font-bold text-purple-600">
+                          <div className="text-3xl font-bold text-accent-600">
                             {uploadProgress}%
                           </div>
                         </div>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                         <div
-                          className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-300"
+                          className="bg-accent-500 h-3 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
@@ -733,9 +794,9 @@ function DocumentsPageContent() {
                   {/* Phase 3: Synthesizing — show synthesis message + keep document list visible */}
                   {uploadPhase === 'synthesizing' && (
                     <>
-                      <div className="flex items-center justify-center py-6 mb-4 bg-purple-50 rounded-lg">
+                      <div className="flex items-center justify-center py-6 mb-4 bg-accent-50 rounded-lg">
                         <div className="text-center">
-                          <Sparkles className="h-10 w-10 text-purple-500 mx-auto mb-3 animate-pulse" />
+                          <Sparkles className="h-10 w-10 text-accent-500 mx-auto mb-3 animate-pulse" />
                           <h3 className="text-lg font-semibold text-gray-900">{t('smartUpload.synthesizing')}</h3>
                           <p className="text-sm text-gray-600 mt-1">{t('smartUpload.synthesizingSubtitle')}</p>
                         </div>
@@ -758,9 +819,9 @@ function DocumentsPageContent() {
                               </div>
                             </div>
                             <div className="flex items-center">
-                              {doc.processing_status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
-                              {doc.processing_status === 'processing' && <Loader2 className="h-5 w-5 text-purple-500 animate-spin" />}
-                              {doc.processing_status === 'failed' && <AlertCircle className="h-5 w-5 text-red-500" />}
+                              {doc.processing_status === 'completed' && <CheckCircle className="h-5 w-5 text-success-500" />}
+                              {doc.processing_status === 'processing' && <Loader2 className="h-5 w-5 text-accent-500 animate-spin" />}
+                              {doc.processing_status === 'failed' && <AlertCircle className="h-5 w-5 text-danger-500" />}
                               {doc.processing_status === 'pending' && <Clock className="h-5 w-5 text-gray-400" />}
                             </div>
                           </div>
@@ -774,7 +835,7 @@ function DocumentsPageContent() {
                     <>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center">
-                          <Loader2 className="h-6 w-6 text-purple-600 animate-spin mr-3" />
+                          <Loader2 className="h-6 w-6 text-accent-600 animate-spin mr-3" />
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900">{t('smartUpload.processing')}</h3>
                             <p className="text-sm text-gray-600">{t('smartUpload.processingSubtitle')}</p>
@@ -782,7 +843,7 @@ function DocumentsPageContent() {
                         </div>
                         {bulkStatus && (
                           <div className="text-right">
-                            <div className="text-3xl font-bold text-purple-600">
+                            <div className="text-3xl font-bold text-accent-600">
                               {bulkStatus.progress.percentage}%
                             </div>
                             <div className="text-xs text-gray-500">
@@ -796,7 +857,7 @@ function DocumentsPageContent() {
                         <div className="mb-6">
                           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                             <div
-                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
+                              className="bg-accent-500 h-3 rounded-full transition-all duration-500"
                               style={{ width: `${bulkStatus.progress.percentage}%` }}
                             />
                           </div>
@@ -820,9 +881,9 @@ function DocumentsPageContent() {
                               </div>
                             </div>
                             <div className="flex items-center">
-                              {doc.processing_status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
-                              {doc.processing_status === 'processing' && <Loader2 className="h-5 w-5 text-purple-500 animate-spin" />}
-                              {doc.processing_status === 'failed' && <AlertCircle className="h-5 w-5 text-red-500" />}
+                              {doc.processing_status === 'completed' && <CheckCircle className="h-5 w-5 text-success-500" />}
+                              {doc.processing_status === 'processing' && <Loader2 className="h-5 w-5 text-accent-500 animate-spin" />}
+                              {doc.processing_status === 'failed' && <AlertCircle className="h-5 w-5 text-danger-500" />}
                               {doc.processing_status === 'pending' && <Clock className="h-5 w-5 text-gray-400" />}
                             </div>
                           </div>
@@ -834,9 +895,9 @@ function DocumentsPageContent() {
               )}
 
               {!bulkUploading && bulkStatus && (
-                <div className="bg-white rounded-lg p-6 border border-green-200">
+                <div className="bg-white rounded-lg p-6 border border-success-200">
                   <div className="flex items-center mb-4">
-                    <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
+                    <CheckCircle className="h-8 w-8 text-success-500 mr-3" />
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{t('smartUpload.processingComplete')}</h3>
                       <p className="text-sm text-gray-600">
@@ -846,18 +907,18 @@ function DocumentsPageContent() {
                   </div>
 
                   {bulkStatus.synthesis && (
-                    <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                    <div className="mt-4 p-4 bg-accent-50 rounded-lg border border-accent-200">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-md font-semibold text-gray-900 flex items-center">
-                          <Sparkles className="h-5 w-5 text-purple-500 mr-2" />
+                          <Sparkles className="h-5 w-5 text-accent-500 mr-2" />
                           {t('synthesis.title')}
                         </h4>
                         <div className="flex items-center gap-2">
                           {bulkStatus.synthesis.risk_level && bulkStatus.synthesis.risk_level !== 'unknown' && (
                             <span className={`text-xs px-2 py-1 rounded font-medium ${
-                              bulkStatus.synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
-                              bulkStatus.synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-green-100 text-green-700'
+                              bulkStatus.synthesis.risk_level === 'high' ? 'bg-danger-100 text-danger-700' :
+                              bulkStatus.synthesis.risk_level === 'medium' ? 'bg-warning-100 text-warning-700' :
+                              'bg-success-100 text-success-700'
                             }`}>
                               {bulkStatus.synthesis.risk_level === 'high' ? t('synthesis.high') :
                                bulkStatus.synthesis.risk_level === 'medium' ? t('synthesis.medium') :
@@ -865,7 +926,7 @@ function DocumentsPageContent() {
                             </span>
                           )}
                           {bulkStatus.synthesis.synthesis_data?.confidence_score != null && (
-                            <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium">
+                            <span className="text-xs px-2 py-1 rounded bg-primary-100 text-primary-700 font-medium">
                               {t('propertySynthesis.confidence', { score: Math.round(bulkStatus.synthesis.synthesis_data.confidence_score * 100) })}
                             </span>
                           )}
@@ -882,7 +943,7 @@ function DocumentsPageContent() {
                           <ul className="space-y-1">
                             {bulkStatus.synthesis.key_findings.map((finding, idx) => (
                               <li key={idx} className="text-sm text-gray-700 flex items-start">
-                                <span className="text-purple-500 mr-2">&bull;</span>
+                                <span className="text-accent-500 mr-2">&bull;</span>
                                 {finding}
                               </li>
                             ))}
@@ -891,7 +952,7 @@ function DocumentsPageContent() {
                       )}
 
                       {(bulkStatus.synthesis.total_annual_cost || bulkStatus.synthesis.total_one_time_cost) && (
-                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-purple-200">
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-accent-200">
                           {bulkStatus.synthesis.total_annual_cost !== undefined && bulkStatus.synthesis.total_annual_cost > 0 && (
                             <div>
                               <dt className="text-xs font-medium text-gray-500">{t('synthesis.totalAnnualCosts')}</dt>
@@ -915,7 +976,7 @@ function DocumentsPageContent() {
 
                   <button
                     onClick={() => setBulkStatus(null)}
-                    className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="mt-4 w-full px-4 py-2 bg-accent-600 text-white rounded-lg hover:bg-accent-700 transition-colors"
                   >
                     {t('smartUpload.uploadMore')}
                   </button>
@@ -972,11 +1033,11 @@ function DocumentsPageContent() {
               : null;
 
             return (
-            <div className="mb-8 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 rounded-xl p-6 border-2 border-purple-200 shadow-lg">
+            <div className="mb-8 bg-gray-50 rounded-xl p-6 border-2 border-accent-200 shadow-lg">
               {/* Header: Title + regenerate + risk badge + confidence badge */}
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <svg className="w-8 h-8 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 mr-3 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   {t('propertySynthesis.title')}
@@ -985,7 +1046,7 @@ function DocumentsPageContent() {
                   <button
                     onClick={handleRegenerateSynthesis}
                     disabled={regenerating}
-                    className="inline-flex items-center px-3 py-1.5 border border-purple-300 text-xs font-medium rounded-lg text-purple-700 bg-white hover:bg-purple-50 disabled:opacity-50"
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-accent-700 bg-white hover:bg-accent-50 disabled:opacity-50"
                   >
                     {regenerating ? (
                       <><Loader2 className="h-3 w-3 mr-1 animate-spin" />{t('documentList.resynthesizing')}</>
@@ -995,15 +1056,15 @@ function DocumentsPageContent() {
                   </button>
                   {synthesis.risk_level && synthesis.risk_level !== 'unknown' && (
                     <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                      synthesis.risk_level === 'high' ? 'bg-red-100 text-red-700' :
-                      synthesis.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'
+                      synthesis.risk_level === 'high' ? 'bg-danger-100 text-danger-700' :
+                      synthesis.risk_level === 'medium' ? 'bg-warning-100 text-warning-700' :
+                      'bg-success-100 text-success-700'
                     }`}>
                       {t('propertySynthesis.risk', { level: synthesis.risk_level?.toUpperCase() || '' })}
                     </span>
                   )}
                   {sd?.confidence_score != null && (
-                    <span className="px-3 py-2 rounded-full text-sm font-semibold bg-blue-100 text-blue-700">
+                    <span className="px-3 py-2 rounded-full text-sm font-semibold bg-primary-100 text-primary-700">
                       {t('propertySynthesis.confidence', { score: Math.round(sd.confidence_score * 100) })}
                     </span>
                   )}
@@ -1020,7 +1081,7 @@ function DocumentsPageContent() {
                   {!editingTantiemes && (
                     <button
                       onClick={() => setEditingTantiemes(true)}
-                      className="inline-flex items-center text-xs text-purple-600 hover:text-purple-800"
+                      className="inline-flex items-center text-xs text-accent-600 hover:text-accent-700"
                     >
                       <Pencil className="h-3 w-3 mr-1" />
                       {t('propertySynthesis.editTantiemes')}
@@ -1035,7 +1096,7 @@ function DocumentsPageContent() {
                         type="number"
                         value={userLotTantiemes ?? sd?.tantiemes_info?.lot_tantiemes ?? ''}
                         onChange={(e) => setUserLotTantiemes(e.target.value ? Number(e.target.value) : null)}
-                        className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-accent-500"
                         placeholder="150"
                       />
                     </div>
@@ -1045,7 +1106,7 @@ function DocumentsPageContent() {
                         type="number"
                         value={userTotalTantiemes ?? sd?.tantiemes_info?.total_tantiemes ?? ''}
                         onChange={(e) => setUserTotalTantiemes(e.target.value ? Number(e.target.value) : null)}
-                        className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        className="w-28 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-accent-500"
                         placeholder="10000"
                       />
                     </div>
@@ -1058,7 +1119,7 @@ function DocumentsPageContent() {
                     <button
                       onClick={handleSaveTantiemes}
                       disabled={savingTantiemes}
-                      className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                      className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 bg-accent-600 text-white text-xs font-medium rounded-lg hover:bg-accent-700 disabled:opacity-50"
                     >
                       {savingTantiemes ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                       {tc('save')}
@@ -1156,7 +1217,8 @@ function DocumentsPageContent() {
                       {Object.entries(sd.annual_cost_breakdown).map(([key, value]) => {
                         const entry = getAnnualCostEntry(value);
                         const effectiveAmount = annualOverrides[key] ?? entry.amount;
-                        if (effectiveAmount <= 0 && !(key in annualOverrides)) return null;
+                        // Always show taxe_fonciere if present (even with 0 amount) — it's critical info
+                        if (effectiveAmount <= 0 && !(key in annualOverrides) && key !== 'taxe_fonciere') return null;
                         const isDirect = DIRECT_COST_KEYS.includes(key);
                         const buyerAmount = (!isDirect && shareRatio != null) ? effectiveAmount * shareRatio : effectiveAmount;
                         const isOverridden = key in annualOverrides;
@@ -1177,7 +1239,7 @@ function DocumentsPageContent() {
                                 }
                                 if (e.key === 'Escape') setEditingAnnualKey(null);
                               }}
-                              className="w-24 border border-gray-300 rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-24 border border-gray-300 rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary-500"
                               autoFocus
                             />
                             <button
@@ -1186,7 +1248,7 @@ function DocumentsPageContent() {
                                 if (!isNaN(v)) setAnnualOverrides(prev => ({ ...prev, [key]: v }));
                                 setEditingAnnualKey(null);
                               }}
-                              className="text-green-600 hover:text-green-800 p-0.5"
+                              className="text-success-600 hover:text-success-700 p-0.5"
                             >
                               <Check className="h-3.5 w-3.5" />
                             </button>
@@ -1202,13 +1264,13 @@ function DocumentsPageContent() {
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-600">{t(`propertySynthesis.costCategories.${key}`)}</span>
                                 {!isDirect && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-600">{t('propertySynthesis.coproCost')}</span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-accent-100 text-accent-600">{t('propertySynthesis.coproCost')}</span>
                                 )}
                                 {isDirect && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{t('propertySynthesis.directCost')}</span>
                                 )}
                                 {isOverridden && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">{t('propertySynthesis.userAdjusted')}</span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-primary-100 text-primary-600">{t('propertySynthesis.userAdjusted')}</span>
                                 )}
                               </div>
                               {entry.source && (
@@ -1229,7 +1291,7 @@ function DocumentsPageContent() {
                                     {isOverridden && editOnCoproCol && (
                                       <span className="text-xs text-gray-400 line-through mr-1">{fmt(entry.amount)}</span>
                                     )}
-                                    <span className={`font-medium ${isOverridden ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    <span className={`font-medium ${isOverridden ? 'text-primary-600' : 'text-gray-500'}`}>
                                       {fmt(effectiveAmount)}
                                     </span>
                                     {isOverridden && editOnCoproCol && (
@@ -1262,7 +1324,7 @@ function DocumentsPageContent() {
                                   {isOverridden && !editOnCoproCol && (
                                     <span className="text-xs text-gray-400 line-through mr-1">{fmt(entry.amount)}</span>
                                   )}
-                                  <span className={`font-medium ${isOverridden && !editOnCoproCol ? 'text-blue-600' : 'text-gray-900'}`}>
+                                  <span className={`font-medium ${isOverridden && !editOnCoproCol ? 'text-primary-600' : 'text-gray-900'}`}>
                                     {fmt(shareRatio != null ? buyerAmount : effectiveAmount)}
                                   </span>
                                   {isOverridden && !editOnCoproCol && (
@@ -1336,7 +1398,7 @@ function DocumentsPageContent() {
                                 }
                                 if (e.key === 'Escape') setEditingOneTimeIdx(null);
                               }}
-                              className="w-24 border border-gray-300 rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-24 border border-gray-300 rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary-500"
                               autoFocus
                             />
                             <button
@@ -1345,7 +1407,7 @@ function DocumentsPageContent() {
                                 if (!isNaN(v)) setOneTimeOverrides(prev => ({ ...prev, [idx]: v }));
                                 setEditingOneTimeIdx(null);
                               }}
-                              className="text-green-600 hover:text-green-800 p-0.5"
+                              className="text-success-600 hover:text-success-700 p-0.5"
                             >
                               <Check className="h-3.5 w-3.5" />
                             </button>
@@ -1377,7 +1439,7 @@ function DocumentsPageContent() {
                                     {isOverridden && (
                                       <span className="text-xs text-gray-400 line-through mr-1">{fmt(item.amount)}</span>
                                     )}
-                                    <span className={`font-medium ${isOverridden ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    <span className={`font-medium ${isOverridden ? 'text-primary-600' : 'text-gray-500'}`}>
                                       {fmt(effectiveAmount)}
                                     </span>
                                     {isOverridden && (
@@ -1410,7 +1472,7 @@ function DocumentsPageContent() {
                                   {isOverridden && !editOnCoproCol && (
                                     <span className="text-xs text-gray-400 line-through mr-1">{fmt(item.amount)}</span>
                                   )}
-                                  <span className={`font-medium ${isOverridden && !editOnCoproCol ? 'text-blue-600' : 'text-gray-900'}`}>
+                                  <span className={`font-medium ${isOverridden && !editOnCoproCol ? 'text-primary-600' : 'text-gray-900'}`}>
                                     {fmt(shareRatio != null ? buyerAmount : effectiveAmount)}
                                   </span>
                                   {isOverridden && !editOnCoproCol && (
@@ -1438,14 +1500,14 @@ function DocumentsPageContent() {
                             <td className="py-2 pl-4 text-right">
                               <div className="inline-flex items-center gap-1.5">
                                 <span className={`text-xs px-2 py-0.5 rounded ${
-                                  effectiveStatus === 'voted' ? 'bg-green-100 text-green-700' :
-                                  effectiveStatus === 'estimated' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-blue-100 text-blue-700'
+                                  effectiveStatus === 'voted' ? 'bg-success-100 text-success-700' :
+                                  effectiveStatus === 'estimated' ? 'bg-warning-100 text-warning-700' :
+                                  'bg-primary-100 text-primary-700'
                                 }`}>
                                   {t(`propertySynthesis.costStatus.${effectiveStatus}`)}
                                 </span>
                                 {isOverridden && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">{t('propertySynthesis.userAdjusted')}</span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-primary-100 text-primary-600">{t('propertySynthesis.userAdjusted')}</span>
                                 )}
                               </div>
                             </td>
@@ -1464,7 +1526,7 @@ function DocumentsPageContent() {
                   <ul className="space-y-2">
                     {synthesis.key_findings.map((finding, idx) => (
                       <li key={idx} className="flex items-start text-gray-700">
-                        <svg className="w-5 h-5 text-purple-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-accent-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                         {finding}
@@ -1481,7 +1543,7 @@ function DocumentsPageContent() {
                   <ul className="space-y-2">
                     {sd.risk_factors.map((factor, idx) => (
                       <li key={idx} className="flex items-start text-gray-700">
-                        <AlertCircle className="w-5 h-5 text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-danger-400 mr-2 flex-shrink-0 mt-0.5" />
                         {factor}
                       </li>
                     ))}
@@ -1494,7 +1556,7 @@ function DocumentsPageContent() {
                 <div className="mb-4">
                   <button
                     onClick={() => setShowThemes(!showThemes)}
-                    className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 hover:text-purple-700"
+                    className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 hover:text-accent-700"
                   >
                     {showThemes ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                     {t('propertySynthesis.crossDocThemes')} ({sd.cross_document_themes.length})
@@ -1521,7 +1583,7 @@ function DocumentsPageContent() {
                 <div className="mb-4">
                   <button
                     onClick={() => setShowActionItems(!showActionItems)}
-                    className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 hover:text-purple-700"
+                    className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 hover:text-accent-700"
                   >
                     {showActionItems ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                     {t('propertySynthesis.actionItems')} ({sd.buyer_action_items.length})
@@ -1532,16 +1594,16 @@ function DocumentsPageContent() {
                         .sort((a, b) => a.priority - b.priority)
                         .map((item, idx) => (
                         <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold">
+                          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-accent-100 text-accent-700 flex items-center justify-center text-sm font-bold">
                             {item.priority}
                           </span>
                           <div className="flex-1">
                             <p className="text-sm text-gray-700">{item.action}</p>
                             <div className="flex items-center gap-3 mt-1">
                               <span className={`text-xs px-2 py-0.5 rounded ${
-                                item.urgency === 'immediate' ? 'bg-red-100 text-red-700' :
-                                item.urgency === 'short_term' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-blue-100 text-blue-700'
+                                item.urgency === 'immediate' ? 'bg-danger-100 text-danger-700' :
+                                item.urgency === 'short_term' ? 'bg-warning-100 text-warning-700' :
+                                'bg-primary-100 text-primary-700'
                               }`}>
                                 {t(`propertySynthesis.urgency.${item.urgency}`) || item.urgency}
                               </span>
@@ -1564,7 +1626,7 @@ function DocumentsPageContent() {
                   <ul className="space-y-2">
                     {synthesis.recommendations.map((rec, idx) => (
                       <li key={idx} className="flex items-start text-gray-700">
-                        <svg className="w-5 h-5 text-pink-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-accent-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
                         {rec}
@@ -1576,7 +1638,7 @@ function DocumentsPageContent() {
 
               {/* Confidence footer */}
               {sd?.confidence_reasoning && (
-                <div className="mt-4 pt-4 border-t border-purple-200">
+                <div className="mt-4 pt-4 border-t border-accent-200">
                   <p className="text-xs text-gray-500">
                     <span className="font-medium">{t('propertySynthesis.confidenceNote')}:</span> {sd.confidence_reasoning}
                   </p>
@@ -1596,7 +1658,7 @@ function DocumentsPageContent() {
                     type="checkbox"
                     checked={selectedDocs.size === documents.length && documents.length > 0}
                     onChange={toggleSelectAll}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                    className="h-4 w-4 text-primary-600 border-gray-300 rounded"
                   />
                   {selectedDocs.size === documents.length ? t('deselectAll') : t('selectAll')}
                 </label>
@@ -1649,7 +1711,7 @@ function DocumentsPageContent() {
                                       type="checkbox"
                                       checked={selectedDocs.has(doc.id)}
                                       onChange={() => toggleDocSelection(doc.id)}
-                                      className="h-4 w-4 text-blue-600 border-gray-300 rounded mr-3 flex-shrink-0"
+                                      className="h-4 w-4 text-primary-600 border-gray-300 rounded mr-3 flex-shrink-0"
                                     />
                                     <FileText className="h-4 w-4 text-gray-400 mr-3 flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
@@ -1664,11 +1726,11 @@ function DocumentsPageContent() {
                                                 if (e.key === 'Enter') handleSaveRename(doc);
                                                 if (e.key === 'Escape') handleCancelRename();
                                               }}
-                                              className="text-sm font-medium text-gray-900 border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                              className="text-sm font-medium text-gray-900 border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                               autoFocus
                                             />
                                             <span className="text-xs text-gray-400">{doc.filename.substring(doc.filename.lastIndexOf('.'))}</span>
-                                            <button onClick={() => handleSaveRename(doc)} className="text-green-600 hover:text-green-800 p-0.5">
+                                            <button onClick={() => handleSaveRename(doc)} className="text-success-600 hover:text-success-700 p-0.5">
                                               <Check className="h-4 w-4" />
                                             </button>
                                             <button onClick={handleCancelRename} className="text-gray-400 hover:text-gray-600 p-0.5">
@@ -1688,9 +1750,9 @@ function DocumentsPageContent() {
                                           </>
                                         )}
                                         {doc.is_analyzed ? (
-                                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                          <CheckCircle className="h-4 w-4 text-success-500 flex-shrink-0" />
                                         ) : (
-                                          <Loader2 className="h-4 w-4 text-blue-500 animate-spin flex-shrink-0" />
+                                          <Loader2 className="h-4 w-4 text-primary-500 animate-spin flex-shrink-0" />
                                         )}
                                       </div>
                                       <div className="flex items-center text-xs text-gray-500 gap-3 mt-0.5">
@@ -1715,7 +1777,7 @@ function DocumentsPageContent() {
                                     )}
                                     <button
                                       onClick={() => handleDeleteDocument(doc.id)}
-                                      className="text-red-400 hover:text-red-600 p-1"
+                                      className="text-danger-400 hover:text-danger-600 p-1"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </button>
@@ -1775,7 +1837,7 @@ function DocumentsPageContent() {
               </span>
               <button
                 onClick={() => setShowBulkDeleteConfirm(true)}
-                className="inline-flex items-center px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-full hover:bg-red-700 transition-colors"
+                className="inline-flex items-center px-4 py-1.5 bg-danger-600 text-white text-sm font-medium rounded-full hover:bg-danger-700 transition-colors"
               >
                 <Trash2 className="h-4 w-4 mr-1.5" />
                 {t('deleteSelected')}
@@ -1801,8 +1863,8 @@ function DocumentsPageContent() {
                 <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
                 <div className="relative inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                   <div className="sm:flex sm:items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                      <Trash2 className="h-6 w-6 text-red-600" aria-hidden="true" />
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-danger-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <Trash2 className="h-6 w-6 text-danger-600" aria-hidden="true" />
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                       <h3 className="text-lg leading-6 font-medium text-gray-900" id="bulk-delete-title">
@@ -1820,7 +1882,7 @@ function DocumentsPageContent() {
                       type="button"
                       disabled={bulkDeleting}
                       onClick={handleBulkDelete}
-                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-danger-600 text-base font-medium text-white hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {bulkDeleting ? (
                         <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{tc('deleting')}</>
@@ -1832,7 +1894,7 @@ function DocumentsPageContent() {
                       type="button"
                       disabled={bulkDeleting}
                       onClick={() => setShowBulkDeleteConfirm(false)}
-                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {tc('cancel')}
                     </button>

@@ -259,7 +259,7 @@ import { Link } from '@/i18n/navigation';
 
 <Link
   href={`/properties/${property.id}`}
-  className="text-indigo-600 hover:text-indigo-800"
+  className="text-primary-600 hover:text-primary-800"
 >
   View Property
 </Link>
@@ -316,13 +316,13 @@ export default function Error({
 }) {
   return (
     <div className="text-center py-8">
-      <h2 className="text-xl font-semibold text-red-600">
+      <h2 className="text-xl font-semibold text-danger-600">
         Something went wrong
       </h2>
       <p className="text-gray-600 mt-2">{error.message}</p>
       <button
         onClick={reset}
-        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+        className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
       >
         Try again
       </button>

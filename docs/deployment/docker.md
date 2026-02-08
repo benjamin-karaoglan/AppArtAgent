@@ -26,13 +26,10 @@ cd appart-agent
 
 # Configure environment
 cp .env.example .env
-# Add GOOGLE_CLOUD_API_KEY to .env
+# Configure AI: set GEMINI_USE_VERTEXAI=true or add GOOGLE_CLOUD_API_KEY
 
-# Start services
+# Start services (migrations run automatically)
 docker-compose up -d
-
-# Run migrations
-docker-compose exec backend alembic upgrade head
 
 # Verify
 docker-compose ps
@@ -53,7 +50,8 @@ services:
       target: dev              # Use dev target for hot-reload
     environment:
       DATABASE_URL: postgresql://appart:appart@db:5432/appart_agent
-      GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY}
+      GEMINI_USE_VERTEXAI: ${GEMINI_USE_VERTEXAI:-false}
+      GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY:-}
       MINIO_ENDPOINT: minio:9000
     volumes:
       - ./backend:/app         # Mount source for hot-reload
@@ -68,12 +66,16 @@ Create `.env` in project root (backend):
 
 ```bash
 # Required
-GOOGLE_CLOUD_API_KEY=your_api_key
 SECRET_KEY=your-secret-key-32-chars-minimum
 
-# Optional
-GOOGLE_CLOUD_PROJECT=your-project
+# AI — choose one:
+GEMINI_USE_VERTEXAI=true                    # Vertex AI (production)
+GOOGLE_CLOUD_PROJECT=your-project           # Required for Vertex AI
+# OR
 GEMINI_USE_VERTEXAI=false
+GOOGLE_CLOUD_API_KEY=your_api_key           # REST API key (dev)
+
+# Optional
 AUTO_IMPORT_DVF=false
 ```
 

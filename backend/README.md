@@ -36,7 +36,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 cd backend
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt
+uv sync
 ```
 
 3. Set up environment variables:
@@ -52,28 +52,23 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-### Local Development with pip
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
 ## Configuration
 
 Key environment variables (set in `.env`):
 
 - `DATABASE_URL`: PostgreSQL connection string
-- `GOOGLE_CLOUD_API_KEY`: Your Google Cloud API key for Gemini
-- `SECRET_KEY`: Secret key for JWT token generation
+- `SECRET_KEY`: Secret key for legacy auth (32+ chars)
+- `GEMINI_USE_VERTEXAI`: `true` for Vertex AI (production), `false` for REST API key (dev)
+- `GOOGLE_CLOUD_API_KEY`: Gemini REST API key (only when `GEMINI_USE_VERTEXAI=false`)
+- `GOOGLE_CLOUD_PROJECT`: GCP project ID (required for Vertex AI)
+- `GOOGLE_CLOUD_LOCATION`: GCP region (default: us-central1)
+- `GEMINI_LLM_MODEL`: Text analysis model (default: gemini-2.5-flash)
+- `GEMINI_IMAGE_MODEL`: Image generation model (default: gemini-2.5-flash-image)
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `STORAGE_BACKEND`: `minio` (dev) or `gcs` (production)
 - `MINIO_ENDPOINT`: MinIO server endpoint (default: minio:9000)
 - `MINIO_ACCESS_KEY`: MinIO access key (default: minioadmin)
 - `MINIO_SECRET_KEY`: MinIO secret key (default: minioadmin)
-- `MINIO_BUCKET`: MinIO bucket name (default: documents)
 
 ## Logging
 
@@ -182,14 +177,12 @@ docker-compose exec db psql -U appart -d appart_agent -c \
 ## Testing
 
 ```bash
-# With uv
-uv pip install pytest pytest-asyncio
-pytest
+# Run all tests
+uv run pytest
 
-# With pip
-pip install pytest pytest-asyncio
-pytest
+# With coverage
+uv run pytest --cov
 
 # Run DVF service tests specifically
-pytest tests/test_dvf_service.py -v
+uv run pytest tests/test_dvf_service.py -v
 ```

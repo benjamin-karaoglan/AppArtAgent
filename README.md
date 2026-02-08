@@ -65,7 +65,7 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-- [Google Cloud API key](https://aistudio.google.com/) for Gemini AI
+- Google Cloud project with Vertex AI enabled, **or** a [Gemini API key](https://aistudio.google.com/) for development
 
 ### Installation
 
@@ -76,13 +76,10 @@ cd AppArtAgent
 
 # Configure environment
 cp .env.example .env
-# Edit .env and add your GOOGLE_CLOUD_API_KEY
+# Edit .env — set GEMINI_USE_VERTEXAI=true (production) or add GOOGLE_CLOUD_API_KEY (dev)
 
-# Start all services
+# Start all services (migrations run automatically)
 docker-compose up -d
-
-# Run database migrations
-docker-compose exec backend alembic upgrade head
 ```
 
 ### Access the Application
@@ -99,7 +96,7 @@ docker-compose exec backend alembic upgrade head
 |-------|--------------|
 | **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, pnpm |
 | **Backend** | FastAPI, Python 3.10+, SQLAlchemy, UV |
-| **AI/ML** | Google Gemini (multimodal), LangChain |
+| **AI** | Google Gemini via `google-genai` SDK (Vertex AI / REST API) |
 | **Database** | PostgreSQL 15, Redis 7 |
 | **Storage** | MinIO (local), Google Cloud Storage (production) |
 | **Infrastructure** | Docker, Terraform, GCP Cloud Run |
@@ -121,8 +118,8 @@ AppArtAgent/
 ├── frontend/               # Next.js frontend
 │   └── src/
 │       ├── app/            # App Router pages
-│       ├── components/     # React components
-│       └── lib/            # Utilities
+│       ├── components/     # React components + ui/ design system
+│       └── lib/            # Utilities, API client, auth
 ├── docs/                   # Documentation (MkDocs)
 ├── infra/terraform/        # Infrastructure as Code
 └── docker-compose.yml      # Local development stack
@@ -144,8 +141,8 @@ Full documentation is available at **[benjamin-karaoglan.github.io/AppArtAgent](
 ### Run Documentation Locally
 
 ```bash
-pip install -r docs/requirements.txt
-mkdocs serve
+uv pip install -r docs/requirements.txt
+uv mkdocs serve
 ```
 
 ## Development
@@ -195,12 +192,15 @@ pnpm dev
 
 ```bash
 DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
-GOOGLE_CLOUD_API_KEY=your_google_api_key
 SECRET_KEY=your-secret-key-at-least-32-characters
 STORAGE_BACKEND=minio
 MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
+
+# AI — choose one:
+GEMINI_USE_VERTEXAI=false
+GOOGLE_CLOUD_API_KEY=your_google_api_key    # Only needed when GEMINI_USE_VERTEXAI=false
 ```
 
 </details>
