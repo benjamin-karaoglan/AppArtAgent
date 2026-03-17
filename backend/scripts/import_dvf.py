@@ -10,7 +10,6 @@ Usage:
 """
 
 import argparse
-import gzip
 import io
 import os
 import shutil
@@ -21,6 +20,7 @@ from pathlib import Path
 
 import polars as pl
 import psycopg2
+import psycopg2.sql
 
 # Schema overrides for CSV columns that polars may mistype
 DVF_SCHEMA_OVERRIDES = {
@@ -75,28 +75,24 @@ def resolve_csv_path(cli_csv: str | None) -> Path:
         if not source_url.startswith("https://"):
             print("ERROR: DVF_SOURCE_URL must use HTTPS")
             sys.exit(1)
-        tmp_path = Path("/tmp/dvf.csv")
-        if tmp_path.exists():
-            print(f"Using cached {tmp_path}")
-            return tmp_path
 
-        archive_path = Path("/tmp/dvf.csv.gz")
+        # Download the .gz archive to /tmp (keeps it compressed — ~500 MB).
+        # IMPORTANT: Cloud Run /tmp is RAM-backed (tmpfs), so we must NOT
+        # extract the 3.3 GB CSV there. Polars reads .csv.gz natively.
+        gz_path = Path("/tmp/dvf.csv.gz")
+        if gz_path.exists():
+            print(f"Using cached {gz_path}")
+            return gz_path
+
         print(f"Downloading {source_url}")
         with (
             urllib.request.urlopen(source_url, timeout=120) as resp,  # noqa: S310
-            open(archive_path, "wb") as out,
+            open(gz_path, "wb") as out,
         ):
             shutil.copyfileobj(resp, out)
-        size_mb = archive_path.stat().st_size / (1024 * 1024)
-        print(f"Downloaded {size_mb:.1f} MB")
-
-        print("Extracting...")
-        with gzip.open(archive_path, "rb") as f_in, open(tmp_path, "wb") as f_out:
-            shutil.copyfileobj(f_in, f_out)
-        archive_path.unlink()
-        out_mb = tmp_path.stat().st_size / (1024 * 1024)
-        print(f"Extracted {out_mb:.1f} MB")
-        return tmp_path
+        size_mb = gz_path.stat().st_size / (1024 * 1024)
+        print(f"Downloaded {size_mb:.1f} MB (kept compressed)")
+        return gz_path
 
     return DEFAULT_CSV_PATH
 
