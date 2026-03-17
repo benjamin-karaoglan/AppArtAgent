@@ -11,7 +11,9 @@ dependencies = [
     "ipykernel>=7.1.0",
     "logfire[google-genai]>=4.19.0",
     "pillow>=12.1.0",
+    "polars>=1.38.1",
     "protobuf>=6.33.4",
+    "psycopg2-binary>=2.9.11",
     "pymupdf>=1.26.7",
 ]
 
@@ -19,7 +21,18 @@ dependencies = [
 # members = ["backend"]
 # Note: Workspace disabled to allow backend to be built standalone in Docker
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pre-commit>=4.5.1",
 ]
+
+[project.scripts]
+download-dvf = "backend.scripts.download_dvf:main"
+import-dvf = "backend.scripts.import_dvf:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]

@@ -1,7 +1,7 @@
 [project]
 name = "appart-agent-backend"
 version = "2.0.0"
-description = "AI-powered apartment purchasing decision platform with LangGraph agent"
+description = "AI-powered apartment purchasing decision platform"
 requires-python = "==3.10.*"
 license = {text = "MIT"}
 authors = [
@@ -28,12 +28,8 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "bcrypt>=4.0.1,<4.1.0", # Pin to 4.0.x for passlib compatibility
-    # AI & LLM (LangGraph Stack)
+    # AI & LLM
     "anthropic>=0.75.0",
-    "langchain>=0.1.0",
-    "langchain-anthropic>=0.1.0",
-    "langchain-core>=0.1.0",
-    "langgraph>=0.2.0",
     # Document Processing
     "pypdf2>=3.0.1",
     "pymupdf>=1.23.0",
@@ -43,12 +39,12 @@ dependencies = [
     "minio>=7.2.0",
     "redis>=5.0.1",
     "celery>=5.3.4",
+    # DVF import pipeline
+    "polars>=1.38.1",
     # Utilities
     "python-dotenv>=1.0.0",
-    "grandalf>=0.8",
     "google-genai>=1.0.0",
     "logfire[fastapi,sqlalchemy,google-genai,httpx]>=4.22.0",
-    "langchain-google-genai>=4.2.0",
     # Google Cloud (for GCP deployment)
     "google-cloud-storage>=2.14.0",
 ]
@@ -76,16 +72,13 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
     "black>=23.7.0",
     "ruff>=0.0.287",
 ]
-
-# UV configuration
-# Note: UV uses PyPI by default, no need to specify index
 
 [tool.ruff]
 line-length = 100
