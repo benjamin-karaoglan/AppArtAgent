@@ -324,7 +324,7 @@ Go to Actions > "DVF Import" > Run workflow. Optionally provide a custom source 
 gcloud run jobs execute dvf-import --region europe-west1
 ```
 
-The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environment variable, which automatically downloads and extracts the `.csv.gz` archive before importing. It runs with 4 vCPUs / 8 GiB RAM to handle the full dataset in memory via Polars. The deploy pipeline (`deploy.yml`) automatically keeps the job's Docker image in sync with the latest backend build.
+The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environment variable, which automatically downloads and extracts the `.csv.gz` archive before importing. It runs with 4 vCPUs / 16 GiB RAM to handle the full dataset in memory via Polars. The deploy pipeline (`deploy.yml`) automatically keeps the job's Docker image in sync with the latest backend build.
 
 See [backend/README.md](./backend/README.md) for schema details and migration management.
 

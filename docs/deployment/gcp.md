@@ -548,7 +548,7 @@ gcloud run jobs describe dvf-import --region $REGION
 
 The `dvf-import` job:
 
-- **Resources**: 4 vCPU, 8 GiB RAM
+- **Resources**: 4 vCPU, 16 GiB RAM
 - **Timeout**: 30 minutes
 - **Max retries**: 0 (fail fast for easier debugging)
 - **VPC egress**: `PRIVATE_RANGES_ONLY` — only Cloud SQL traffic goes through the VPC; the data.gouv.fr download bypasses the VPC directly to the internet

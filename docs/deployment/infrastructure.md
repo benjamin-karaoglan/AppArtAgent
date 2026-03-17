@@ -287,7 +287,7 @@ flowchart TB
     subgraph DVFJob["dvf-import (Job)"]
         DVF_CMD["download-dvf & import-dvf"]
         DVF_VPC["VPC Connector"]
-        DVF_RES["CPU: 4, Memory: 8Gi"]
+        DVF_RES["CPU: 4, Memory: 16Gi"]
     end
 ```
 
@@ -296,7 +296,7 @@ flowchart TB
 | `appart-frontend` | 1 | 512Mi | `var.min_instances` | 10 | - |
 | `appart-backend` | 2 | 2Gi | `var.min_instances` | 10 | - |
 | `db-migrate` (job) | 1 | 1Gi | N/A | 1 | 10m |
-| `dvf-import` (job) | 4 | 8Gi | N/A | 1 | 30m |
+| `dvf-import` (job) | 4 | 16Gi | N/A | 1 | 30m |
 
 ### Storage Buckets
 
