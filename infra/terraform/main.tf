@@ -940,7 +940,7 @@ resource "google_cloud_run_v2_job" "db_migrate" {
 # =============================================================================
 # Imports the full geolocalized DVF dataset (~20M rows) into Cloud SQL.
 # Downloads the CSV from data.gouv.fr, processes with Polars, and loads via
-# COPY FROM STDIN. Requires 4 vCPUs + 8 GiB RAM for in-memory processing.
+# COPY FROM STDIN. Requires 4 vCPUs + 16 GiB RAM for in-memory processing.
 #
 # Trigger manually:
 #   gcloud run jobs execute dvf-import --region europe-west1

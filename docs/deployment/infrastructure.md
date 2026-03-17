@@ -287,7 +287,7 @@ flowchart TB
     subgraph DVFJob["dvf-import (Job)"]
         DVF_CMD["download-dvf & import-dvf"]
         DVF_VPC["VPC Connector"]
-        DVF_RES["CPU: 4, Memory: 8Gi"]
+        DVF_RES["CPU: 4, Memory: 16Gi"]
     end
 ```
 
