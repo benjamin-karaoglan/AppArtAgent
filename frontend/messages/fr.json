@@ -84,7 +84,7 @@
     "features": {
       "priceAnalysis": {
         "title": "Analyse de Prix",
-        "description": "Comparez les prix demandés avec les données réelles du marché issues des registres DVF français. Sachez si vous faites une bonne affaire."
+        "description": "Comparez les prix demandés avec les données réelles du marché issues des registres DVF français. Vérifiez si vous faites une bonne affaire."
       },
       "documentAnalysis": {
         "title": "Analyse de Documents",
@@ -99,8 +99,8 @@
         "description": "Estimations complètes des coûts annuels incluant charges, taxes et travaux à venir."
       },
       "styleVisualization": {
-        "title": "Visualisation de Style",
-        "description": "Téléchargez des photos et utilisez l'IA pour visualiser le potentiel de rénovation et les transformations de style."
+        "title": "Visualisation de rénovation par IA",
+        "description": "Ajoutez des photos et découvrez, grâce à l'IA, à quoi pourrait ressembler le bien après rénovation."
       },
       "investmentScore": {
         "title": "Score d'Investissement",
@@ -122,7 +122,7 @@
     },
     "footer": {
       "copyright": "© 2026 AppArt Agent. Tous droits réservés.",
-      "tagline": "Vous aidant à prendre des décisions immobilières éclairées en France"
+      "tagline": "Nous vous aidons à prendre des décisions immobilières éclairées en France"
     }
   },
   "dashboard": {
@@ -218,7 +218,7 @@
     "analysis": {
       "title": "Analyse de prix",
       "simpleAnalysis": "Analyse simple",
-      "trendAnalysis": "Analyse tendance (Projection 2025)",
+      "trendAnalysis": "Analyse tendance (Projection {year})",
       "analyzing": "Analyse en cours...",
       "manageDocuments": "Gérer les documents",
       "redesignStudio": "Studio de redesign d'appartement",
@@ -238,13 +238,13 @@
       },
       "trendTooltip": {
         "title": "Analyse tendance",
-        "whatItDoes": "Projette la valeur 2025 en utilisant les tendances du marché des adresses voisines.",
+        "whatItDoes": "Projette la valeur actuelle en utilisant les tendances du marché des adresses voisines.",
         "howItWorks": "Comment ça marche :",
         "steps": {
           "takeSale": "Prend la vente la plus récente à votre adresse exacte",
           "analyzeNeighboring": "Analyse les ventes des immeubles voisins (±2, ±4, ±6, etc.)",
           "calculateTrend": "Calcule la tendance annuelle du marché",
-          "projectForward": "Projette le prix historique vers 2025",
+          "projectForward": "Projette le prix historique vers la date actuelle",
           "accountTime": "Tient compte du temps et de l'évolution du marché"
         },
         "bestFor": "Idéal pour : Les biens avec des données de vente plus anciennes. Estime la valeur actuelle basée sur les tendances du quartier."
@@ -255,8 +255,9 @@
       "recommendation": "Recommandation :"
     },
     "trend": {
-      "title": "Projection Tendance 2025",
-      "projectedValue": "Valeur projetée 2025",
+      "title": "Projection Tendance {year}",
+      "projectedValue": "Valeur projetée {year}",
+      "projectedValueInfo": "Calculée en prenant le prix/m² de la dernière vente à cette adresse, puis en appliquant la tendance du marché de la dernière année (évolution entre l'avant-dernière et la dernière année de ventes voisines) jusqu'à aujourd'hui, multiplié par la surface.",
       "marketTrend": "Tendance du marché",
       "basedOnSales": "Basé sur {count} ventes voisines",
       "neighboringSalesTitle": "Ventes voisines pour la tendance ({count})",
@@ -279,6 +280,7 @@
       "units": "{count} lots",
       "individualUnits": "Lots individuels ({count} lots dans cette transaction)",
       "unit": "Lot",
+      "type": "Type",
       "rooms": "Pièces",
       "individualPricePerSqm": "Prix/m² individuel",
       "groupedNote": "Note : Les prix/m² individuels ci-dessus sont calculés par lot. Le prix/m² groupé ({price}) est le prix de marché correct pour l'ensemble de la transaction.",
@@ -331,6 +333,32 @@
     },
     "deleteTitle": "Supprimer le bien",
     "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
+    "priceAnalyst": {
+      "title": "Analyste de Prix",
+      "summary": {
+        "title": "Analyse de Prix",
+        "noData": "Aucune analyse disponible",
+        "completeInfo": "Renseignez le prix et la surface pour voir l'analyse",
+        "staleWarning": "Analyse potentiellement obsolète",
+        "refresh": "Actualiser",
+        "viewFull": "Ouvrir l'Analyste de Prix"
+      },
+      "metrics": {
+        "estimatedValue": "Valeur estimée",
+        "estimatedValueInfo": "Calculée à partir du prix moyen au m² des ventes comparables incluses, multiplié par la surface de votre bien. Vous pouvez inclure ou exclure des ventes dans le tableau ci-dessous pour affiner l'estimation.",
+        "deviation": "Écart de prix",
+        "deviationInfo": "Différence en pourcentage entre votre prix demandé et la valeur estimée. Un écart positif signifie que votre prix est au-dessus du marché, négatif en dessous.",
+        "comparables": "Ventes comparables",
+        "comparablesInfo": "Nombre de ventes similaires à la même adresse utilisées pour le calcul. Les valeurs aberrantes (méthode IQR) sont exclues par défaut.",
+        "recommendation": "Recommandation",
+        "projection": "Projection {year}",
+        "trend": "Tendance"
+      },
+      "refresh": "Actualiser l'analyse",
+      "refreshing": "Actualisation...",
+      "lastUpdated": "Dernière mise à jour : {date}",
+      "backToProperty": "Retour au bien"
+    },
     "analyzeFailed": "Échec de l'analyse de prix",
     "recalculateFailed": "Échec du recalcul de l'analyse",
     "recalculateTrendFailed": "Échec du recalcul de l'analyse tendance",
@@ -568,8 +596,8 @@
   },
   "metadata": {
     "title": "AppArt Agent - Décisions Immobilières Intelligentes",
-    "description": "Plateforme IA pour vous aider à prendre des décisions d'achat immobilier éclairées en France",
+    "description": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France",
     "ogTitle": "AppArt Agent - Décisions Immobilières Intelligentes",
-    "ogDescription": "Plateforme IA pour vous aider à prendre des décisions d'achat immobilier éclairées en France"
+    "ogDescription": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France"
   }
 }

@@ -4,6 +4,7 @@
 #
 # This Terraform configuration deploys:
 # - Cloud Run services for Frontend and Backend
+# - Cloud Run Jobs for DB migrations and DVF data import
 # - Cloud SQL PostgreSQL database
 # - Memorystore Redis cache
 # - Cloud Storage buckets
@@ -935,6 +936,89 @@ resource "google_cloud_run_v2_job" "db_migrate" {
 }
 
 # =============================================================================
+# Cloud Run Job - DVF Data Import
+# =============================================================================
+# Imports the full geolocalized DVF dataset (~20M rows) into Cloud SQL.
+# Downloads the CSV from data.gouv.fr, processes with Polars, and loads via
+# COPY FROM STDIN. Requires 4 vCPUs + 8 GiB RAM for in-memory processing.
+#
+# Trigger manually:
+#   gcloud run jobs execute dvf-import --region europe-west1
+#
+# Or schedule via Cloud Scheduler (see google_cloud_scheduler_job below).
+
+variable "dvf_source_url" {
+  description = "URL to the geolocalized DVF CSV archive (.csv.gz)"
+  type        = string
+  default     = "https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz"
+}
+
+resource "google_cloud_run_v2_job" "dvf_import" {
+  name     = "dvf-import"
+  location = var.region
+
+  template {
+    template {
+      service_account = google_service_account.backend.email
+      timeout         = "1800s" # 30 min — full import takes ~2 min but download can be slow
+      max_retries     = 1
+
+      # VPC access required for private Cloud SQL
+      vpc_access {
+        connector = google_vpc_access_connector.connector.id
+        egress    = "ALL_TRAFFIC"
+      }
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.postgres.connection_name]
+        }
+      }
+
+      containers {
+        image   = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/backend:latest"
+        command = ["/app/.venv/bin/python", "scripts/import_dvf.py"]
+
+        resources {
+          limits = {
+            cpu    = "4"
+            memory = "8Gi"
+          }
+        }
+
+        volume_mounts {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+
+        env {
+          name  = "DVF_SOURCE_URL"
+          value = var.dvf_source_url
+        }
+
+        env {
+          name = "DATABASE_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.database_url.secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    google_project_service.apis,
+    google_secret_manager_secret_version.database_url,
+    google_sql_database.database,
+    google_vpc_access_connector.connector,
+  ]
+}
+
+# =============================================================================
 # Cloud Run - Frontend
 # =============================================================================
 
@@ -1657,6 +1741,11 @@ output "vpc_connector" {
 output "migration_job" {
   description = "Database migration Cloud Run Job name"
   value       = google_cloud_run_v2_job.db_migrate.name
+}
+
+output "dvf_import_job" {
+  description = "DVF data import Cloud Run Job name"
+  value       = google_cloud_run_v2_job.dvf_import.name
 }
 
 output "deployer_service_account" {

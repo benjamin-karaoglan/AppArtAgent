@@ -108,7 +108,7 @@ class DocumentSummary(Base):
     # For Diags: urgent issues, compliance status
     diagnostic_issues = Column(JSON, nullable=True)
 
-    # Full synthesis data from LangGraph agent
+    # Full synthesis data from AI analysis
     synthesis_data = Column(JSON, nullable=True)
 
     # Timestamps

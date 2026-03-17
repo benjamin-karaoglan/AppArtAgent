@@ -31,13 +31,13 @@ export default function Header() {
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                 <Link
                   href="/dashboard"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center justify-center min-w-[9rem] px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-primary-500 hover:text-primary-600 inline-flex items-center justify-center min-w-[9rem] px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
                 >
                   {t('dashboard')}
                 </Link>
                 <Link
                   href="/properties"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center justify-center min-w-[5.5rem] px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-primary-500 hover:text-primary-600 inline-flex items-center justify-center min-w-[5.5rem] px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
                 >
                   {t('properties')}
                 </Link>

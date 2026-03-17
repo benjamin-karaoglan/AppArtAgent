@@ -134,13 +134,15 @@ Testing stack: pytest + pytest-asyncio + pytest-cov.
 
 ## Dependency Management
 
-### Python (uv only -- never use pip)
+### Python (uv only -- never use pip or bare `python`)
+
+**Always use `uv run` to execute Python scripts and commands.** Never invoke `python` directly -- `uv run` ensures the correct virtualenv and dependencies are used.
 
 ```bash
 uv add <package>        # Add a dependency
 uv remove <package>     # Remove a dependency
 uv sync                 # Sync from lock file
-uv run <command>        # Run a command in the venv
+uv run <command>        # Run a command in the venv (never bare `python`)
 ```
 
 Lock file: `uv.lock` (root level). Backend deps defined in `backend/pyproject.toml`.
@@ -255,7 +257,7 @@ terraform plan
 terraform apply
 ```
 
-Managed resources: Cloud Run services, GCS buckets, IAM, Vertex AI config.
+Managed resources: Cloud Run services, Cloud Run Jobs (DB migrations + DVF import), GCS buckets, Cloud SQL, Memorystore Redis, IAM, Secret Manager.
 
 ### GCP Bootstrap
 
@@ -276,14 +278,16 @@ First-time GCP setup:
 
 1. **Build & Test**: Python (uv + ruff + pytest), Node.js (pnpm + eslint + tsc)
 2. **Push images**: To Artifact Registry (on main branch only)
-3. **Migrate DB**: Run Alembic migrations
+3. **Migrate DB**: Run Alembic migrations + update DVF import job image
 4. **Deploy**: Backend + Frontend to Cloud Run
+
+`.github/workflows/dvf-import.yml`: Manually triggered workflow that executes the `dvf-import` Cloud Run Job (downloads + imports full DVF dataset into Cloud SQL).
 
 `.github/workflows/docs.yml`: Builds and deploys MkDocs to GitHub Pages.
 
 ## Key Domain Concepts
 
-- **DVF** (Demandes de Valeurs Foncieres): French government open dataset of 5M+ property transactions (2022-2025). Used for price analysis and market comparisons.
+- **DVF** (Demandes de Valeurs Foncieres): French government open dataset of 20M+ geolocalized property transactions. Schema: `dvf_sales` (~4.8M rows, one per transaction) + `dvf_sale_lots` (~13.5M rows, one per lot). Source: [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/). Download with `uv run download-dvf <url>` (extracts into `data/dvf/`). Import with `uv run import-dvf` (polars + COPY FROM STDIN, ~55s for full dataset).
 - **PV AG** (Proces-Verbal d'Assemblee Generale): Minutes from co-ownership meetings -- analyzed for risk flags, pending works, copropriete health.
 - **Diagnostics**: Building diagnostics (amiante, plomb, DPE/GES energy ratings).
 - **Redesign Studio**: AI-powered apartment photo transformation using Gemini image generation with style presets (modern_norwegian, minimalist_scandinavian, cozy_hygge).

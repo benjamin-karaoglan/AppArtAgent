@@ -7,7 +7,7 @@ This guide covers the Terraform configuration used to deploy AppArt Agent on Goo
 ```mermaid
 flowchart TB
     subgraph Terraform["Terraform Configuration"]
-        TF["main.tf<br/>~1500 lines"]
+        TF["main.tf<br/>~1700 lines"]
         Vars["terraform.tfvars"]
     end
 
@@ -16,6 +16,7 @@ flowchart TB
             CR_FE["Cloud Run: Frontend"]
             CR_BE["Cloud Run: Backend"]
             CR_JOB["Cloud Run Job: Migrations"]
+            CR_DVF["Cloud Run Job: DVF Import"]
         end
 
         subgraph Network["Networking"]
@@ -153,6 +154,12 @@ flowchart LR
 | `create_dns_zone` | bool | `true` | Create Cloud DNS managed zone |
 | `api_subdomain` | string | `api` | Subdomain for backend API |
 
+### DVF Dataset Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `dvf_source_url` | string | `""` | DVF dataset URL (optional, defaults to latest full dataset) |
+
 ```mermaid
 flowchart TD
     Domain{"domain set?"}
@@ -276,13 +283,20 @@ flowchart TB
         MIG_CMD["alembic upgrade head"]
         MIG_VPC["VPC Connector"]
     end
+
+    subgraph DVFJob["dvf-import (Job)"]
+        DVF_CMD["download-dvf & import-dvf"]
+        DVF_VPC["VPC Connector"]
+        DVF_RES["CPU: 4, Memory: 8Gi"]
+    end
 ```
 
-| Service | CPU | Memory | Min Instances | Max Instances |
-|---------|-----|--------|---------------|---------------|
-| `appart-frontend` | 1 | 512Mi | `var.min_instances` | 10 |
-| `appart-backend` | 2 | 2Gi | `var.min_instances` | 10 |
-| `db-migrate` (job) | 1 | 1Gi | N/A | 1 |
+| Service | CPU | Memory | Min Instances | Max Instances | Timeout |
+|---------|-----|--------|---------------|---------------|---------|
+| `appart-frontend` | 1 | 512Mi | `var.min_instances` | 10 | - |
+| `appart-backend` | 2 | 2Gi | `var.min_instances` | 10 | - |
+| `db-migrate` (job) | 1 | 1Gi | N/A | 1 | 10m |
+| `dvf-import` (job) | 4 | 8Gi | N/A | 1 | 1h |
 
 ### Storage Buckets
 
@@ -369,6 +383,7 @@ terraform output
 | `deployer_service_account` | Deployer SA email |
 | `dns_nameservers` | Cloud DNS nameservers (if using Cloud DNS) |
 | `lb_ip` | Load balancer IP (if using LB) |
+| `dvf_import_job` | DVF import job name |
 
 ## State Management
 

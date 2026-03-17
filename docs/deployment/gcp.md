@@ -190,6 +190,13 @@ docker push $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/frontend:latest
 gcloud run jobs execute db-migrate --region $REGION --wait
 ```
 
+### 5.5. Import DVF Dataset (Optional)
+
+```bash
+# Execute DVF import job
+gcloud run jobs execute dvf-import --region $REGION --wait
+```
+
 ### 6. Deploy Cloud Run Services
 
 ```bash
@@ -216,6 +223,7 @@ flowchart TD
         CR_FE["Cloud Run: Frontend"]
         CR_BE["Cloud Run: Backend"]
         CR_JOB["Cloud Run Job: Migrations"]
+        CR_DVF["Cloud Run Job: DVF Import"]
     end
 
     subgraph Database["Database & Cache"]
@@ -523,6 +531,36 @@ gcloud run jobs execute db-migrate --region $REGION --wait
 gcloud run jobs executions logs db-migrate --region $REGION
 ```
 
+### DVF Import
+
+The DVF (Demandes de Valeurs Foncieres) dataset contains 20M+ French property transactions and is imported via a dedicated Cloud Run Job.
+
+```bash
+# Execute DVF import job (downloads and imports full dataset)
+gcloud run jobs execute dvf-import --region $REGION --wait
+
+# Check import job logs
+gcloud run jobs executions logs dvf-import --region $REGION
+
+# View job configuration
+gcloud run jobs describe dvf-import --region $REGION
+```
+
+The `dvf-import` job:
+
+- **Resources**: 4 vCPU, 8 GiB RAM
+- **Timeout**: 1 hour
+- **Process**: Downloads DVF data from data.gouv.fr, extracts archives, imports via polars + COPY FROM STDIN
+- **Duration**: ~55 seconds for full dataset (4.8M sales, 13.5M lots)
+- **Trigger**: Manual via GitHub Actions workflow (`.github/workflows/dvf-import.yml`) or `gcloud` command
+
+To trigger via GitHub Actions:
+
+1. Go to **Actions** tab in GitHub
+2. Select **DVF Import** workflow
+3. Click **Run workflow**
+4. Select branch and click **Run workflow**
+
 ### Direct Database Access
 
 For debugging or manual operations:
@@ -692,6 +730,11 @@ To minimize cold start latency:
 
 ## CI/CD with GitHub Actions
 
+The project includes two GitHub Actions workflows:
+
+1. **`.github/workflows/deploy.yml`**: Main deployment workflow (triggered on push to `main`)
+2. **`.github/workflows/dvf-import.yml`**: DVF import workflow (manual trigger only)
+
 ### Setup GitHub Actions
 
 1. Create a service account key:
@@ -727,6 +770,7 @@ sequenceDiagram
     GA->>GA: Build Docker images
     GA->>AR: Push images
     GA->>CR: Execute db-migrate job
+    GA->>CR: Update dvf-import job image
     GA->>CR: Deploy backend
     GA->>CR: Deploy frontend
     GA->>GH: Report status
@@ -902,8 +946,9 @@ terraform destroy
 gcloud run services delete appart-backend --region $REGION
 gcloud run services delete appart-frontend --region $REGION
 
-# Delete only the migration job
+# Delete only the jobs
 gcloud run jobs delete db-migrate --region $REGION
+gcloud run jobs delete dvf-import --region $REGION
 ```
 
 ## Next Steps

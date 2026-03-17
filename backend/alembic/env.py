@@ -1,12 +1,17 @@
 import os
 from logging.config import fileConfig
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
+# Load .env from backend/ directory (for local dev; Docker overrides via env)
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
 # Import models for autogenerate support
-from app.core.database import Base
+from app.core.database import Base  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

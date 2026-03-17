@@ -198,7 +198,7 @@ docker-compose exec backend alembic upgrade head
 docker-compose exec db psql -U appart -d appart_agent
 
 # Run SQL command
-docker-compose exec db psql -U appart -d appart_agent -c "SELECT COUNT(*) FROM dvf_records;"
+docker-compose exec db psql -U appart -d appart_agent -c "SELECT COUNT(*) FROM dvf_sales;"
 ```
 
 ### Backup Database

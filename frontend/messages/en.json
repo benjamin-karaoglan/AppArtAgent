@@ -84,7 +84,7 @@
     "features": {
       "priceAnalysis": {
         "title": "Price Analysis",
-        "description": "Compare asking prices with real market data from French DVF records. Know if you're getting a fair deal."
+        "description": "Compare asking prices against real market data from French DVF records. Check if you're getting a fair deal."
       },
       "documentAnalysis": {
         "title": "Document Analysis",
@@ -99,8 +99,8 @@
         "description": "Comprehensive annual cost estimates including charges, taxes, and upcoming works."
       },
       "styleVisualization": {
-        "title": "Style Visualization",
-        "description": "Upload photos and use AI to visualize renovation potential and style transformations."
+        "title": "AI Renovation Visualization",
+        "description": "Upload photos and let AI show you what the property could look like after renovation."
       },
       "investmentScore": {
         "title": "Investment Score",
@@ -122,7 +122,7 @@
     },
     "footer": {
       "copyright": "© 2026 AppArt Agent. All rights reserved.",
-      "tagline": "Helping you make informed property decisions in France"
+      "tagline": "We help you make informed property decisions in France"
     }
   },
   "dashboard": {
@@ -218,7 +218,7 @@
     "analysis": {
       "title": "Price Analysis",
       "simpleAnalysis": "Simple Analysis",
-      "trendAnalysis": "Trend Analysis (2025 Projection)",
+      "trendAnalysis": "Trend Analysis ({year} Projection)",
       "analyzing": "Analyzing...",
       "manageDocuments": "Manage Documents",
       "redesignStudio": "Apartment Redesign Studio",
@@ -238,13 +238,13 @@
       },
       "trendTooltip": {
         "title": "Trend Analysis",
-        "whatItDoes": "Projects 2025 value using market trends from neighboring addresses.",
+        "whatItDoes": "Projects current value using market trends from neighboring addresses.",
         "howItWorks": "How it works:",
         "steps": {
           "takeSale": "Takes most recent sale at your exact address",
           "analyzeNeighboring": "Analyzes sales from neighboring buildings (±2, ±4, ±6, etc.)",
           "calculateTrend": "Calculates year-over-year market trend",
-          "projectForward": "Projects historical price forward to 2025",
+          "projectForward": "Projects historical price forward to current date",
           "accountTime": "Accounts for time and market evolution"
         },
         "bestFor": "Best for: Properties with older sales data. Estimates current value based on neighborhood trends."
@@ -255,8 +255,9 @@
       "recommendation": "Recommendation:"
     },
     "trend": {
-      "title": "2025 Trend Projection",
-      "projectedValue": "Projected 2025 Value",
+      "title": "{year} Trend Projection",
+      "projectedValue": "Projected {year} Value",
+      "projectedValueInfo": "Calculated by taking the price/m² from the most recent sale at this address, then applying the latest year's market trend (change between the two most recent years of neighboring sales) up to today, multiplied by the surface area.",
       "marketTrend": "Market Trend",
       "basedOnSales": "Based on {count} neighboring sales",
       "neighboringSalesTitle": "Neighboring Sales Used for Trend ({count})",
@@ -279,6 +280,7 @@
       "units": "{count} units",
       "individualUnits": "Individual Units ({count} lots in this transaction)",
       "unit": "Unit",
+      "type": "Type",
       "rooms": "Rooms",
       "individualPricePerSqm": "Individual Price/m²",
       "groupedNote": "Note: Individual prices/m² shown above are calculated per lot. The grouped price/m² ({price}) is the correct market price for the entire transaction.",
@@ -331,6 +333,32 @@
     },
     "deleteTitle": "Delete Property",
     "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
+    "priceAnalyst": {
+      "title": "Price Analyst",
+      "summary": {
+        "title": "Price Analysis",
+        "noData": "No analysis available",
+        "completeInfo": "Complete price and surface area to see analysis",
+        "staleWarning": "Analysis may be outdated",
+        "refresh": "Refresh",
+        "viewFull": "Open Price Analyst"
+      },
+      "metrics": {
+        "estimatedValue": "Estimated Value",
+        "estimatedValueInfo": "Calculated from the average price/m² of included comparable sales, multiplied by your property's surface area. You can include or exclude sales in the table below to refine the estimate.",
+        "deviation": "Price Deviation",
+        "deviationInfo": "Percentage difference between your asking price and the estimated market value. A positive deviation means your price is above market, negative means below.",
+        "comparables": "Comparable Sales",
+        "comparablesInfo": "Number of similar sales at the same address used for the calculation. Outliers detected using the IQR method are excluded by default.",
+        "recommendation": "Recommendation",
+        "projection": "{year} Projection",
+        "trend": "Trend"
+      },
+      "refresh": "Refresh Analysis",
+      "refreshing": "Refreshing...",
+      "lastUpdated": "Last updated: {date}",
+      "backToProperty": "Back to Property"
+    },
     "analyzeFailed": "Failed to analyze price",
     "recalculateFailed": "Failed to recalculate analysis",
     "recalculateTrendFailed": "Failed to recalculate trend analysis",
@@ -568,8 +596,8 @@
   },
   "metadata": {
     "title": "AppArt Agent - Smart Property Decisions",
-    "description": "AI-powered platform to help you make informed apartment purchasing decisions in France",
+    "description": "AI-powered platform that helps you make informed apartment purchasing decisions in France",
     "ogTitle": "AppArt Agent - Smart Property Decisions",
-    "ogDescription": "AI-powered platform to help you make informed apartment purchasing decisions in France"
+    "ogDescription": "AI-powered platform that helps you make informed apartment purchasing decisions in France"
   }
 }

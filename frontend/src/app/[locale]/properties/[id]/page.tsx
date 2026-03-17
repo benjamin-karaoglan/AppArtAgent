@@ -6,11 +6,11 @@ import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
-import InfoTooltip from '@/components/InfoTooltip';
-import MarketTrendChart from '@/components/MarketTrendChart';
+import PriceAnalysisSummary from '@/components/PriceAnalysisSummary';
 import { api } from '@/lib/api';
-import { ArrowLeft, TrendingUp, FileText, Loader2, Trash2, ChevronDown, ChevronUp, Building2, ShieldCheck, AlertTriangle, ShieldAlert, Sparkles, Paintbrush, Image as ImageIcon, X, Columns, Pencil, Check } from 'lucide-react';
+import { ArrowLeft, TrendingUp, FileText, Loader2, Trash2, ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, ShieldAlert, Sparkles, Paintbrush, Image as ImageIcon, X, Columns, Pencil, Check } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
+import Spinner from '@/components/ui/Spinner';
 import type { Property } from '@/types';
 
 function PropertyDetailContent() {
@@ -23,15 +23,9 @@ function PropertyDetailContent() {
 
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [priceAnalysis, setPriceAnalysis] = useState<any>(null);
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showNeighboringSales, setShowNeighboringSales] = useState(false);
-  const [excludedOutliers, setExcludedOutliers] = useState<Set<number>>(new Set());
-  const [excludedNeighboringOutliers, setExcludedNeighboringOutliers] = useState<Set<number>>(new Set());
-  const [expandedSales, setExpandedSales] = useState<Set<number>>(new Set());
   const [synthesis, setSynthesis] = useState<any>(null);
   const [synthesisLoading, setSynthesisLoading] = useState(true);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
@@ -110,146 +104,6 @@ function PropertyDetailContent() {
     }
   };
 
-  const analyzePrice = async (analysisType: 'simple' | 'trend' = 'simple') => {
-    setAnalyzing(true);
-    setError('');
-
-    try {
-      const response = await api.post(
-        `/api/properties/${propertyId}/analyze-price?analysis_type=${analysisType}`
-      );
-      setPriceAnalysis(response.data);
-
-      // Initialize excluded outliers set (outliers are excluded by default)
-      const outlierIndices = new Set<number>();
-      response.data.comparable_sales?.forEach((sale: any, index: number) => {
-        if (sale.is_outlier) {
-          outlierIndices.add(index);
-        }
-      });
-      setExcludedOutliers(outlierIndices);
-
-      // Initialize excluded neighboring outliers for trend analysis
-      const neighboringOutlierIndices = new Set<number>();
-      response.data.trend_projection?.neighboring_sales?.forEach((sale: any, index: number) => {
-        if (sale.is_outlier) {
-          neighboringOutlierIndices.add(index);
-        }
-      });
-      setExcludedNeighboringOutliers(neighboringOutlierIndices);
-
-      // Reload property to get updated values
-      await loadProperty();
-    } catch (err: any) {
-      console.error('Price analysis error:', err);
-      setError(err.response?.data?.detail || t('analyzeFailed'));
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  const toggleOutlierInclusion = async (index: number) => {
-    const newExcluded = new Set(excludedOutliers);
-    if (newExcluded.has(index)) {
-      newExcluded.delete(index);
-    } else {
-      newExcluded.add(index);
-    }
-    setExcludedOutliers(newExcluded);
-
-    // Recalculate analysis with new exclusions
-    await recalculateAnalysis(newExcluded);
-  };
-
-  const toggleSaleExpansion = (index: number) => {
-    const newExpanded = new Set(expandedSales);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedSales(newExpanded);
-  };
-
-  const recalculateAnalysis = async (excluded: Set<number>) => {
-    if (!priceAnalysis?.comparable_sales) return;
-
-    try {
-      // Get IDs of excluded sales
-      const excludedSaleIds = Array.from(excluded).map(
-        index => priceAnalysis.comparable_sales[index]?.id
-      ).filter(id => id !== undefined);
-
-      const response = await api.post(
-        `/api/properties/${propertyId}/recalculate-analysis`,
-        excludedSaleIds
-      );
-
-      console.log('📊 Recalculate API Response:', response.data);
-      console.log('📊 Current priceAnalysis.estimated_value:', priceAnalysis.estimated_value);
-      console.log('📊 New estimated_value from API:', response.data.estimated_value);
-
-      // Update the analysis results in place
-      setPriceAnalysis({
-        ...priceAnalysis,
-        estimated_value: response.data.estimated_value,
-        price_per_sqm: response.data.price_per_sqm,
-        market_avg_price_per_sqm: response.data.market_avg_price_per_sqm,
-        market_median_price_per_sqm: response.data.market_median_price_per_sqm,
-        price_deviation_percent: response.data.price_deviation_percent,
-        recommendation: response.data.recommendation,
-        confidence_score: response.data.confidence_score,
-        comparables_count: response.data.comparables_count,
-        market_trend_annual: response.data.market_trend_annual,
-      });
-    } catch (err) {
-      console.error('Failed to recalculate:', err);
-      setError(t('recalculateFailed'));
-    }
-  };
-
-  const toggleNeighboringOutlierInclusion = async (index: number) => {
-    const newExcluded = new Set(excludedNeighboringOutliers);
-    if (newExcluded.has(index)) {
-      newExcluded.delete(index);
-    } else {
-      newExcluded.add(index);
-    }
-    setExcludedNeighboringOutliers(newExcluded);
-
-    // Trigger trend analysis recalculation
-    await recalculateTrendAnalysis(newExcluded);
-  };
-
-  const recalculateTrendAnalysis = async (excludedNeighboring: Set<number>) => {
-    if (!priceAnalysis?.trend_projection?.neighboring_sales) return;
-
-    try {
-      // Get IDs of excluded neighboring sales
-      const excludedSaleIds = Array.from(excludedNeighboring).map(
-        index => priceAnalysis.trend_projection.neighboring_sales[index]?.id
-      ).filter((id: any) => id !== undefined);
-
-      const response = await api.post(
-        `/api/properties/${propertyId}/recalculate-trend`,
-        excludedSaleIds
-      );
-
-      // Update only the trend projection data
-      setPriceAnalysis({
-        ...priceAnalysis,
-        trend_projection: {
-          ...priceAnalysis.trend_projection,
-          ...response.data.trend_projection,
-        },
-        neighboring_sales_count: response.data.neighboring_sales_count,
-      });
-    } catch (err) {
-      console.error('Failed to recalculate trend:', err);
-      setError(t('recalculateTrendFailed'));
-    }
-  };
-
   const handleDelete = async () => {
     setDeleting(true);
     setError('');
@@ -318,7 +172,7 @@ function PropertyDetailContent() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+          <Spinner size={32} className="text-primary-600" />
         </div>
       </div>
     );
@@ -578,98 +432,21 @@ function PropertyDetailContent() {
               )}
             </div>
 
-            {/* Market Analysis Card */}
-            <div className="space-y-6">
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.title')}</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => analyzePrice('simple')}
-                      disabled={analyzing || !property.asking_price || !property.surface_area}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {analyzing ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          {t('analysis.analyzing')}
-                        </>
-                      ) : (
-                        <>
-                          <TrendingUp className="h-5 w-5 mr-2" />
-                          {t('analysis.simpleAnalysis')}
-                        </>
-                      )}
-                    </button>
-                    <InfoTooltip
-                      title={t('analysis.simpleTooltip.title')}
-                      content={
-                        <div className="space-y-2">
-                          <p><strong>{t('analysis.simpleTooltip.whatItDoes')}</strong></p>
-                          <p><strong>{t('analysis.simpleTooltip.howItWorks')}</strong></p>
-                          <ul className="list-disc pl-4 space-y-1 text-xs">
-                            <li>{t('analysis.simpleTooltip.steps.findSales')}</li>
-                            <li>{t('analysis.simpleTooltip.steps.groupTransactions')}</li>
-                            <li>{t('analysis.simpleTooltip.steps.detectOutliers')}</li>
-                            <li>{t('analysis.simpleTooltip.steps.calculateAverage')}</li>
-                            <li>{t('analysis.simpleTooltip.steps.rawPrices')}</li>
-                          </ul>
-                          <p className="text-xs text-gray-600 mt-2">
-                            <strong>{t('analysis.simpleTooltip.bestFor')}</strong>
-                          </p>
-                        </div>
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => analyzePrice('trend')}
-                      disabled={analyzing || !property.asking_price || !property.surface_area}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-primary-600 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {analyzing ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          {t('analysis.analyzing')}
-                        </>
-                      ) : (
-                        <>
-                          <TrendingUp className="h-5 w-5 mr-2" />
-                          {t('analysis.trendAnalysis')}
-                        </>
-                      )}
-                    </button>
-                    <InfoTooltip
-                      title={t('analysis.trendTooltip.title')}
-                      content={
-                        <div className="space-y-2">
-                          <p><strong>{t('analysis.trendTooltip.whatItDoes')}</strong></p>
-                          <p><strong>{t('analysis.trendTooltip.howItWorks')}</strong></p>
-                          <ul className="list-disc pl-4 space-y-1 text-xs">
-                            <li>{t('analysis.trendTooltip.steps.takeSale')}</li>
-                            <li>{t('analysis.trendTooltip.steps.analyzeSales')}</li>
-                            <li>{t('analysis.trendTooltip.steps.calculateTrend')}</li>
-                            <li>{t('analysis.trendTooltip.steps.projectPrice')}</li>
-                            <li>{t('analysis.trendTooltip.steps.accountTime')}</li>
-                          </ul>
-                          <p className="text-xs text-gray-600 mt-2">
-                            <strong>{t('analysis.trendTooltip.bestFor')}</strong>
-                          </p>
-                        </div>
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Property Tools Card */}
-              <div className="bg-white shadow rounded-lg p-6">
+            {/* Sidebar: Property Tools */}
+            <div className="bg-white shadow rounded-lg p-6 flex flex-col">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.toolsTitle')}</h2>
-                <div className="space-y-3">
+                <div className="flex-1 flex flex-col justify-center space-y-3">
+                  <button
+                    onClick={() => router.push(`/properties/${propertyId}/price-analyst`)}
+                    className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    <TrendingUp className="h-5 w-5 mr-2" />
+                    {t('priceAnalyst.title')}
+                  </button>
+
                   <button
                     onClick={() => router.push(`/properties/${propertyId}/documents`)}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                   >
                     <FileText className="h-5 w-5 mr-2" />
                     {t('analysis.manageDocuments')}
@@ -677,15 +454,20 @@ function PropertyDetailContent() {
 
                   <button
                     onClick={() => router.push(`/properties/${propertyId}/redesign-studio`)}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    className="w-full inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                   >
                     <Paintbrush className="h-5 w-5 mr-2" />
                     {t('analysis.redesignStudio')}
                   </button>
                 </div>
-              </div>
             </div>
           </div>
+
+          {/* Price Analysis Summary Card — first band */}
+          <PriceAnalysisSummary
+            propertyId={propertyId}
+            hasRequiredFields={!!(property.asking_price && property.surface_area)}
+          />
 
           {/* AI Property Analysis Card */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
@@ -697,7 +479,7 @@ function PropertyDetailContent() {
               {synthesis && (
                 <button
                   onClick={() => router.push(`/properties/${propertyId}/documents`)}
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   {t('analysis.manageDocuments')}
@@ -845,7 +627,7 @@ function PropertyDetailContent() {
                 <p className="text-sm text-gray-500 mb-3">{t('aiAnalysis.noData')}</p>
                 <button
                   onClick={() => router.push(`/properties/${propertyId}/documents`)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   {t('aiAnalysis.viewDocuments')}
@@ -863,7 +645,7 @@ function PropertyDetailContent() {
               </h2>
               <button
                 onClick={() => router.push(`/properties/${propertyId}/photos`)}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <Paintbrush className="h-4 w-4 mr-2" />
                 {t('designOverview.openStudio')}
@@ -878,7 +660,7 @@ function PropertyDetailContent() {
                     <p className="text-sm text-gray-500 mb-3">{t('designOverview.noRedesigns')}</p>
                     <button
                       onClick={() => router.push(`/properties/${propertyId}/photos`)}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                     >
                       <Paintbrush className="h-4 w-4 mr-2" />
                       {t('designOverview.goToStudio')}
@@ -1023,386 +805,6 @@ function PropertyDetailContent() {
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Market Trend Visualization */}
-          {priceAnalysis && (
-            <div className="mb-8">
-              <MarketTrendChart propertyId={propertyId} />
-            </div>
-          )}
-
-          {/* Price Analysis Results */}
-          {priceAnalysis && (
-            <div className="bg-white shadow rounded-lg p-6 mb-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.title')}</h2>
-
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-6">
-                {priceAnalysis.estimated_value && (
-                  <div className="border-l-4 border-primary-500 pl-4">
-                    <dt className="text-sm font-medium text-gray-500">{t('analysis.estimatedValue')}</dt>
-                    <dd className="mt-1 text-2xl font-semibold text-gray-900">
-                      {new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      }).format(priceAnalysis.estimated_value)}
-                    </dd>
-                  </div>
-                )}
-
-                {priceAnalysis?.price_deviation_percent !== undefined && (
-                  <div className="border-l-4 border-warning-500 pl-4">
-                    <dt className="text-sm font-medium text-gray-500">{t('analysis.priceDeviation')}</dt>
-                    <dd className={`mt-1 text-2xl font-semibold ${
-                      priceAnalysis.price_deviation_percent > 0 ? 'text-danger-600' : 'text-success-600'
-                    }`}>
-                      {priceAnalysis.price_deviation_percent > 0 ? '+' : ''}
-                      {priceAnalysis.price_deviation_percent.toFixed(1)}%
-                    </dd>
-                  </div>
-                )}
-
-                {priceAnalysis?.comparable_sales && (
-                  <div className="border-l-4 border-success-500 pl-4">
-                    <dt className="text-sm font-medium text-gray-500">{t('analysis.comparableSales')}</dt>
-                    <dd className="mt-1 text-2xl font-semibold text-gray-900">
-                      {priceAnalysis.comparables_count || priceAnalysis.comparable_sales.length}
-                    </dd>
-                  </div>
-                )}
-              </div>
-
-              {priceAnalysis?.recommendation && (
-                <div className="bg-primary-50 border-l-4 border-primary-400 p-4">
-                  <p className="text-sm text-primary-800">
-                    <span className="font-medium">{t('analysis.recommendation')}</span> {priceAnalysis.recommendation}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Trend Projection Results */}
-          {priceAnalysis?.trend_projection && (
-            <div className="bg-gradient-to-r from-accent-50 to-primary-50 shadow rounded-lg p-6 mb-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">{t('trend.title')}</h2>
-
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 mb-6">
-                <div className="border-l-4 border-accent-600 pl-4 bg-white p-4 rounded">
-                  <dt className="text-sm font-medium text-gray-500">{t('trend.projectedValue')}</dt>
-                  <dd className="mt-1 text-2xl font-semibold text-accent-600">
-                    {new Intl.NumberFormat('fr-FR', {
-                      style: 'currency',
-                      currency: 'EUR',
-                      maximumFractionDigits: 0,
-                    }).format(priceAnalysis.trend_projection.estimated_value_2025)}
-                  </dd>
-                  <dd className="mt-1 text-sm text-gray-500">
-                    {new Intl.NumberFormat('fr-FR', {
-                      style: 'currency',
-                      currency: 'EUR',
-                      maximumFractionDigits: 0,
-                    }).format(priceAnalysis.trend_projection.projected_price_per_sqm)}/m²
-                  </dd>
-                </div>
-
-                <div className="border-l-4 border-accent-500 pl-4 bg-white p-4 rounded">
-                  <dt className="text-sm font-medium text-gray-500">{t('trend.marketTrend')}</dt>
-                  <dd className={`mt-1 text-2xl font-semibold ${
-                    priceAnalysis.trend_projection.trend_used > 0 ? 'text-success-600' : 'text-danger-600'
-                  }`}>
-                    {priceAnalysis.trend_projection.trend_used > 0 ? '+' : ''}
-                    {priceAnalysis.trend_projection.trend_used.toFixed(2)}% /year
-                  </dd>
-                  <dd className="mt-1">
-                    <button
-                      onClick={() => setShowNeighboringSales(!showNeighboringSales)}
-                      className="text-sm text-primary-600 hover:text-primary-800 flex items-center gap-1"
-                    >
-                      {t('trend.basedOnSales', { count: priceAnalysis.trend_projection.trend_sample_size })}
-                      {showNeighboringSales ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
-                  </dd>
-                </div>
-              </div>
-
-              {showNeighboringSales && priceAnalysis.trend_projection.neighboring_sales && (
-                <div className="bg-white p-4 rounded mb-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">
-                    {t('trend.neighboringSalesTitle', { count: priceAnalysis.trend_projection.neighboring_sales.length })}
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.include')}</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.saleDate')}</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.address')}</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.surface')}</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.salePrice')}</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('comparables.pricePerSqm')}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {priceAnalysis.trend_projection.neighboring_sales.map((sale: any, idx: number) => (
-                          <tr
-                            key={idx}
-                            className={`hover:bg-gray-50 ${sale.is_outlier ? 'bg-warning-50' : ''} ${excludedNeighboringOutliers.has(idx) ? 'opacity-50' : ''}`}
-                          >
-                            <td className="px-2 py-2 whitespace-nowrap text-center">
-                              <input
-                                type="checkbox"
-                                checked={!excludedNeighboringOutliers.has(idx)}
-                                onChange={() => toggleNeighboringOutlierInclusion(idx)}
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
-                                title={sale.is_outlier ? t('comparables.outlierDetected') : t('comparables.includeInTrend')}
-                              />
-                              {sale.is_outlier && (
-                                <div className="text-xs text-warning-600 mt-1">{t('comparables.outlier')}</div>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap text-gray-900">
-                              {new Date(sale.sale_date).toLocaleDateString('fr-FR')}
-                            </td>
-                            <td className="px-3 py-2 text-gray-900">{sale.address}</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-gray-900">{sale.surface_area} m²</td>
-                            <td className="px-3 py-2 whitespace-nowrap text-gray-900">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                maximumFractionDigits: 0,
-                              }).format(sale.sale_price)}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap text-gray-900">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                maximumFractionDigits: 0,
-                              }).format(sale.price_per_sqm)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-white p-4 rounded">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">{t('trend.baseSale')}</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">{t('trend.date')}</span>
-                    <span className="ml-2 font-medium text-gray-900">
-                      {new Date(priceAnalysis.trend_projection.base_sale_date).toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">{t('trend.pricePerSqm')}</span>
-                    <span className="ml-2 font-medium text-gray-900">
-                      {new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                        maximumFractionDigits: 0,
-                      }).format(priceAnalysis.trend_projection.base_price_per_sqm)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Comparable Sales List */}
-          {priceAnalysis?.comparable_sales && priceAnalysis.comparable_sales.length > 0 && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">
-                {t('comparables.title', { total: priceAnalysis.comparable_sales.length, included: priceAnalysis.comparables_count || priceAnalysis.comparable_sales.length })}
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('comparables.include')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('comparables.saleDate')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('comparables.address')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('comparables.surface')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('comparables.salePrice')}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('comparables.pricePerSqm')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {priceAnalysis.comparable_sales.map((sale: any, index: number) => {
-                      const isMultiUnit = sale.unit_count && sale.unit_count > 1;
-                      const isExpanded = expandedSales.has(index);
-                      // All sales from grouped view use total_* and grouped_* fields
-                      const displaySurface = sale.total_surface_area || sale.surface_area;
-                      const displayRooms = sale.total_rooms || sale.rooms;
-                      const displayPricePerSqm = sale.grouped_price_per_sqm || sale.price_per_sqm;
-
-                      return (
-                        <>
-                          <tr
-                            key={index}
-                            className={`hover:bg-gray-50 ${sale.is_outlier ? 'bg-warning-50' : ''} ${excludedOutliers.has(index) ? 'opacity-50' : ''} ${isMultiUnit ? 'border-l-4 border-l-primary-500' : ''}`}
-                          >
-                            <td className="px-3 py-4 whitespace-nowrap text-center">
-                              <input
-                                type="checkbox"
-                                checked={!excludedOutliers.has(index)}
-                                onChange={() => toggleOutlierInclusion(index)}
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
-                                title={sale.is_outlier ? t('comparables.outlierDetected') : t('comparables.includeInAnalysis')}
-                              />
-                              {sale.is_outlier && (
-                                <div className="text-xs text-warning-600 mt-1">{t('comparables.outlier')}</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(sale.sale_date).toLocaleDateString('fr-FR')}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-900">
-                              <div className="flex items-start gap-2">
-                                <div className="flex-1">
-                                  {sale.address || '-'}<br />
-                                  <span className="text-gray-500">{sale.city} {sale.postal_code}</span>
-                                </div>
-                                {isMultiUnit && (
-                                  <button
-                                    onClick={() => toggleSaleExpansion(index)}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-700 bg-primary-50 rounded hover:bg-primary-100"
-                                    title="Multi-unit sale - click to see details"
-                                  >
-                                    <Building2 className="h-3 w-3" />
-                                    {t('comparables.units', { count: sale.unit_count })}
-                                    {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {displaySurface?.toFixed(2)} m²
-                              {isMultiUnit && displayRooms && (
-                                <div className="text-xs text-gray-500">{t('comparables.rooms')}: {displayRooms}</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                maximumFractionDigits: 0,
-                              }).format(sale.sale_price)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                maximumFractionDigits: 0,
-                              }).format(displayPricePerSqm)}
-                              {isMultiUnit && (
-                                <div className="text-xs text-primary-600 font-medium">{t('comparables.grouped')}</div>
-                              )}
-                            </td>
-                          </tr>
-                          {/* Expandable drill-down for multi-unit sales */}
-                          {isMultiUnit && isExpanded && sale.lots_detail && (
-                            <tr key={`${index}-detail`} className="bg-primary-50">
-                              <td colSpan={6} className="px-6 py-4">
-                                <div className="text-xs font-medium text-gray-700 mb-2 uppercase">{t('comparables.individualUnits', { count: sale.unit_count })}</div>
-                                <div className="bg-white rounded border border-primary-200 overflow-hidden">
-                                  <table className="min-w-full text-xs">
-                                    <thead className="bg-gray-50">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.unit')}</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.surface')}</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.rooms')}</th>
-                                        <th className="px-3 py-2 text-left font-medium text-gray-500">{t('comparables.individualPricePerSqm')}</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                      {sale.lots_detail.map((lot: any, lotIdx: number) => (
-                                        <tr key={lotIdx} className="hover:bg-gray-50">
-                                          <td className="px-3 py-2 text-gray-700">{t('comparables.unit')} {lotIdx + 1}</td>
-                                          <td className="px-3 py-2 text-gray-900">{lot.surface_area} m²</td>
-                                          <td className="px-3 py-2 text-gray-900">{lot.rooms || '-'}</td>
-                                          <td className="px-3 py-2 text-gray-900">
-                                            {lot.price_per_sqm ? new Intl.NumberFormat('fr-FR', {
-                                              style: 'currency',
-                                              currency: 'EUR',
-                                              maximumFractionDigits: 0,
-                                            }).format(lot.price_per_sqm) : '-'}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                  <div className="px-3 py-2 bg-gray-50 text-xs text-gray-600 border-t border-gray-200">
-                                    {t('comparables.groupedNote', { price: new Intl.NumberFormat('fr-FR', {
-                                      style: 'currency',
-                                      currency: 'EUR',
-                                      maximumFractionDigits: 0,
-                                    }).format(displayPricePerSqm) })}
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Summary statistics */}
-              {priceAnalysis.market_avg_price_per_sqm && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">{t('comparables.marketAvgPrice')}</dt>
-                      <dd className="mt-1 text-lg font-semibold text-gray-900">
-                        {new Intl.NumberFormat('fr-FR', {
-                          style: 'currency',
-                          currency: 'EUR',
-                          maximumFractionDigits: 0,
-                        }).format(priceAnalysis.market_avg_price_per_sqm)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">{t('comparables.yourPrice')}</dt>
-                      <dd className="mt-1 text-lg font-semibold text-gray-900">
-                        {new Intl.NumberFormat('fr-FR', {
-                          style: 'currency',
-                          currency: 'EUR',
-                          maximumFractionDigits: 0,
-                        }).format(priceAnalysis.price_per_sqm)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">{t('comparables.marketMedianPrice')}</dt>
-                      <dd className="mt-1 text-lg font-semibold text-gray-900">
-                        {new Intl.NumberFormat('fr-FR', {
-                          style: 'currency',
-                          currency: 'EUR',
-                          maximumFractionDigits: 0,
-                        }).format(priceAnalysis.market_median_price_per_sqm)}
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

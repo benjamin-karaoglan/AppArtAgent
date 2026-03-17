@@ -11,6 +11,7 @@
 #            ▼                       │
 #   ┌─────────────────┐              │
 #   │  Run Migrations │              │            ← Blocking (must succeed)
+#   │  + Update DVF   │              │
 #   │  (Cloud Run Job)│              │
 #   └────────┬────────┘              │
 #            │                       │
@@ -18,6 +19,8 @@
 #   ┌─────────────────┐     ┌─────────────────┐
 #   │  Deploy Backend │     │ Deploy Frontend │   ← Only after migrations
 #   └─────────────────┘     └─────────────────┘
+#
+#   DVF import is a separate workflow (dvf-import.yml) triggered manually.
 #
 # =============================================================================
 
@@ -239,6 +242,13 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --wait
           echo "✅ Migrations completed successfully"
+
+      - name: Update DVF import job image
+        run: |
+          gcloud run jobs update dvf-import \
+            --image ${{ env.ARTIFACT_REGISTRY }}/backend:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            2>/dev/null || echo "⚠️ dvf-import job not found (run terraform apply first)"
 
   # ===========================================================================
   # Deploy Backend (after migrations succeed)

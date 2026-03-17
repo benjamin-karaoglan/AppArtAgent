@@ -7,6 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import { api } from '@/lib/api';
 import { Plus, Home, Trash2 } from 'lucide-react';
+import Spinner from '@/components/ui/Spinner';
 import type { Property } from '@/types';
 
 function PropertiesContent() {
@@ -90,7 +91,7 @@ function PropertiesContent() {
             <div className="px-4 py-5 sm:p-6">
               {loading ? (
                 <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  <Spinner size={32} className="inline-block text-primary-600" />
                   <p className="mt-2 text-sm text-gray-500">{t('loading')}</p>
                 </div>
               ) : properties.length === 0 ? (

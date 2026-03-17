@@ -91,12 +91,21 @@ function NewPropertyContent() {
   }, [addressQuery]);
 
   const selectAddress = (suggestion: AddressSuggestion) => {
-    setValue('address', suggestion.address);
+    // Extract the number the user typed (e.g. "35" from "35 rue notre dame")
+    const numberMatch = addressQuery.trim().match(/^(\d+(?:\s*(?:bis|ter|quater|[A-Za-z]))?)\s+/i);
+    const userNumber = numberMatch ? numberMatch[1].trim() : '';
+
+    // Combine user's number with the street name from DVF
+    const fullAddress = userNumber
+      ? `${userNumber} ${suggestion.address}`
+      : suggestion.address;
+
+    setValue('address', fullAddress);
     setValue('postal_code', suggestion.postal_code);
     setValue('city', suggestion.city);
-    setValue('property_type', suggestion.property_type);
+    setValue('property_type', suggestion.property_type.split(', ')[0]); // Take first type if multiple
     setValue('department', suggestion.postal_code.substring(0, 2));
-    setAddressQuery(suggestion.address);
+    setAddressQuery(fullAddress);
     setShowSuggestions(false);
   };
 
@@ -201,7 +210,8 @@ function NewPropertyContent() {
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900">{suggestion.address}</span>
                               <span className="text-sm text-gray-500">
-                                {suggestion.city} {suggestion.postal_code} - {suggestion.property_type}
+                                {suggestion.postal_code} {suggestion.city}
+                                {suggestion.property_type && ` \u00B7 ${suggestion.property_type}`}
                                 <span className="ml-2 text-xs text-gray-400">({t('location.salesCount', { count: suggestion.count })})</span>
                               </span>
                             </div>

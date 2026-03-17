@@ -104,6 +104,17 @@ Dashboard statistics card with icon.
 <StatCard icon={<Home className="h-5 w-5" />} label="Total Properties" value={12} />
 ```
 
+### Spinner
+
+**File**: `src/components/ui/Spinner.tsx`
+
+Loading spinner indicator.
+
+```tsx
+<Spinner size="sm" />
+<Spinner size="md" />
+```
+
 ## Application Components
 
 ### Header
@@ -149,6 +160,30 @@ Authentication guard — redirects to login if not authenticated.
 **File**: `src/components/AppArtLogo.tsx`
 
 SVG logo component with configurable size and color.
+
+### PriceAnalysisSummary
+
+**File**: `src/components/PriceAnalysisSummary.tsx`
+
+Summary card showing estimated value, deviation, and recommendation for a property.
+
+### PriceMetricsGrid
+
+**File**: `src/components/PriceMetricsGrid.tsx`
+
+Grid of price metrics (price/m², market average, confidence score).
+
+### ComparableSalesTable
+
+**File**: `src/components/ComparableSalesTable.tsx`
+
+Table of comparable DVF sales with outlier detection and exclusion toggles.
+
+### TrendProjectionCard
+
+**File**: `src/components/TrendProjectionCard.tsx`
+
+Card showing trend-based price projection with neighboring sales data.
 
 ## Color Token Reference
 

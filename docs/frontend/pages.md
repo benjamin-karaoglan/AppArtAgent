@@ -190,6 +190,17 @@ const requestRedesign = async (photoId: number, style: string) => {
 };
 ```
 
+#### Price Analyst (`/[locale]/properties/[id]/price-analyst`)
+
+**File**: `src/app/[locale]/properties/[id]/price-analyst/page.tsx`
+
+Dedicated price analysis page for a property, showing:
+
+- Price analysis summary with market comparison
+- Comparable sales table from DVF data
+- Market trend chart with neighboring address data
+- Trend-based price projection
+
 ## Protected Routes
 
 Routes under `/[locale]/dashboard` and `/[locale]/properties` require authentication.

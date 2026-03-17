@@ -1,307 +1,551 @@
 # DVF Data
 
-DVF (Demandes de Valeurs Foncières) is France's open dataset of real estate transactions. AppArt Agent uses this data for price analysis and market trends.
+DVF (Demandes de Valeurs Foncières) is France's open dataset of real estate transactions. AppArt Agent uses this geolocalized data for price analysis and market trends.
 
 ## Overview
 
 | Metric | Value |
 |--------|-------|
-| Total Records | 5.4M+ |
-| Years Covered | 2022-2025 |
+| Total Sales | 4.8M+ |
+| Total Lots | 13.5M+ |
+| Years Covered | 2015-2025 |
 | Update Frequency | Quarterly |
 | Source | data.gouv.fr |
-
-### Records by Year
-
-| Year | Records | Coverage |
-|------|---------|----------|
-| 2022 | 1,933,436 | Full year |
-| 2023 | 1,518,590 | Full year |
-| 2024 | 1,367,286 | Full year |
-| 2025 | 567,471 | Q1-Q2 |
+| Geographic Coverage | Nationwide with lat/lon |
 
 ## Data Source
 
 Official DVF data is published by the French government:
 
-- **URL**: https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres/
-- **Format**: Pipe-delimited CSV (|)
-- **File Size**: ~400-600MB per year
-- **Fields**: 40+ columns including address, price, surface area, property type
+- **URL**: https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/
+- **Format**: CSV with geolocalized coordinates
+- **File Size**: ~3.5GB uncompressed (~20M rows)
+- **Fields**: 43 columns including address, price, surface area, property type, latitude, longitude
 
-## Importing Data
+**Key difference from original DVF**: This is a pre-processed geolocalized version with:
 
-### Download DVF Files
+- Computed lat/lon coordinates for each transaction
+- Cleaned and normalized addresses
+- Aggregated by unique transaction (id_mutation)
+- One row per lot sold
 
-1. Visit [data.gouv.fr DVF](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres/)
-2. Download yearly files (e.g., `ValeursFoncieres-2024.txt`)
-3. Save to `data/dvf/` directory
+## New Schema (March 2026)
 
-### Run Import
+The project migrated from the old monolithic `dvf_records` table to a normalized two-table schema:
 
-```bash
-# Basic import
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024
+### DVFSale (Transactions)
 
-# With custom chunk size (for memory-constrained systems)
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024 --read-chunk-size 20000
+One row per real estate transaction (unique `id_mutation`).
 
-# Force re-import (bypass hash check)
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024 --force
+```python
+class DVFSale(Base):
+    __tablename__ = "dvf_sales"
+
+    id: int                           # Primary key
+    id_mutation: str                  # Unique transaction ID (indexed)
+    date_mutation: date               # Sale date
+    nature_mutation: str              # Type: Vente, Échange, etc.
+    prix: float                       # Total transaction price
+    adresse_numero: str               # Street number
+    adresse_nom_voie: str             # Street name
+    adresse_complete: str             # Computed full address (GIN indexed)
+    code_postal: str                  # Postal code (indexed)
+    code_commune: str                 # INSEE commune code
+    nom_commune: str                  # City name
+    code_departement: str             # Department code
+    longitude: float                  # Longitude
+    latitude: float                   # Latitude
+    type_principal: str               # Primary property type (Appartement, Maison, etc.)
+    surface_bati: float               # Total built surface
+    nombre_pieces: int                # Total rooms
+    surface_terrain: float            # Land surface
+    nombre_lots: int                  # Number of lots in transaction
+    n_appartements: int               # Number of apartments
+    n_maisons: int                    # Number of houses
+    n_dependances: int                # Number of dependencies
+    n_parcelles_terrain: int          # Number of land parcels
+    prix_m2: float                    # Price per sqm (computed, indexed)
+    annee: int                        # Year (extracted from date_mutation)
 ```
 
-### Import Options
+**Indexes**:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--year` | Required | Data year being imported |
-| `--read-chunk-size` | 30000 | Rows per batch |
-| `--force` | false | Re-import even if file hash matches |
+- Composite: `(code_postal, type_principal)`
+- Composite: `(code_postal, type_principal, date_mutation)` for trend queries
+- GIN trigram: `adresse_complete` for fuzzy address matching
+- Partial: `prix_m2 WHERE prix_m2 IS NOT NULL` for price analysis
 
-## Import Process
+### DVFSaleLot (Individual Lots)
 
-The chunked importer handles large files efficiently:
+One row per lot within a transaction (many-to-one with DVFSale).
+
+```python
+class DVFSaleLot(Base):
+    __tablename__ = "dvf_sale_lots"
+
+    id: int                           # Primary key
+    id_mutation: str                  # Foreign key to DVFSale
+    lot_type: str                     # Type: Appartement, Maison, Dépendance, Terrain
+    nature_culture: str               # Land type (for terrain lots)
+    surface_bati: float               # Built surface of this lot
+    nombre_pieces: int                # Rooms in this lot
+    surface_terrain: float            # Land surface of this lot
+    id_parcelle: str                  # Cadastral parcel ID
+    longitude: float                  # Lot-specific longitude (if available)
+    latitude: float                   # Lot-specific latitude (if available)
+```
+
+**Why two tables?**
+
+- One transaction (`id_mutation`) can involve multiple lots (e.g., apartment + parking)
+- Each lot has its own type, surface, and sometimes coordinates
+- Aggregations at transaction level (DVFSale) are much faster
+- Detailed lot analysis available when needed (DVFSaleLot)
+
+## Data Import
+
+### CLI Tools
+
+Two new CLI commands are available via `uv run`:
+
+#### 1. Download DVF
+
+```bash
+# Download the latest geolocalized DVF dataset
+uv run download-dvf https://www.data.gouv.fr/fr/datasets/r/3004168d-bec4-44d9-a781-ef16f41856a2
+
+# This will:
+# - Download the CSV file (~3.5GB)
+# - Extract to data/dvf/
+# - Verify integrity
+```
+
+**Entry point**: `backend/scripts/download_dvf.py` (registered in root `pyproject.toml`)
+
+#### 2. Import DVF
+
+```bash
+# Import downloaded DVF data into PostgreSQL
+uv run import-dvf
+
+# Options:
+# --source data/dvf/dvf_geolocalized.csv  # Custom source file
+# --limit 100000                          # Import only first N rows (for testing)
+```
+
+**Entry point**: `backend/scripts/import_dvf.py` (registered in root `pyproject.toml`)
+
+### Import Process
+
+The new importer uses Polars for fast CSV processing and PostgreSQL COPY for bulk inserts:
 
 ```mermaid
 flowchart TD
-    A["1. Hash Check<br/>Calculate SHA-256<br/>Compare with previous imports"] --> B
-    B["2. Chunked Reading<br/>Read 30,000 rows at a time<br/>Minimize memory usage"] --> C
-    C["3. Data Cleaning<br/>Normalize addresses<br/>Parse dates, Validate prices"] --> D
-    D["4. Filtering<br/>Keep: apartments, houses, dépendances<br/>Skip: land, commercial, industrial"] --> E
-    E["5. Deduplication<br/>PostgreSQL UPSERT<br/>Unique constraint check"] --> F
-    F["6. Audit Trail<br/>Record import in dvf_imports table<br/>Track statistics"]
+    A["1. Load CSV<br/>Polars reads ~20M rows<br/>~15GB in memory"] --> B
+    B["2. Group by id_mutation<br/>Aggregate lot-level data<br/>Compute transaction totals"] --> C
+    C["3. Create DVFSale rows<br/>~4.8M unique transactions<br/>Compute adresse_complete, prix_m2"] --> D
+    D["4. Bulk insert DVFSales<br/>COPY FROM STDIN<br/>~30s for 4.8M rows"] --> E
+    E["5. Create DVFSaleLot rows<br/>~13.5M individual lots<br/>Preserve lot details"] --> F
+    F["6. Bulk insert DVFSaleLots<br/>COPY FROM STDIN<br/>~25s for 13.5M rows"]
 ```
 
 ### Performance
 
 | Metric | Value |
 |--------|-------|
-| Processing Speed | ~1,000 records/sec |
-| 600MB File | ~5 minutes |
-| Memory Usage | ~200MB (chunked) |
+| Total Import Time | ~55 seconds |
+| DVFSale Insert | ~30 seconds (4.8M rows) |
+| DVFSaleLot Insert | ~25 seconds (13.5M rows) |
+| Memory Usage | ~15GB peak (Polars groupby) |
+| CPU | 4+ vCPU recommended |
 
-## Data Schema
+**Why so fast?**
 
-### DVFRecord Model
+- Polars: columnar processing, parallel execution, lazy evaluation
+- COPY FROM STDIN: PostgreSQL bulk insert protocol (50x faster than INSERT)
+- No row-by-row processing: bulk operations only
 
-```python
-class DVFRecord(Base):
-    id: int
-    sale_date: date           # Date de mutation
-    sale_price: float         # Valeur foncière
-    address: str              # Adresse complète
-    postal_code: str          # Code postal
-    city: str                 # Commune
-    property_type: str        # Type local
-    surface_area: float       # Surface réelle bâti
-    rooms: int               # Nombre de pièces
-    price_per_sqm: float     # Calculated
-    data_year: int           # Year of import
-    import_batch_id: str     # For rollback
-```
+### Street Address Normalization
 
-### Property Types
-
-| French | English | Included |
-|--------|---------|----------|
-| Appartement | Apartment | ✅ |
-| Maison | House | ✅ |
-| Dépendance | Storage/Annex | ✅ |
-| Local industriel | Industrial | ❌ |
-| Local commercial | Commercial | ❌ |
-
-## Import Management
-
-### View Import History
-
-```bash
-docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT
-    source_file,
-    data_year,
-    status,
-    total_records,
-    inserted_records,
-    duration_seconds,
-    started_at
-FROM dvf_imports
-ORDER BY started_at DESC
-LIMIT 10;
-"
-```
-
-### Check Data by Year
-
-```bash
-docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT
-    data_year,
-    COUNT(*) as records,
-    MIN(sale_date) as earliest,
-    MAX(sale_date) as latest
-FROM dvf_records
-GROUP BY data_year
-ORDER BY data_year;
-"
-```
-
-### Rollback Import
-
-```bash
-# List all imports
-docker-compose exec backend python scripts/rollback_dvf_import.py --list
-
-# Rollback specific import
-docker-compose exec backend python scripts/rollback_dvf_import.py <batch_id>
-```
-
-## Data Validation
-
-### Verify Import Completeness
-
-```bash
-# Total records
-docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT COUNT(*) as total_records FROM dvf_records;
-"
-
-# Records per postal code (top 10)
-docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT postal_code, COUNT(*) as count
-FROM dvf_records
-GROUP BY postal_code
-ORDER BY count DESC
-LIMIT 10;
-"
-```
-
-### Test Specific Address
+The importer normalizes street addresses to match DVF abbreviations:
 
 ```python
-# backend/scripts/test_address.py
-from app.core.database import SessionLocal
-from app.models.property import DVFRecord
-
-db = SessionLocal()
-records = db.query(DVFRecord).filter(
-    DVFRecord.address.like('56 RUE NOTRE-DAME%')
-).all()
-
-print(f"Found {len(records)} sales")
-for r in records:
-    print(f"  {r.sale_date}: {r.sale_price:,.0f} EUR")
-db.close()
+STREET_TYPE_MAPPING = {
+    "BOULEVARD": "BD",
+    "AVENUE": "AV",
+    "RUE": "RUE",
+    "PLACE": "PL",
+    "IMPASSE": "IMP",
+    "CHEMIN": "CHE",
+    "ALLEE": "ALL",
+    # ... etc
+}
 ```
 
-## Search Optimization
+This enables accurate address matching in `DVFService.get_exact_address_sales()`.
 
-### GIN Trigram Index
+## DVF Service
 
-The database uses PostgreSQL trigram index for fuzzy address matching:
+The `DVFService` class provides high-level methods for price analysis:
 
-```sql
--- Enable extension
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+### Methods
 
--- Create GIN index
-CREATE INDEX idx_dvf_address_gin ON dvf_records
-USING GIN (address gin_trgm_ops);
-```
+| Method | Purpose |
+|--------|---------|
+| `get_exact_address_sales()` | Find historical sales at exact address |
+| `get_comparable_sales()` | Find similar properties in same postal code |
+| `get_neighboring_sales_for_trend()` | Get recent sales in area for trend calculation |
+| `calculate_market_trend()` | Compute monthly price trend from neighboring sales |
+| `calculate_trend_based_projection()` | Project future price using trend |
+| `calculate_price_analysis()` | Full analysis: exact + comparable + trend projection |
 
-### Search Query
-
-```python
-from sqlalchemy import func
-
-def search_by_address(db, address: str, postal_code: str):
-    return db.query(DVFRecord).filter(
-        DVFRecord.postal_code == postal_code,
-        func.similarity(DVFRecord.address, address) > 0.3
-    ).order_by(
-        func.similarity(DVFRecord.address, address).desc()
-    ).limit(50).all()
-```
-
-## Price Analysis
-
-### Simple Analysis
-
-Returns historical sales at exact address:
+### Example: Price Analysis
 
 ```python
 from app.services.dvf_service import DVFService
 
 service = DVFService(db)
-result = service.get_simple_analysis(
-    address="56 Rue Notre-Dame des Champs",
-    postal_code="75006"
-)
-```
-
-### Trend Analysis
-
-Projects prices using neighboring sales:
-
-```python
-result = service.get_trend_analysis(
-    address="56 Rue Notre-Dame des Champs",
+result = service.calculate_price_analysis(
+    property_id=123,
+    address="56 RUE NOTRE-DAME DES CHAMPS",
     postal_code="75006",
-    surface_area=65.5
+    surface_area=65.5,
+    rooms=3,
+    property_type="Appartement"
 )
+
+# Returns:
+{
+    "exact_match_sales": [...],          # Sales at same address
+    "comparable_sales": [...],           # Similar properties in 75006
+    "excluded_sale_ids": [1, 2, 3],      # Outliers removed by IQR
+    "market_trend_monthly": 0.008,       # 0.8% monthly growth
+    "market_trend_annual": 0.096,        # 9.6% annual growth
+    "projected_price": 875000,           # Estimated value
+    "projected_price_m2": 13360,
+    "confidence": "medium",
+    "excluded_neighboring_sale_ids": [4, 5]
+}
 ```
 
 ### IQR Outlier Filtering
 
-Both analyses use IQR (Interquartile Range) to filter outliers:
+All analyses use IQR (Interquartile Range) to remove outliers:
 
 ```python
-def filter_outliers(prices: List[float]) -> List[float]:
-    q1 = np.percentile(prices, 25)
-    q3 = np.percentile(prices, 75)
+def filter_outliers(values: List[float]) -> List[float]:
+    q1 = np.percentile(values, 25)
+    q3 = np.percentile(values, 75)
     iqr = q3 - q1
     lower = q1 - 1.5 * iqr
     upper = q3 + 1.5 * iqr
-    return [p for p in prices if lower <= p <= upper]
+    return [v for v in values if lower <= v <= upper]
+```
+
+Outliers are tracked in `excluded_sale_ids` and `excluded_neighboring_sale_ids`.
+
+## Price Analysis Table
+
+Results are cached in the `price_analyses` table:
+
+```python
+class PriceAnalysis(Base):
+    __tablename__ = "price_analyses"
+
+    id: int
+    property_id: int                         # Foreign key to properties
+    analysis_data: JSON                      # Full DVFService result
+    excluded_sale_ids: JSON                  # Outlier IDs removed
+    excluded_neighboring_sale_ids: JSON      # Trend outlier IDs removed
+    created_at: datetime
+    updated_at: datetime
+```
+
+This avoids re-computing expensive analyses and preserves historical snapshots.
+
+## Production Deployment (GCP Cloud Run Job)
+
+### Cloud Run Job: dvf-import
+
+The import runs as a Cloud Run job (not a service) to avoid timeout limits:
+
+```bash
+gcloud run jobs deploy dvf-import \
+  --image=gcr.io/PROJECT/dvf-import:latest \
+  --region=us-central1 \
+  --memory=8Gi \
+  --cpu=4 \
+  --task-timeout=30m \
+  --set-env-vars="DVF_SOURCE_URL=https://..."
+```
+
+**Configuration**:
+
+- **Memory**: 8 GiB (15GB peak during groupby, but GC reduces to ~8GB)
+- **CPU**: 4 vCPU (Polars parallelism)
+- **Timeout**: 30 minutes (actual: ~2 minutes including download)
+- **Trigger**: Manual (via GitHub Actions workflow)
+
+### GitHub Actions Workflows
+
+#### 1. dvf-import.yml
+
+Manual workflow to trigger DVF import:
+
+```yaml
+name: Import DVF Data
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: 'DVF source URL'
+        required: true
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloud Run Job
+        run: |
+          gcloud run jobs execute dvf-import \
+            --region=us-central1 \
+            --env-vars="DVF_SOURCE_URL=${{ inputs.source_url }}"
+```
+
+#### 2. deploy.yml
+
+Updates DVF job image on each deploy to `main`:
+
+```yaml
+- name: Update DVF Import Job Image
+  run: |
+    gcloud run jobs update dvf-import \
+      --image=$IMAGE_URL \
+      --region=us-central1
+```
+
+## Query Examples
+
+### Find Sales at Address
+
+```python
+from app.services.dvf_service import DVFService
+
+service = DVFService(db)
+sales = service.get_exact_address_sales(
+    address="56 RUE NOTRE-DAME DES CHAMPS",
+    postal_code="75006"
+)
+
+for sale in sales:
+    print(f"{sale.date_mutation}: {sale.prix:,.0f} EUR ({sale.prix_m2:,.0f} EUR/m²)")
+```
+
+### Comparable Sales (Same Postal Code + Type)
+
+```python
+comparables = service.get_comparable_sales(
+    postal_code="75006",
+    property_type="Appartement",
+    surface_area=65.5,
+    rooms=3,
+    max_results=50
+)
+
+# Filters by:
+# - Same postal code
+# - Same property type
+# - Surface within 20% (52.4-78.6 m²)
+# - Rooms within ±1 (2-4 rooms)
+# - Last 2 years
+# - Sorted by date descending
+```
+
+### Market Trend (Neighboring Sales)
+
+```python
+trend = service.calculate_market_trend(
+    postal_code="75006",
+    property_type="Appartement",
+    surface_area=65.5,
+    rooms=3
+)
+
+print(f"Monthly trend: {trend['monthly_change']:.2%}")
+print(f"Annual trend: {trend['annual_change']:.2%}")
+```
+
+## Data Validation
+
+### Check Import Completeness
+
+```bash
+# Total sales
+docker-compose exec db psql -U appart -d appart_agent -c "
+SELECT COUNT(*) as total_sales FROM dvf_sales;
+"
+
+# Total lots
+docker-compose exec db psql -U appart -d appart_agent -c "
+SELECT COUNT(*) as total_lots FROM dvf_sale_lots;
+"
+
+# Sales by year
+docker-compose exec db psql -U appart -d appart_agent -c "
+SELECT annee, COUNT(*) as count
+FROM dvf_sales
+GROUP BY annee
+ORDER BY annee;
+"
+```
+
+### Check Index Usage
+
+```bash
+docker-compose exec db psql -U appart -d appart_agent -c "
+SELECT
+    schemaname,
+    tablename,
+    indexname,
+    idx_scan as times_used
+FROM pg_stat_user_indexes
+WHERE tablename IN ('dvf_sales', 'dvf_sale_lots')
+ORDER BY idx_scan DESC;
+"
+```
+
+### Test Address Search
+
+```python
+from app.core.database import SessionLocal
+from app.models.property import DVFSale
+from sqlalchemy import func
+
+db = SessionLocal()
+
+# Fuzzy search using trigram similarity
+sales = db.query(DVFSale).filter(
+    DVFSale.code_postal == "75006",
+    func.similarity(DVFSale.adresse_complete, "56 RUE NOTRE DAME CHAMPS") > 0.3
+).order_by(
+    func.similarity(DVFSale.adresse_complete, "56 RUE NOTRE DAME CHAMPS").desc()
+).limit(10).all()
+
+for sale in sales:
+    print(f"{sale.adresse_complete} ({sale.date_mutation}): {sale.prix:,.0f} EUR")
+
+db.close()
 ```
 
 ## Troubleshooting
 
 ### Missing Sales
 
-**Issue**: Search returns fewer sales than expected.
+**Issue**: Address search returns no results.
 
-**Solution**: Verify data is imported:
+**Solutions**:
 
-```bash
-docker-compose exec db psql -U appart -d appart_agent -c "
-SELECT data_year, COUNT(*) FROM dvf_records
-WHERE postal_code = '75006'
-GROUP BY data_year;
-"
+1. Check if postal code exists:
+
+```sql
+SELECT COUNT(*) FROM dvf_sales WHERE code_postal = '75006';
+```
+
+2. Check address normalization:
+
+```python
+from app.services.dvf_service import normalize_street
+
+input_addr = "56 Boulevard Notre-Dame des Champs"
+normalized = normalize_street(input_addr)
+print(f"Searching for: {normalized}")  # "56 BD NOTRE DAME DES CHAMPS"
+```
+
+3. Use fuzzy search instead of exact match:
+
+```python
+# Exact match (may fail due to typos)
+sales = db.query(DVFSale).filter_by(
+    adresse_complete="56 RUE NOTRE DAME CHAMPS",
+    code_postal="75006"
+).all()
+
+# Fuzzy match (more forgiving)
+sales = db.query(DVFSale).filter(
+    DVFSale.code_postal == "75006",
+    func.similarity(DVFSale.adresse_complete, "56 RUE NOTRE DAME CHAMPS") > 0.3
+).all()
 ```
 
 ### Slow Queries
 
-**Issue**: Address search takes too long.
+**Issue**: Address search takes too long (>1s).
 
-**Solution**: Verify GIN index exists:
+**Solutions**:
 
-```bash
-docker-compose exec db psql -U appart -d appart_agent -c "
+1. Verify GIN index exists:
+
+```sql
 SELECT indexname FROM pg_indexes
-WHERE tablename = 'dvf_records' AND indexname LIKE '%gin%';
-"
+WHERE tablename = 'dvf_sales' AND indexname LIKE '%gin%';
 ```
+
+2. Analyze table statistics:
+
+```sql
+ANALYZE dvf_sales;
+```
+
+3. Check query plan:
+
+```sql
+EXPLAIN ANALYZE
+SELECT * FROM dvf_sales
+WHERE code_postal = '75006'
+  AND similarity(adresse_complete, '56 RUE NOTRE DAME CHAMPS') > 0.3
+ORDER BY similarity(adresse_complete, '56 RUE NOTRE DAME CHAMPS') DESC
+LIMIT 50;
+```
+
+Expected: Index Scan using idx_dvf_sales_composite or idx_dvf_sales_address_gin
 
 ### Import Failures
 
-**Issue**: Import crashes or hangs.
+**Issue**: Import crashes or runs out of memory.
 
-**Solution**:
+**Solutions**:
 
-1. Check available memory
-2. Reduce chunk size: `--read-chunk-size 10000`
-3. Check disk space for PostgreSQL
+1. Increase available memory (15GB+ recommended)
+2. Use `--limit` flag for testing:
+
+```bash
+uv run import-dvf --limit 100000  # Import only first 100k rows
+```
+
+3. Check disk space for PostgreSQL:
+
+```bash
+docker-compose exec db df -h /var/lib/postgresql/data
+```
+
+4. Check PostgreSQL logs:
+
+```bash
+docker-compose logs db | tail -100
+```
+
+## Migration from Old Schema
+
+The migration from `dvf_records` → `dvf_sales + dvf_sale_lots` is handled by Alembic:
+
+- **Migration file**: `backend/alembic/versions/l3m4n5o6p7q8_migrate_dvf_to_geolocalized_schema.py`
+- **Drops**: `dvf_records`, `dvf_imports`, `dvf_stats`, `dvf_grouped_transactions` view
+- **Creates**: `dvf_sales`, `dvf_sale_lots`, indexes
+
+Run migration:
+
+```bash
+docker-compose exec backend alembic upgrade head
+```
+
+**No data is automatically migrated.** After running the migration, you must re-import DVF data using `uv run import-dvf`.

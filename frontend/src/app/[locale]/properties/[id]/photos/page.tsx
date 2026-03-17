@@ -7,6 +7,7 @@ import { ArrowLeft, Upload, Sparkles, Image as ImageIcon, Download, Trash2, X, C
 import { Link } from '@/i18n/navigation';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import Spinner from '@/components/ui/Spinner';
 import api from '@/lib/api';
 
 interface PromotedRedesign {
@@ -690,7 +691,7 @@ function PhotosContent() {
 
                 {loading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-600 mx-auto"></div>
+                    <Spinner size={32} className="text-accent-600 mx-auto" />
                   </div>
                 ) : photos.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
