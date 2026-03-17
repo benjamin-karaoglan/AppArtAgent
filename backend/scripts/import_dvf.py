@@ -16,8 +16,8 @@ import os
 import shutil
 import sys
 import time
+import urllib.request
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import polars as pl
 import psycopg2
@@ -79,7 +79,11 @@ def resolve_csv_path(cli_csv: str | None) -> Path:
 
         archive_path = Path("/tmp/dvf.csv.gz")
         print(f"Downloading {source_url}")
-        urlretrieve(source_url, archive_path)
+        with (
+            urllib.request.urlopen(source_url, timeout=120) as resp,  # noqa: S310
+            open(archive_path, "wb") as out,
+        ):
+            shutil.copyfileobj(resp, out)
         size_mb = archive_path.stat().st_size / (1024 * 1024)
         print(f"Downloaded {size_mb:.1f} MB")
 
