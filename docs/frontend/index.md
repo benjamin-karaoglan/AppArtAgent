@@ -9,10 +9,12 @@ The AppArt Agent frontend is a Next.js 14 application using the App Router.
 | Next.js 14 | React framework with App Router |
 | React 18 | UI library with Server Components |
 | TypeScript | Type safety |
-| Tailwind CSS | Styling |
+| Tailwind CSS | Styling (semantic design tokens) |
 | Better Auth | Authentication (email/password + Google OAuth) |
 | next-intl | Internationalization (FR/EN) |
 | React Query | Data fetching and caching |
+| Lucide React | Icons |
+| @ducanh2912/next-pwa | Progressive Web App (installable on mobile) |
 | pnpm | Package management |
 
 ## Project Structure
@@ -30,7 +32,8 @@ frontend/
 │   │   │   ├── properties/      # Property management
 │   │   │   │   ├── [id]/
 │   │   │   │   │   ├── documents/
-│   │   │   │   │   └── photos/
+│   │   │   │   │   ├── photos/
+│   │   │   │   │   └── price-analyst/
 │   │   │   │   └── new/
 │   │   │   └── auth/
 │   │   │       ├── login/
@@ -39,12 +42,16 @@ frontend/
 │   │   ├── globals.css          # Global styles
 │   │   └── layout.tsx           # Root layout
 │   ├── components/              # Shared components
-│   │   ├── ui/                  # Design system (Button, Badge, Card, etc.)
+│   │   ├── ui/                  # Design system (Button, Badge, Card, Spinner, etc.)
 │   │   ├── Header.tsx           # Navigation + locale switcher
 │   │   ├── ProtectedRoute.tsx   # Auth guard
 │   │   ├── InfoTooltip.tsx      # Informational tooltips
 │   │   ├── AppArtLogo.tsx       # SVG logo
-│   │   └── MarketTrendChart.tsx
+│   │   ├── MarketTrendChart.tsx
+│   │   ├── PriceAnalysisSummary.tsx
+│   │   ├── PriceMetricsGrid.tsx
+│   │   ├── ComparableSalesTable.tsx
+│   │   └── TrendProjectionCard.tsx
 │   ├── contexts/
 │   │   └── AuthContext.tsx       # Auth state (Better Auth)
 │   ├── i18n/                    # Internationalization
@@ -173,3 +180,11 @@ import { Button, Badge, Card } from '@/components/ui';
 ```
 
 See [Components](components.md) for the full design system reference.
+
+### PWA (Progressive Web App)
+
+The app is installable on mobile devices. Configuration in `next.config.js`:
+
+- Disabled in development
+- Service worker files (`sw.js`, `workbox-*.js`) generated during `pnpm build` and gitignored
+- Manifest at `public/manifest.json`

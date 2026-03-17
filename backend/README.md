@@ -122,24 +122,29 @@ Once running, visit:
 
 ## DVF Data Management
 
-### Current Database
+### Schema
 
-The database contains **5.4 million DVF property records** across 4 years (2022-2025 Q1-Q2).
+The database uses two tables for DVF data:
+
+- `dvf_sales` (~4.8M rows): One row per real estate transaction, with GPS coordinates
+- `dvf_sale_lots` (~13.5M rows): One row per lot/component within a transaction
+
+Source: [Geolocalized DVF dataset](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/) (20M rows with lat/lon).
 
 ### Importing DVF Data
 
 ```bash
-# Import a specific year (using Docker)
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024
+# 1. Download the dataset (one-time)
+uv run download-dvf https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz
 
-# Import with custom chunk size for memory-constrained environments
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2023.txt --year 2023 --read-chunk-size 30000
+# 2. Run migration (creates empty tables)
+cd backend && uv run alembic upgrade head
 
-# Force re-import (bypasses file hash check)
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024 --force
+# 3. Import data (~55s for 20M rows)
+uv run import-dvf
+
+# Or with custom CSV path:
+uv run import-dvf --csv /path/to/dvf.csv
 ```
 
 ### Migration Management
@@ -158,20 +163,6 @@ docker-compose exec backend alembic current
 
 # Rollback one migration
 docker-compose exec backend alembic downgrade -1
-```
-
-### Import Management
-
-```bash
-# View import history
-docker-compose exec backend python scripts/rollback_dvf_import.py --list
-
-# Rollback a specific import
-docker-compose exec backend python scripts/rollback_dvf_import.py <batch_id>
-
-# Check database status
-docker-compose exec db psql -U appart -d appart_agent -c \
-  "SELECT data_year, COUNT(*) as records FROM dvf_records GROUP BY data_year ORDER BY data_year;"
 ```
 
 ## Testing

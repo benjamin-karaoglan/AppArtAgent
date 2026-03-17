@@ -41,7 +41,7 @@ flowchart TB
         subgraph Services["Service Layer"]
             S1["AI Services<br/>Native PDF | Thinking | Synthesis"]
             S2["Storage Service<br/>MinIO | GCS abstraction"]
-            S3["DVF Service<br/>5.4M+ transactions"]
+            S3["DVF Service<br/>4.8M sales + 13.5M lots"]
             S4["Price Analysis<br/>Trends & projections"]
         end
     end
@@ -181,7 +181,7 @@ flowchart LR
         Users["users"]
         Properties["properties"]
         Documents["documents"]
-        DVF["dvf_records<br/>5.4M+ rows"]
+        DVF["dvf_sales (4.8M)<br/>dvf_sale_lots (13.5M)"]
     end
 
     subgraph Redis["Redis 7"]
@@ -209,7 +209,9 @@ Stores structured data:
 | `properties` | ~100s | Properties and their metadata |
 | `documents` | ~1000s | Documents and analysis results (5 categories) |
 | `document_summaries` | ~100s | Cross-document synthesis with user overrides |
-| `dvf_records` | 5.4M+ | French property transactions (2022-2025) |
+| `price_analyses` | ~100s | Cached DVF price analysis results |
+| `dvf_sales` | 4.8M | French property transactions (2015-2025) |
+| `dvf_sale_lots` | 13.5M | Individual lots within transactions |
 
 #### Redis
 

@@ -35,7 +35,8 @@ backend/
 │   │   ├── analysis.py      # Analysis results (DocumentSummary)
 │   │   ├── document.py      # Documents (storage_key/storage_bucket)
 │   │   ├── photo.py         # Photos (promoted_redesign_id) and redesigns
-│   │   ├── property.py      # Properties (building_floors) and DVF
+│   │   ├── price_analysis.py  # Cached price analysis results
+│   │   ├── property.py      # Properties and DVF (DVFSale, DVFSaleLot)
 │   │   └── user.py          # Users
 │   ├── schemas/             # Pydantic schemas
 │   │   ├── document.py      # Document schemas (BulkDeleteRequest, RenameRequest)
@@ -49,8 +50,8 @@ backend/
 │   │   ├── documents/       # Document processing
 │   │   │   ├── bulk_processor.py      # Async parallel processing
 │   │   │   └── parser.py
-│   │   ├── dvf_service.py   # DVF data management
-│   │   ├── price_analysis.py
+│   │   ├── dvf_service.py   # DVF price analysis and address matching
+│   │   ├── price_analysis.py  # Price analysis caching service
 │   │   └── storage.py       # Storage abstraction (MinIO/GCS)
 │   ├── prompts/             # AI prompt templates
 │   │   └── v1/              # Versioned prompts (incl. dp_process_other.md)

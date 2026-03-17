@@ -33,7 +33,7 @@
 
 AppArt Agent helps buyers make informed real estate decisions by combining:
 
-- **5.4M+ French property transactions** from DVF (Demandes de Valeurs Foncières) data
+- **4.8M+ geolocalized French property transactions** from the DVF (Demandes de Valeurs Foncières) open dataset
 - **AI-powered document analysis** using Google Gemini for PV d'AG, diagnostics, taxes, and charges
 - **Photo redesign visualization** to explore renovation potential
 - **Comprehensive decision dashboard** with cost breakdown and risk assessment
@@ -141,8 +141,7 @@ Full documentation is available at **[benjamin-karaoglan.github.io/AppArtAgent](
 ### Run Documentation Locally
 
 ```bash
-uv pip install -r docs/requirements.txt
-uv mkdocs serve
+uv run --extra docs mkdocs serve
 ```
 
 ## Development
@@ -167,9 +166,8 @@ uv mkdocs serve
 
 ```bash
 cd backend
-uv venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
-uvicorn app.main:app --reload
+uv sync
+uv run uvicorn app.main:app --reload
 ```
 
 </details>
@@ -280,26 +278,47 @@ The backend validates sessions by checking the `better-auth.session_token` cooki
 docker-compose exec backend alembic upgrade head
 ```
 
-**Migrate existing users to Better Auth:**
-
-```bash
-docker-compose exec backend python scripts/migrate_users_to_better_auth.py --dry-run
-docker-compose exec backend python scripts/migrate_users_to_better_auth.py
-```
-
 </details>
 
 ## DVF Data
 
-The application uses France's open [DVF data](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres/) for price analysis.
+The application uses France's open [geolocalized DVF dataset](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/) (20M+ rows with GPS coordinates) for price analysis.
+
+**Schema**: Two normalized tables built from the raw CSV via Polars groupby + PostgreSQL `COPY FROM STDIN`:
+
+- `dvf_sales` (~4.8M rows) — one row per transaction, with aggregated surface/rooms/type counts and computed `prix_m2`
+- `dvf_sale_lots` (~13.5M rows) — one row per lot/component within a transaction
+
+### Local Import
 
 ```bash
-# Import DVF data
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024
+# 1. Download the dataset (~600 MB compressed, ~2.5 GB extracted)
+uv run download-dvf https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz
+
+# 2. Import into PostgreSQL (~55s for full dataset)
+uv run import-dvf
+
+# Or with a custom CSV path:
+uv run import-dvf --csv /path/to/dvf.csv
 ```
 
-See [DVF Import Guide](./backend/scripts/DVF_IMPORT_GUIDE.md) for detailed instructions.
+### Production Import (GCP)
+
+In production, DVF data is imported via a **Cloud Run Job** (`dvf-import`) that downloads and imports the dataset directly into Cloud SQL. It can be triggered in two ways:
+
+**Via GitHub Actions** (recommended):
+
+Go to Actions > "DVF Import" > Run workflow. Optionally provide a custom source URL.
+
+**Via gcloud CLI**:
+
+```bash
+gcloud run jobs execute dvf-import --region europe-west1
+```
+
+The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environment variable, which automatically downloads and extracts the `.csv.gz` archive before importing. It runs with 4 vCPUs / 8 GiB RAM to handle the full dataset in memory via Polars. The deploy pipeline (`deploy.yml`) automatically keeps the job's Docker image in sync with the latest backend build.
+
+See [backend/README.md](./backend/README.md) for schema details and migration management.
 
 ## Contributing
 

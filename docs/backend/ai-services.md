@@ -203,11 +203,10 @@ result = await generator.redesign_photo(
 
 | Style | Description |
 |-------|-------------|
-| `modern` | Clean lines, contemporary furniture |
-| `scandinavian` | Light wood, minimal decoration |
-| `industrial` | Exposed brick, metal accents |
-| `bohemian` | Colorful, eclectic patterns |
-| `classic` | Traditional furniture, rich colors |
+| `modern_norwegian` | Modern Norwegian: clean lines, light wood |
+| `minimalist_scandinavian` | Minimalist Scandinavian: functional minimalism |
+| `cozy_hygge` | Cozy Hygge: warm textiles, candles |
+| `fancy_dark_modern` | Fancy Dark Modern: dark tones, luxury accents |
 
 ## Prompt Management
 
