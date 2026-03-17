@@ -549,8 +549,10 @@ gcloud run jobs describe dvf-import --region $REGION
 The `dvf-import` job:
 
 - **Resources**: 4 vCPU, 8 GiB RAM
-- **Timeout**: 1 hour
-- **Process**: Downloads DVF data from data.gouv.fr, extracts archives, imports via polars + COPY FROM STDIN
+- **Timeout**: 30 minutes
+- **Max retries**: 0 (fail fast for easier debugging)
+- **VPC egress**: `PRIVATE_RANGES_ONLY` — only Cloud SQL traffic goes through the VPC; the data.gouv.fr download bypasses the VPC directly to the internet
+- **Process**: Downloads DVF data from data.gouv.fr, extracts `.csv.gz`, imports via polars + COPY FROM STDIN
 - **Duration**: ~55 seconds for full dataset (4.8M sales, 13.5M lots)
 - **Trigger**: Manual via GitHub Actions workflow (`.github/workflows/dvf-import.yml`) or `gcloud` command
 
@@ -676,13 +678,14 @@ echo -n "your-logfire-token" | gcloud secrets versions add logfire-token --data-
 The backend automatically sends traces and logs to Logfire when `LOGFIRE_ENABLED=true`.
 
 !!! warning "VPC Egress Configuration"
-    Logfire requires external network access. The VPC connector must use `PRIVATE_RANGES_ONLY` egress
-    (not `ALL_TRAFFIC`) to allow the backend to reach `logfire-eu.pydantic.dev`. If using `ALL_TRAFFIC`,
-    you must configure Cloud NAT for the VPC.
+    All Cloud Run services and jobs must use `PRIVATE_RANGES_ONLY` egress (not `ALL_TRAFFIC`)
+    unless a Cloud NAT gateway is configured on the VPC. Without Cloud NAT, `ALL_TRAFFIC` routes
+    all outbound requests through the VPC — which blocks access to the public internet (data.gouv.fr
+    downloads, Logfire, Vertex AI, etc.) and causes connection timeouts.
 
-    The Terraform configuration uses `PRIVATE_RANGES_ONLY` by default, which routes only internal
-    traffic (Cloud SQL, Redis) through the VPC while allowing external traffic (Logfire, Vertex AI)
-    to use the default internet egress.
+    The Terraform configuration uses `PRIVATE_RANGES_ONLY` on all resources, which routes only
+    internal traffic (Cloud SQL, Redis) through the VPC while allowing external traffic to use
+    the default internet egress.
 
 ## Scaling Configuration
 
