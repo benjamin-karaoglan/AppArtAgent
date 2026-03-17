@@ -119,4 +119,4 @@ deployer-key.json
 .mypy_cache/
 
 # Assets
-assets/
+/assets/
