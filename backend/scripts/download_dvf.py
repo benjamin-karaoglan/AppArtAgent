@@ -12,21 +12,29 @@ Usage:
 import gzip
 import shutil
 import sys
+import urllib.request
 import zipfile
 from pathlib import Path
-from urllib.request import urlretrieve
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "dvf"
 
 
 def download(url: str) -> None:
+    if not url.startswith("https://"):
+        print("ERROR: URL must use HTTPS")
+        sys.exit(1)
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     filename = url.split("/")[-1].split("?")[0]
     dest = DATA_DIR / filename
 
     print(f"Downloading {url}")
-    urlretrieve(url, dest)
+    with (
+        urllib.request.urlopen(url, timeout=120) as resp,  # noqa: S310
+        open(dest, "wb") as out,
+    ):
+        shutil.copyfileobj(resp, out)
     size_mb = dest.stat().st_size / (1024 * 1024)
     print(f"Saved {dest.name} ({size_mb:.1f} MB)")
 

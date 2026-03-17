@@ -72,6 +72,9 @@ def resolve_csv_path(cli_csv: str | None) -> Path:
     # Check for DVF_SOURCE_URL env var (Cloud Run Job)
     source_url = os.environ.get("DVF_SOURCE_URL")
     if source_url:
+        if not source_url.startswith("https://"):
+            print("ERROR: DVF_SOURCE_URL must use HTTPS")
+            sys.exit(1)
         tmp_path = Path("/tmp/dvf.csv")
         if tmp_path.exists():
             print(f"Using cached {tmp_path}")
@@ -344,7 +347,9 @@ def main() -> None:
         """)
         for row in cur.fetchall():
             index_defs.append((row[0], row[1]))
-            cur.execute(f"DROP INDEX IF EXISTS {row[0]}")
+            cur.execute(
+                psycopg2.sql.SQL("DROP INDEX IF EXISTS {}").format(psycopg2.sql.Identifier(row[0]))
+            )
 
         # COPY dvf_sales
         print("COPY dvf_sales...")

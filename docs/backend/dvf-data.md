@@ -267,62 +267,42 @@ This avoids re-computing expensive analyses and preserves historical snapshots.
 
 ### Cloud Run Job: dvf-import
 
-The import runs as a Cloud Run job (not a service) to avoid timeout limits:
+The import runs as a Cloud Run Job (not a service) to avoid timeout limits.
+The job is defined in Terraform (`infra/terraform/main.tf`) and triggered manually.
 
 ```bash
-gcloud run jobs deploy dvf-import \
-  --image=gcr.io/PROJECT/dvf-import:latest \
-  --region=us-central1 \
-  --memory=8Gi \
-  --cpu=4 \
-  --task-timeout=30m \
-  --set-env-vars="DVF_SOURCE_URL=https://..."
+# Execute the import
+gcloud run jobs execute dvf-import --region europe-west1 --wait
+
+# Check logs
+gcloud run jobs executions logs dvf-import --region europe-west1
 ```
 
 **Configuration**:
 
-- **Memory**: 8 GiB (15GB peak during groupby, but GC reduces to ~8GB)
+- **Memory**: 8 GiB
 - **CPU**: 4 vCPU (Polars parallelism)
 - **Timeout**: 30 minutes (actual: ~2 minutes including download)
-- **Trigger**: Manual (via GitHub Actions workflow)
+- **Max retries**: 0 (fail fast for easier debugging)
+- **VPC egress**: `PRIVATE_RANGES_ONLY` — Cloud SQL traffic goes through the VPC connector, public downloads (data.gouv.fr) bypass the VPC directly to the internet
+- **Trigger**: Manual (via GitHub Actions workflow or `gcloud` command)
 
 ### GitHub Actions Workflows
 
 #### 1. dvf-import.yml
 
-Manual workflow to trigger DVF import:
+Manual workflow to trigger DVF import. Optionally accepts a custom source URL.
 
-```yaml
-name: Import DVF Data
-on:
-  workflow_dispatch:
-    inputs:
-      source_url:
-        description: 'DVF source URL'
-        required: true
-
-jobs:
-  import:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Cloud Run Job
-        run: |
-          gcloud run jobs execute dvf-import \
-            --region=us-central1 \
-            --env-vars="DVF_SOURCE_URL=${{ inputs.source_url }}"
+```bash
+# Via GitHub UI: Actions → DVF Import → Run workflow
+# Or via CLI:
+gh workflow run dvf-import.yml
 ```
 
 #### 2. deploy.yml
 
-Updates DVF job image on each deploy to `main`:
-
-```yaml
-- name: Update DVF Import Job Image
-  run: |
-    gcloud run jobs update dvf-import \
-      --image=$IMAGE_URL \
-      --region=us-central1
-```
+Updates the DVF job image on each deploy to `main` so the next import
+execution uses the latest code.
 
 ## Query Examples
 

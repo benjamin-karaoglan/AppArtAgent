@@ -296,7 +296,7 @@ flowchart TB
 | `appart-frontend` | 1 | 512Mi | `var.min_instances` | 10 | - |
 | `appart-backend` | 2 | 2Gi | `var.min_instances` | 10 | - |
 | `db-migrate` (job) | 1 | 1Gi | N/A | 1 | 10m |
-| `dvf-import` (job) | 4 | 8Gi | N/A | 1 | 1h |
+| `dvf-import` (job) | 4 | 8Gi | N/A | 1 | 30m |
 
 ### Storage Buckets
 
