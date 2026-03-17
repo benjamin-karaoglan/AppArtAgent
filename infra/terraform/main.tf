@@ -885,10 +885,10 @@ resource "google_cloud_run_v2_job" "db_migrate" {
       timeout         = "600s"
       max_retries     = 1
 
-      # VPC access required for private Cloud SQL
+      # VPC for Cloud SQL; no external access needed
       vpc_access {
         connector = google_vpc_access_connector.connector.id
-        egress    = "ALL_TRAFFIC"
+        egress    = "PRIVATE_RANGES_ONLY"
       }
 
       volumes {
@@ -961,12 +961,12 @@ resource "google_cloud_run_v2_job" "dvf_import" {
     template {
       service_account = google_service_account.backend.email
       timeout         = "1800s" # 30 min — full import takes ~2 min but download can be slow
-      max_retries     = 1
+      max_retries     = 0     # No retries — fail fast for easier debugging
 
-      # VPC access required for private Cloud SQL
+      # VPC for Cloud SQL; public traffic (data.gouv.fr download) bypasses VPC
       vpc_access {
         connector = google_vpc_access_connector.connector.id
-        egress    = "ALL_TRAFFIC"
+        egress    = "PRIVATE_RANGES_ONLY"
       }
 
       volumes {

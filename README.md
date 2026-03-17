@@ -17,9 +17,13 @@
   </a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/node-18%2B-green" alt="Node.js">
+  <a href="https://appartagent.com">
+    <img src="https://img.shields.io/badge/Live%20App-appartagent.com-brightgreen" alt="Live App">
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://appartagent.com">Try it Live</a> •
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#documentation">Documentation</a> •
@@ -28,6 +32,10 @@
 </p>
 
 ---
+
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="AppArt Agent Demo" width="800">
+</p>
 
 ## Overview
 
