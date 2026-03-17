@@ -280,7 +280,7 @@ gcloud run jobs executions logs dvf-import --region europe-west1
 
 **Configuration**:
 
-- **Memory**: 8 GiB
+- **Memory**: 16 GiB
 - **CPU**: 4 vCPU (Polars parallelism)
 - **Timeout**: 30 minutes (actual: ~2 minutes including download)
 - **Max retries**: 0 (fail fast for easier debugging)

@@ -279,9 +279,10 @@ def main() -> None:
 
     print(f"  dvf_sale_lots rows: {len(lots):,}")
 
-    # --- Step 6: Serialize to buffers ---
-    print("Serializing to buffers...")
+    # Free the raw DataFrame — no longer needed
+    del df
 
+    # --- Step 6: Columns for COPY ---
     sales_columns = [
         "id_mutation",
         "date_mutation",
@@ -307,8 +308,6 @@ def main() -> None:
         "prix_m2",
         "annee",
     ]
-    sales_buf = dataframe_to_copy_buffer(sales, sales_columns)
-
     lots_columns = [
         "id_mutation",
         "lot_type",
@@ -320,12 +319,12 @@ def main() -> None:
         "longitude",
         "latitude",
     ]
-    lots_buf = dataframe_to_copy_buffer(lots, lots_columns)
 
     t_process = time.time() - t0
     print(f"  Processing took {t_process:.1f}s")
 
     # --- Step 7: Load into PostgreSQL ---
+    # Serialize and load each table one at a time to limit peak memory.
     print("Connecting to database...")
     conn = psycopg2.connect(database_url)
     conn.autocommit = False
@@ -351,24 +350,32 @@ def main() -> None:
                 psycopg2.sql.SQL("DROP INDEX IF EXISTS {}").format(psycopg2.sql.Identifier(row[0]))
             )
 
-        # COPY dvf_sales
+        # COPY dvf_sales (serialize → load → free)
+        print("Serializing dvf_sales...")
+        sales_buf = dataframe_to_copy_buffer(sales, sales_columns)
+        del sales  # Free DataFrame before COPY
         print("COPY dvf_sales...")
         db_sales_columns = ", ".join(sales_columns)
         cur.copy_expert(
             f"COPY dvf_sales ({db_sales_columns}) FROM STDIN WITH (FORMAT text, NULL '\\N')",
             sales_buf,
         )
+        del sales_buf  # Free buffer
         cur.execute("SELECT COUNT(*) FROM dvf_sales")
         sales_count = cur.fetchone()[0]
         print(f"  Loaded {sales_count:,} sales")
 
-        # COPY dvf_sale_lots
+        # COPY dvf_sale_lots (serialize → load → free)
+        print("Serializing dvf_sale_lots...")
+        lots_buf = dataframe_to_copy_buffer(lots, lots_columns)
+        del lots  # Free DataFrame before COPY
         print("COPY dvf_sale_lots...")
         db_lots_columns = ", ".join(lots_columns)
         cur.copy_expert(
             f"COPY dvf_sale_lots ({db_lots_columns}) FROM STDIN WITH (FORMAT text, NULL '\\N')",
             lots_buf,
         )
+        del lots_buf  # Free buffer
         cur.execute("SELECT COUNT(*) FROM dvf_sale_lots")
         lots_count = cur.fetchone()[0]
         print(f"  Loaded {lots_count:,} lots")
