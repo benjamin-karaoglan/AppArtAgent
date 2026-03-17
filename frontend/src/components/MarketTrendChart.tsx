@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api';
-import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import Spinner from '@/components/ui/Spinner';
 
 interface MarketTrendData {
   years: number[];
@@ -46,7 +46,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
+        <Spinner size={24} className="text-primary-600" />
       </div>
     );
   }
@@ -231,31 +231,6 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
             );
           })}
         </svg>
-      </div>
-
-      {/* Legend and Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div className="flex items-center gap-2 p-3 bg-success-50 rounded">
-          <TrendingUp className="h-5 w-5 text-success-600" />
-          <div>
-            <div className="font-medium text-gray-900">{t('positiveGrowth')}</div>
-            <div className="text-success-700 text-xs">{t('positiveGrowthDesc')}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-danger-50 rounded">
-          <TrendingDown className="h-5 w-5 text-danger-600" />
-          <div>
-            <div className="font-medium text-gray-900">{t('negativeGrowth')}</div>
-            <div className="text-danger-700 text-xs">{t('negativeGrowthDesc')}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-primary-50 rounded">
-          <div className="w-5 h-5 bg-primary-500 rounded"></div>
-          <div>
-            <div className="font-medium text-gray-900">{t('trendLine')}</div>
-            <div className="text-primary-700 text-xs">{t('trendLineDesc')}</div>
-          </div>
-        </div>
       </div>
 
       {/* Overall trend summary */}

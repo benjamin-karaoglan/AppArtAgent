@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
+import Spinner from '@/components/ui/Spinner';
 import { api } from '@/lib/api';
 import {
   ArrowLeft,
@@ -642,7 +643,7 @@ function DocumentsPageContent() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+          <Spinner size={32} className="text-primary-600" />
         </div>
       </div>
     );

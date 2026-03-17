@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: 'AppArt Agent',
     },
     icons: {
-      icon: '/favicon.ico',
+      icon: '/icon.svg',
       apple: '/icons/apple-touch-icon.png',
     },
     openGraph: {
