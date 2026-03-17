@@ -21,6 +21,7 @@ from pathlib import Path
 
 import polars as pl
 import psycopg2
+import psycopg2.sql
 
 # Schema overrides for CSV columns that polars may mistype
 DVF_SCHEMA_OVERRIDES = {
