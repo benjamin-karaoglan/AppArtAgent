@@ -111,17 +111,15 @@ def classify_lot_type(row_type_local: str | None, nature_culture: str | None) ->
 
 
 def dataframe_to_copy_buffer(df: pl.DataFrame, columns: list[str]) -> io.BytesIO:
-    """Serialize a polars DataFrame to a tab-separated BytesIO buffer for COPY."""
+    """Serialize a polars DataFrame to a tab-separated BytesIO buffer for COPY FROM STDIN."""
     buf = io.BytesIO()
-    for row in df.select(columns).iter_rows():
-        values = []
-        for v in row:
-            if v is None:
-                values.append("\\N")
-            else:
-                values.append(str(v).replace("\t", " ").replace("\n", " ").replace("\\", "\\\\"))
-        line = "\t".join(values) + "\n"
-        buf.write(line.encode("utf-8"))
+    df.select(columns).write_csv(
+        buf,
+        separator="\t",
+        null_value="\\N",
+        include_header=False,
+        quote_style="never",
+    )
     buf.seek(0)
     return buf
 
