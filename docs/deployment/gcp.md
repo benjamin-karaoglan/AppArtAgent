@@ -284,6 +284,7 @@ flowchart TD
 | `db_tier` | Cloud SQL instance tier | `db-g1-small` |
 | `redis_tier` | Redis tier | `BASIC` |
 | `min_instances` | Minimum Cloud Run instances | `0` |
+| `backend_max_concurrency` | Max concurrent requests per backend instance | `20` |
 
 ### Service Account Permissions
 
@@ -720,6 +721,10 @@ max_instances = 10
 # Always-on (no cold starts, ~$50/month/service)
 min_instances = 1
 max_instances = 10
+
+# Backend concurrency (default: 20, Cloud Run default is 80)
+# Lower value = autoscale sooner, critical for DB-heavy endpoints
+backend_max_concurrency = 20
 ```
 
 ### Cold Start Optimization

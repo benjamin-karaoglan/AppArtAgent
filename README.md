@@ -328,6 +328,26 @@ The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environme
 
 See [backend/README.md](./backend/README.md) for schema details and migration management.
 
+## Performance & Load Testing
+
+### Optimizations
+
+- **Redis caching** on high-traffic endpoints (`/dvf-stats`, `/price-analysis`) to avoid repeated expensive queries on 4.8M+ rows
+- **N+1 query elimination** on `/api/properties/with-synthesis` (3N+1 queries reduced to 4 total)
+- **Cloud Run concurrency tuning** (`backend_max_concurrency = 20`) for earlier autoscaling under load
+
+### Load Testing with Locust
+
+```bash
+# Backend API (Web UI at http://localhost:8089)
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com
+
+# Headless mode for CI
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com --headless -u 50 -r 5 --run-time 2m AppArtUser
+```
+
+Set `LOCUST_AUTH_TOKEN` (session cookie) and optionally `LOCUST_PROPERTY_ID` before running.
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](./docs/development/contributing.md) for details.

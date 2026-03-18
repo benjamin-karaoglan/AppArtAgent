@@ -102,6 +102,7 @@ terraform output
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `min_instances` | number | `0` | Minimum instances (0=scale-to-zero, 1=always-on) |
+| `backend_max_concurrency` | number | `20` | Max concurrent requests per backend instance (Cloud Run default is 80; lower value triggers autoscaling sooner for DB-heavy endpoints) |
 
 ```mermaid
 flowchart LR

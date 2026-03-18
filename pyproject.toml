@@ -23,6 +23,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "locust>=2.43.3",
     "pre-commit>=4.5.1",
 ]
 

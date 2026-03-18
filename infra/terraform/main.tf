@@ -122,6 +122,12 @@ variable "min_instances" {
   default     = 1
 }
 
+variable "backend_max_concurrency" {
+  description = "Max concurrent requests per Cloud Run backend instance. Lower values trigger autoscaling sooner. Default 20 (vs Cloud Run default of 80) for DB-heavy workloads."
+  type        = number
+  default     = 20
+}
+
 variable "use_load_balancer" {
   description = "Use Cloud Load Balancer with Certificate Manager instead of Cloud Run domain mappings. Recommended for production - more reliable SSL certificate provisioning."
   type        = bool
@@ -669,6 +675,8 @@ resource "google_cloud_run_v2_service" "backend" {
       min_instance_count = var.min_instances
       max_instance_count = 10
     }
+
+    max_instance_request_concurrency = var.backend_max_concurrency
 
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/backend:latest"
