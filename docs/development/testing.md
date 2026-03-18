@@ -298,6 +298,49 @@ open coverage/lcov-report/index.html
 | AI services | 70% | TBD |
 | Frontend components | 80% | TBD |
 
+## Load Testing with Locust
+
+Load tests live at `loadtest/locustfile.py` in the project root. Locust is installed as a root-level dev dependency.
+
+### Running Load Tests
+
+```bash
+# Backend API load test (Web UI at http://localhost:8089)
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com
+
+# Frontend SSR pages (run separately with different host)
+uv run python -m locust -f loadtest/locustfile.py --host https://appartagent.com FrontendUser
+
+# Headless mode for CI
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com --headless -u 50 -r 5 --run-time 2m AppArtUser
+```
+
+### User Classes
+
+| Class | Target | Description |
+|-------|--------|-------------|
+| `AppArtUser` | Backend API | Exercises REST endpoints with auth |
+| `FrontendUser` | Frontend SSR | Loads rendered pages |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `LOCUST_AUTH_TOKEN` | Better Auth session cookie for authenticated requests |
+| `LOCUST_PROPERTY_ID` | Property ID to use in tests (default: 1) |
+
+### Baseline Results (50 users)
+
+| Metric | Value |
+|--------|-------|
+| P50 | 220ms |
+| P90 | 8.7s |
+| P95 | 15s |
+| P99 | 25s |
+| Error rate | 0% |
+
+Slowest endpoint before caching: `/api/properties/dvf-stats` (median 1.6s). Even `/health` had P90 of 5.5s due to request queuing at high concurrency.
+
 ## CI/CD Integration
 
 Tests run automatically on pull requests:

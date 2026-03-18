@@ -1,5 +1,7 @@
 """Properties API routes."""
 
+import json
+import logging
 import statistics
 from collections import defaultdict
 from datetime import datetime
@@ -11,6 +13,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.better_auth_security import get_current_user_hybrid as get_current_user
+from app.core.cache import cache_get, cache_set, get_redis
 from app.core.database import get_db
 from app.core.i18n import get_local, translate
 from app.models.document import Document, DocumentSummary
@@ -28,6 +31,8 @@ from app.schemas.property import (
     PropertyWithSynthesisResponse,
 )
 from app.services.dvf_service import DVFService, _street_ilike_pattern, dvf_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -63,6 +68,11 @@ async def get_dvf_stats(
     """
     get_local(request)
 
+    # Check Redis cache first
+    cached = cache_get("dvf_stats")
+    if cached:
+        return DVFStatsResponse(**json.loads(cached))
+
     total = db.query(func.count(DVFSale.id)).scalar() or 0
 
     # Format the count for display
@@ -73,12 +83,17 @@ async def get_dvf_stats(
     else:
         formatted = str(total)
 
-    return DVFStatsResponse(
+    result = DVFStatsResponse(
         total_records=total,
         total_imports=0,
         last_updated=None,
         formatted_count=formatted,
     )
+
+    # Cache for 1 hour — count only changes on DVF import
+    cache_set("dvf_stats", json.dumps(result.model_dump()), 3600)
+
+    return result
 
 
 @router.get("/search-addresses", response_model=List[AddressSearchResult])
@@ -161,24 +176,46 @@ async def list_properties_with_synthesis(
         .all()
     )
 
+    if not properties:
+        return []
+
+    prop_ids = [p.id for p in properties]
+
+    # Batch fetch syntheses (one query instead of N)
+    syntheses = (
+        db.query(DocumentSummary)
+        .filter(
+            DocumentSummary.property_id.in_(prop_ids),
+            DocumentSummary.category == None,
+        )
+        .all()
+    )
+    synthesis_map = {s.property_id: s for s in syntheses}
+
+    # Batch fetch document counts (one query instead of N)
+    doc_counts = (
+        db.query(Document.property_id, func.count(Document.id))
+        .filter(Document.property_id.in_(prop_ids))
+        .group_by(Document.property_id)
+        .all()
+    )
+    doc_count_map: dict[int, int] = dict(doc_counts)
+
+    # Batch fetch redesign counts (one query instead of N)
+    redesign_counts = (
+        db.query(Photo.property_id, func.count(PhotoRedesign.id))
+        .join(PhotoRedesign, PhotoRedesign.photo_id == Photo.id)
+        .filter(Photo.property_id.in_(prop_ids))
+        .group_by(Photo.property_id)
+        .all()
+    )
+    redesign_count_map: dict[int, int] = dict(redesign_counts)
+
     result = []
     for prop in properties:
-        synthesis = (
-            db.query(DocumentSummary)
-            .filter(DocumentSummary.property_id == prop.id, DocumentSummary.category == None)
-            .first()
-        )
-
-        doc_count = (
-            db.query(func.count(Document.id)).filter(Document.property_id == prop.id).scalar()
-        ) or 0
-
-        redesign_count = (
-            db.query(func.count(PhotoRedesign.id))
-            .join(Photo, PhotoRedesign.photo_id == Photo.id)
-            .filter(Photo.property_id == prop.id)
-            .scalar()
-        ) or 0
+        synthesis = synthesis_map.get(prop.id)
+        doc_count = doc_count_map.get(prop.id, 0)
+        redesign_count = redesign_count_map.get(prop.id, 0)
 
         synthesis_preview = None
         if synthesis:
@@ -692,6 +729,12 @@ async def get_price_analysis_summary(
     """
     locale = get_local(request)
 
+    # Check Redis cache first
+    cache_key = f"price_analysis_summary:{property_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return PriceAnalysisSummaryResponse(**json.loads(cached))
+
     property_obj = (
         db.query(Property)
         .filter(Property.id == property_id, Property.user_id == int(current_user))
@@ -706,7 +749,12 @@ async def get_price_analysis_summary(
     if not pa:
         return PriceAnalysisSummaryResponse()
 
-    return PriceAnalysisSummaryResponse(**_pa_to_summary(pa, False))
+    result = _pa_to_summary(pa, False)
+
+    # Cache for 30 min
+    cache_set(cache_key, json.dumps(result, default=str), 1800)
+
+    return PriceAnalysisSummaryResponse(**result)
 
 
 @router.get("/{property_id}/price-analysis/full", response_model=PriceAnalysisFullResponse)
@@ -718,6 +766,12 @@ async def get_price_analysis_full(
 ):
     """Get full price analysis data for the Price Analyst page."""
     locale = get_local(request)
+
+    # Check Redis cache first
+    cache_key = f"price_analysis_full:{property_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return PriceAnalysisFullResponse(**json.loads(cached))
 
     property_obj = (
         db.query(Property)
@@ -733,7 +787,12 @@ async def get_price_analysis_full(
     if not pa:
         return PriceAnalysisFullResponse()
 
-    return PriceAnalysisFullResponse(**_pa_to_full(pa, False))
+    result = _pa_to_full(pa, False)
+
+    # Cache for 30 min
+    cache_set(cache_key, json.dumps(result, default=str), 1800)
+
+    return PriceAnalysisFullResponse(**result)
 
 
 @router.post("/{property_id}/price-analysis/refresh", response_model=PriceAnalysisFullResponse)
@@ -774,6 +833,14 @@ async def refresh_price_analysis(
         excluded_sale_ids=excluded_sale_ids or [],
         excluded_neighboring_sale_ids=excluded_neighboring or [],
     )
+
+    # Invalidate cached price analysis
+    try:
+        r = get_redis()
+        r.delete(f"price_analysis_summary:{property_id}", f"price_analysis_full:{property_id}")
+    except Exception:
+        logger.debug("Failed to invalidate price analysis cache for property %s", property_id)
+
     return PriceAnalysisFullResponse(**_pa_to_full(pa, False))
 
 
@@ -813,6 +880,14 @@ async def exclude_sales(
         excluded_sale_ids=body.excluded_sale_ids,
         excluded_neighboring_sale_ids=body.excluded_neighboring_sale_ids,
     )
+
+    # Invalidate cached price analysis
+    try:
+        r = get_redis()
+        r.delete(f"price_analysis_summary:{property_id}", f"price_analysis_full:{property_id}")
+    except Exception:
+        logger.debug("Failed to invalidate price analysis cache for property %s", property_id)
+
     return PriceAnalysisFullResponse(**_pa_to_full(pa, False))
 
 

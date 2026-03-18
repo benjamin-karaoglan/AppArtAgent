@@ -165,6 +165,24 @@ docker-compose exec backend alembic current
 docker-compose exec backend alembic downgrade -1
 ```
 
+## Performance
+
+### Redis Caching
+
+The backend uses a fault-tolerant Redis cache (`app/core/cache.py`) for expensive endpoints. If Redis is down, requests bypass the cache without errors.
+
+| Endpoint | Cache Key | TTL | Notes |
+|----------|-----------|-----|-------|
+| `/api/properties/dvf-stats` | `dvf_stats` | 1 hour | `COUNT(*)` on 4.8M rows |
+| `/api/properties/{id}/price-analysis` | `price_analysis_summary:{id}` | 30 min | Summary view |
+| `/api/properties/{id}/price-analysis/full` | `price_analysis_full:{id}` | 30 min | Full analysis |
+
+Cache is invalidated on refresh or exclude-sales operations.
+
+### N+1 Query Fix
+
+The `/api/properties/with-synthesis` endpoint is optimized from 3N+1 queries to 4 total queries using batch `.in_()` fetches and dictionary lookups.
+
 ## Testing
 
 ```bash
@@ -177,3 +195,20 @@ uv run pytest --cov
 # Run DVF service tests specifically
 uv run pytest tests/test_dvf_service.py -v
 ```
+
+### Load Testing
+
+Load tests use [Locust](https://locust.io/) and live at `loadtest/locustfile.py` (project root). Locust is a root-level dev dependency.
+
+```bash
+# From project root — backend API load test (Web UI at http://localhost:8089)
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com
+
+# Frontend SSR pages (run separately)
+uv run python -m locust -f loadtest/locustfile.py --host https://appartagent.com FrontendUser
+
+# Headless mode for CI
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com --headless -u 50 -r 5 --run-time 2m AppArtUser
+```
+
+Environment variables: `LOCUST_AUTH_TOKEN` (Better Auth session cookie), `LOCUST_PROPERTY_ID` (default: 1).

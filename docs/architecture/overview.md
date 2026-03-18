@@ -220,6 +220,10 @@ In-memory caching for:
 - Session data (7-day TTL)
 - Frequently accessed queries (1-hour TTL)
 - Rate limiting counters
+- **API response caching** via `app/core/cache.py` (fault-tolerant -- Redis down = cache miss, never an error):
+  - DVF stats: `dvf_stats` key, 1h TTL
+  - Price analysis summary: `price_analysis_summary:{id}`, 30min TTL
+  - Price analysis full: `price_analysis_full:{id}`, 30min TTL
 
 #### Object Storage (MinIO / GCS)
 

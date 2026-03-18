@@ -446,6 +446,24 @@ def get_price_stats(db: Session, postal_code: str, year: int):
     ).first()
 ```
 
+## Query Optimizations
+
+### N+1 Query Fix
+
+The `/api/properties/with-synthesis` endpoint was optimized from 3N+1 queries to 4 total queries. Instead of fetching related data per-property in a loop, it uses batch `.in_()` fetches and dictionary lookups.
+
+### Redis Caching Layer
+
+Expensive read endpoints are cached in Redis via the fault-tolerant `app/core/cache.py` module. If Redis is unavailable, requests fall through to the database without error.
+
+| Endpoint | Cache Key | TTL |
+|----------|-----------|-----|
+| `/api/properties/dvf-stats` | `dvf_stats` | 1 hour |
+| `/api/properties/{id}/price-analysis` | `price_analysis_summary:{id}` | 30 min |
+| `/api/properties/{id}/price-analysis/full` | `price_analysis_full:{id}` | 30 min |
+
+Cache is invalidated on refresh or exclude-sales operations.
+
 ## Database Management
 
 ### Backup

@@ -71,6 +71,12 @@ backend/
 | [Database & Models](database.md) | Data models and migrations |
 | [DVF Data](dvf-data.md) | French property data import and queries |
 
+## Performance
+
+- **Redis caching**: Expensive endpoints (`/dvf-stats`, `/price-analysis`, `/price-analysis/full`) are cached via the fault-tolerant `app/core/cache.py` module. Redis down = cache miss, never an error.
+- **N+1 query fix**: `/api/properties/with-synthesis` uses batch fetches (4 queries total instead of 3N+1).
+- **Load testing**: Locust-based load tests in `loadtest/locustfile.py` with `AppArtUser` and `FrontendUser` classes.
+
 ## Quick Commands
 
 ```bash

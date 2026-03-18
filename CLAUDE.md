@@ -24,6 +24,7 @@
 - **AI**: Google Gemini (gemini-2.5-flash for text, gemini-2.5-flash-image for images) via `google-genai` SDK. Supports Vertex AI (production) or REST API key (development).
 - **Auth**: Better Auth (session-based, managed by frontend) with legacy JWT fallback
 - **Storage**: MinIO (local dev) / Google Cloud Storage (production) -- abstracted in `app/services/storage.py`
+- **Caching**: Redis via fault-tolerant `app/core/cache.py` -- Redis down = cache miss, never an error. Key cached endpoints: `/api/properties/dvf-stats` (1h TTL), `/api/properties/{id}/price-analysis` (30min TTL), `/api/properties/{id}/price-analysis/full` (30min TTL)
 - **Entry point**: `backend/app/main.py`
 - **Config**: `backend/app/core/config.py` (Pydantic settings from env vars)
 - **API routes**: `backend/app/api/` (users, properties, documents, photos, analysis, webhooks)
@@ -132,6 +133,23 @@ uv run pytest tests/test_dvf_service.py  # Specific test file
 ```
 
 Testing stack: pytest + pytest-asyncio + pytest-cov.
+
+### Load Testing (Locust)
+
+Locust is installed as a root-level dev dependency. Run from the project root:
+
+```bash
+# Backend API load test (Web UI at http://localhost:8089)
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com
+
+# Frontend SSR load test (run separately with different host)
+uv run python -m locust -f loadtest/locustfile.py --host https://appartagent.com FrontendUser
+
+# Headless mode for CI
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com --headless -u 50 -r 5 --run-time 2m AppArtUser
+```
+
+Two user classes: `AppArtUser` (backend API) and `FrontendUser` (SSR pages). Environment variables: `LOCUST_AUTH_TOKEN` (Better Auth session cookie), `LOCUST_PROPERTY_ID` (default: 1).
 
 ## Dependency Management
 
@@ -259,6 +277,8 @@ terraform apply
 ```
 
 Managed resources: Cloud Run services, Cloud Run Jobs (DB migrations + DVF import), GCS buckets, Cloud SQL, Memorystore Redis, IAM, Secret Manager.
+
+Key variable: `backend_max_concurrency` (default: 20) controls per-instance request concurrency on the backend Cloud Run service. Lower than the Cloud Run default of 80 to trigger autoscaling sooner for DB-heavy endpoints.
 
 ### GCP Bootstrap
 
