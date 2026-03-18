@@ -119,7 +119,7 @@ variable "google_oauth_client_secret" {
 variable "min_instances" {
   description = "Minimum instances for Cloud Run services. Set to 1 for always-on (better latency, ~$50/month/service), 0 for scale-to-zero (cold starts, lower cost)"
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "use_load_balancer" {
