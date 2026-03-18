@@ -121,7 +121,7 @@ flowchart LR
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `db_tier` | string | `db-f1-micro` | Cloud SQL instance tier |
+| `db_tier` | string | `db-g1-small` | Cloud SQL instance tier |
 
 **Available Tiers:**
 
@@ -158,7 +158,7 @@ flowchart LR
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `dvf_source_url` | string | `""` | DVF dataset URL (optional, defaults to latest full dataset) |
+| `dvf_source_url` | string | `""` | DVF dataset URL or gs:// URI (optional, defaults to latest full dataset) |
 
 ```mermaid
 flowchart TD
@@ -296,7 +296,7 @@ flowchart TB
 | `appart-frontend` | 1 | 512Mi | `var.min_instances` | 10 | - |
 | `appart-backend` | 2 | 2Gi | `var.min_instances` | 10 | - |
 | `db-migrate` (job) | 1 | 1Gi | N/A | 1 | 10m |
-| `dvf-import` (job) | 4 | 16Gi | N/A | 1 | 30m |
+| `dvf-import` (job) | 8 | 32Gi | N/A | 1 | 60m |
 
 ### Storage Buckets
 
@@ -532,11 +532,11 @@ terraform destroy -target=google_compute_global_forwarding_rule.https
 
 | Resource | Configuration | Cost/month |
 |----------|---------------|------------|
-| Cloud SQL | `db-f1-micro` | ~$10 |
+| Cloud SQL | `db-g1-small` | ~$25 |
 | Redis | `BASIC` 1GB | ~$35 |
 | Cloud Run | `min_instances=0` | ~$0-10 |
 | Storage | ~10GB | ~$1 |
-| **Total** | | **~$50/month** |
+| **Total** | | **~$65/month** |
 
 ### Production Setup
 
@@ -544,7 +544,7 @@ terraform destroy -target=google_compute_global_forwarding_rule.https
 |----------|---------------|------------|
 | Cloud SQL | `db-custom-2-4096` | ~$70 |
 | Redis | `STANDARD_HA` 1GB | ~$70 |
-| Cloud Run | `min_instances=1` | ~$100-150 |
+| Cloud Run | `min_instances=1` (default) | ~$100-150 |
 | Load Balancer | Global LB | ~$20 |
 | Storage | ~50GB | ~$5 |
 | **Total** | | **~$265-315/month** |

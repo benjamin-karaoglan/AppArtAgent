@@ -12,6 +12,7 @@ Usage:
 import argparse
 import io
 import os
+import resource
 import shutil
 import sys
 import time
@@ -64,6 +65,23 @@ TYPE_LOCAL_MAP = {
 }
 
 
+def _download_from_gcs(gcs_uri: str, dest: Path) -> None:
+    """Download a file from GCS using google-cloud-storage."""
+    from google.cloud import storage  # already a backend dependency
+
+    # Parse gs://bucket/path
+    parts = gcs_uri.replace("gs://", "").split("/", 1)
+    bucket_name, blob_name = parts[0], parts[1]
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.reload()  # Fetch metadata (size)
+    size_mb = (blob.size or 0) / 1024 / 1024
+    print(f"Downloading gs://{bucket_name}/{blob_name} ({size_mb:.0f} MB)")
+    blob.download_to_filename(str(dest))
+    print(f"Downloaded to {dest}")
+
+
 def resolve_csv_path(cli_csv: str | None) -> Path:
     """Resolve CSV path from CLI arg, env var, or default."""
     if cli_csv:
@@ -72,13 +90,21 @@ def resolve_csv_path(cli_csv: str | None) -> Path:
     # Check for DVF_SOURCE_URL env var (Cloud Run Job)
     source_url = os.environ.get("DVF_SOURCE_URL")
     if source_url:
+        # GCS path (fast, same region): gs://bucket/path/dvf.csv
+        if source_url.startswith("gs://"):
+            tmp_path = Path("/tmp/dvf.csv")
+            if tmp_path.exists():
+                print(f"Using cached {tmp_path}")
+                return tmp_path
+            _download_from_gcs(source_url, tmp_path)
+            return tmp_path
+
+        # HTTPS URL (data.gouv.fr): download compressed, polars reads .gz natively
         if not source_url.startswith("https://"):
-            print("ERROR: DVF_SOURCE_URL must use HTTPS")
+            print("ERROR: DVF_SOURCE_URL must use https:// or gs://")
             sys.exit(1)
 
-        # Download the .gz archive to /tmp (keeps it compressed — ~500 MB).
-        # IMPORTANT: Cloud Run /tmp is RAM-backed (tmpfs), so we must NOT
-        # extract the 3.3 GB CSV there. Polars reads .csv.gz natively.
+        # IMPORTANT: Cloud Run /tmp is RAM-backed (tmpfs), so keep compressed
         gz_path = Path("/tmp/dvf.csv.gz")
         if gz_path.exists():
             print(f"Using cached {gz_path}")
@@ -106,6 +132,17 @@ def classify_lot_type(row_type_local: str | None, nature_culture: str | None) ->
     return "Terrain"
 
 
+def log_mem(label: str) -> None:
+    """Log current memory usage (RSS) in MiB."""
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # macOS returns bytes, Linux returns KiB
+    if sys.platform == "darwin":
+        mib = rss / (1024 * 1024)
+    else:
+        mib = rss / 1024
+    print(f"  [MEM] {label}: {mib:,.0f} MiB peak RSS")
+
+
 def dataframe_to_copy_buffer(df: pl.DataFrame, columns: list[str]) -> io.BytesIO:
     """Serialize a polars DataFrame to a tab-separated BytesIO buffer for COPY FROM STDIN."""
     buf = io.BytesIO()
@@ -118,6 +155,37 @@ def dataframe_to_copy_buffer(df: pl.DataFrame, columns: list[str]) -> io.BytesIO
     )
     buf.seek(0)
     return buf
+
+
+CHUNK_SIZE = 500_000  # rows per COPY batch
+
+
+def chunked_copy(
+    cur: "psycopg2.extensions.cursor",
+    df: pl.DataFrame,
+    table: str,
+    columns: list[str],
+) -> int:
+    """COPY a DataFrame into PostgreSQL in chunks with progress logging."""
+    total = len(df)
+    col_list = ", ".join(columns)
+    copy_sql = f"COPY {table} ({col_list}) FROM STDIN WITH (FORMAT text, NULL '\\N')"
+
+    loaded = 0
+    chunk_idx = 0
+    while loaded < total:
+        chunk = df.slice(loaded, CHUNK_SIZE)
+        buf = dataframe_to_copy_buffer(chunk, columns)
+        cur.copy_expert(copy_sql, buf)
+        del buf
+        loaded += len(chunk)
+        del chunk
+        chunk_idx += 1
+        pct = loaded / total * 100
+        print(f"  chunk {chunk_idx}: {loaded:,}/{total:,} rows ({pct:.0f}%)")
+        log_mem(f"after chunk {chunk_idx}")
+
+    return loaded
 
 
 def main() -> None:
@@ -153,6 +221,7 @@ def main() -> None:
     t0 = time.time()
 
     # --- Step 1: Read CSV ---
+    log_mem("start")
     print(f"Reading {csv_path}...")
     df = pl.read_csv(
         csv_path,
@@ -161,6 +230,7 @@ def main() -> None:
         truncate_ragged_lines=True,
     )
     print(f"  Raw rows: {len(df):,}")
+    log_mem("after read_csv")
 
     # --- Step 2: Filter to sales only ---
     df = df.filter(pl.col("nature_mutation").str.starts_with("Vente"))
@@ -244,6 +314,7 @@ def main() -> None:
     )
 
     print(f"  dvf_sales rows: {len(sales):,}")
+    log_mem("after sales groupby")
 
     # --- Step 5: Build dvf_sale_lots ---
     print("Building dvf_sale_lots...")
@@ -272,9 +343,11 @@ def main() -> None:
     )
 
     print(f"  dvf_sale_lots rows: {len(lots):,}")
+    log_mem("after lots select (before del df)")
 
     # Free the raw DataFrame — no longer needed
     del df
+    log_mem("after del df")
 
     # --- Step 6: Columns for COPY ---
     sales_columns = [
@@ -329,56 +402,90 @@ def main() -> None:
         print("Truncating tables...")
         cur.execute("TRUNCATE dvf_sales CASCADE")
 
-        # Drop indexes for faster COPY
+        # Drop indexes for faster COPY (hardcoded list — survives interrupted runs)
         print("Dropping indexes...")
-        index_defs = []
-        cur.execute("""
-            SELECT indexname, indexdef FROM pg_indexes
-            WHERE tablename IN ('dvf_sales', 'dvf_sale_lots')
-            AND indexname NOT LIKE '%_pkey'
-            AND indexname != 'dvf_sales_id_mutation_key'
-        """)
-        for row in cur.fetchall():
-            index_defs.append((row[0], row[1]))
+        for idx_name in [
+            "idx_dvf_sales_date_mutation",
+            "idx_dvf_sales_code_postal",
+            "idx_dvf_sales_code_departement",
+            "idx_dvf_sales_annee",
+            "idx_dvf_sales_postal_type",
+            "idx_dvf_sales_postal_type_date",
+            "idx_dvf_sales_adresse_gin",
+            "idx_dvf_sales_prix_m2",
+            "idx_dvf_sale_lots_id_mutation",
+            "idx_dvf_sale_lots_lot_type",
+        ]:
             cur.execute(
-                psycopg2.sql.SQL("DROP INDEX IF EXISTS {}").format(psycopg2.sql.Identifier(row[0]))
+                psycopg2.sql.SQL("DROP INDEX IF EXISTS {}").format(
+                    psycopg2.sql.Identifier(idx_name)
+                )
             )
 
-        # COPY dvf_sales (serialize → load → free)
-        print("Serializing dvf_sales...")
-        sales_buf = dataframe_to_copy_buffer(sales, sales_columns)
-        del sales  # Free DataFrame before COPY
-        print("COPY dvf_sales...")
-        db_sales_columns = ", ".join(sales_columns)
-        cur.copy_expert(
-            f"COPY dvf_sales ({db_sales_columns}) FROM STDIN WITH (FORMAT text, NULL '\\N')",
-            sales_buf,
-        )
-        del sales_buf  # Free buffer
-        cur.execute("SELECT COUNT(*) FROM dvf_sales")
-        sales_count = cur.fetchone()[0]
+        # COPY dvf_sales in chunks
+        print(f"COPY dvf_sales ({len(sales):,} rows, {CHUNK_SIZE:,}/chunk)...")
+        sales_count = chunked_copy(cur, sales, "dvf_sales", sales_columns)
+        del sales
         print(f"  Loaded {sales_count:,} sales")
+        log_mem("after sales COPY")
 
-        # COPY dvf_sale_lots (serialize → load → free)
-        print("Serializing dvf_sale_lots...")
-        lots_buf = dataframe_to_copy_buffer(lots, lots_columns)
-        del lots  # Free DataFrame before COPY
-        print("COPY dvf_sale_lots...")
-        db_lots_columns = ", ".join(lots_columns)
-        cur.copy_expert(
-            f"COPY dvf_sale_lots ({db_lots_columns}) FROM STDIN WITH (FORMAT text, NULL '\\N')",
-            lots_buf,
-        )
-        del lots_buf  # Free buffer
-        cur.execute("SELECT COUNT(*) FROM dvf_sale_lots")
-        lots_count = cur.fetchone()[0]
+        # Commit sales before starting lots (reduces transaction size)
+        print("Committing dvf_sales...")
+        conn.commit()
+
+        # COPY dvf_sale_lots in chunks
+        print(f"COPY dvf_sale_lots ({len(lots):,} rows, {CHUNK_SIZE:,}/chunk)...")
+        lots_count = chunked_copy(cur, lots, "dvf_sale_lots", lots_columns)
+        del lots
         print(f"  Loaded {lots_count:,} lots")
+        log_mem("after lots COPY")
 
-        # Recreate indexes
+        # Recreate indexes (hardcoded — matches alembic migration)
         print("Recreating indexes...")
-        for idx_name, idx_def in index_defs:
-            print(f"  {idx_name}")
-            cur.execute(idx_def)
+        index_defs = [
+            (
+                "idx_dvf_sales_date_mutation",
+                "CREATE INDEX idx_dvf_sales_date_mutation ON dvf_sales (date_mutation)",
+            ),
+            (
+                "idx_dvf_sales_code_postal",
+                "CREATE INDEX idx_dvf_sales_code_postal ON dvf_sales (code_postal)",
+            ),
+            (
+                "idx_dvf_sales_code_departement",
+                "CREATE INDEX idx_dvf_sales_code_departement ON dvf_sales (code_departement)",
+            ),
+            ("idx_dvf_sales_annee", "CREATE INDEX idx_dvf_sales_annee ON dvf_sales (annee)"),
+            (
+                "idx_dvf_sales_postal_type",
+                "CREATE INDEX idx_dvf_sales_postal_type ON dvf_sales (code_postal, type_principal)",
+            ),
+            (
+                "idx_dvf_sales_postal_type_date",
+                "CREATE INDEX idx_dvf_sales_postal_type_date ON dvf_sales (code_postal, type_principal, date_mutation)",
+            ),
+            (
+                "idx_dvf_sales_adresse_gin",
+                "CREATE INDEX idx_dvf_sales_adresse_gin ON dvf_sales USING gin(adresse_complete gin_trgm_ops)",
+            ),
+            (
+                "idx_dvf_sales_prix_m2",
+                "CREATE INDEX idx_dvf_sales_prix_m2 ON dvf_sales (prix_m2) WHERE prix_m2 > 0",
+            ),
+            (
+                "idx_dvf_sale_lots_id_mutation",
+                "CREATE INDEX idx_dvf_sale_lots_id_mutation ON dvf_sale_lots (id_mutation)",
+            ),
+            (
+                "idx_dvf_sale_lots_lot_type",
+                "CREATE INDEX idx_dvf_sale_lots_lot_type ON dvf_sale_lots (lot_type)",
+            ),
+        ]
+        for idx_name, idx_sql in index_defs:
+            print(f"  {idx_name}...", end=" ", flush=True)
+            t_idx = time.time()
+            cur.execute(idx_sql)
+            print(f"done ({time.time() - t_idx:.1f}s)")
 
         # Commit the data + indexes
         conn.commit()

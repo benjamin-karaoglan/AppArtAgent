@@ -80,7 +80,7 @@ variable "api_subdomain" {
 variable "db_tier" {
   description = "Cloud SQL instance tier"
   type        = string
-  default     = "db-f1-micro" # Use db-custom-2-4096 for production
+  default     = "db-g1-small" # Minimum for DVF import; use db-custom-2-4096 for high traffic
 }
 
 variable "redis_tier" {
@@ -119,7 +119,7 @@ variable "google_oauth_client_secret" {
 variable "min_instances" {
   description = "Minimum instances for Cloud Run services. Set to 1 for always-on (better latency, ~$50/month/service), 0 for scale-to-zero (cold starts, lower cost)"
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "use_load_balancer" {
@@ -948,9 +948,9 @@ resource "google_cloud_run_v2_job" "db_migrate" {
 # Or schedule via Cloud Scheduler (see google_cloud_scheduler_job below).
 
 variable "dvf_source_url" {
-  description = "URL to the geolocalized DVF CSV archive (.csv.gz)"
+  description = "DVF source: gs:// URI (recommended, same-region GCS) or https:// URL (data.gouv.fr)"
   type        = string
-  default     = "https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz"
+  default     = ""
 }
 
 resource "google_cloud_run_v2_job" "dvf_import" {
@@ -960,10 +960,10 @@ resource "google_cloud_run_v2_job" "dvf_import" {
   template {
     template {
       service_account = google_service_account.backend.email
-      timeout         = "1800s" # 30 min — full import takes ~2 min but download can be slow
-      max_retries     = 0     # No retries — fail fast for easier debugging
+      timeout         = "3600s" # 60 min — import takes ~25 min with db-g1-small
+      max_retries     = 0       # No retries — fail fast for easier debugging
 
-      # VPC for Cloud SQL; public traffic (data.gouv.fr download) bypasses VPC
+      # VPC for Cloud SQL; public traffic (GCS/data.gouv.fr) bypasses VPC
       vpc_access {
         connector = google_vpc_access_connector.connector.id
         egress    = "PRIVATE_RANGES_ONLY"
@@ -982,8 +982,8 @@ resource "google_cloud_run_v2_job" "dvf_import" {
 
         resources {
           limits = {
-            cpu    = "4"
-            memory = "16Gi"
+            cpu    = "8"      # Polars parallelism
+            memory = "32Gi"   # Peak RSS ~27 GiB for 20M-row dataset
           }
         }
 
@@ -995,6 +995,11 @@ resource "google_cloud_run_v2_job" "dvf_import" {
         env {
           name  = "DVF_SOURCE_URL"
           value = var.dvf_source_url
+        }
+
+        env {
+          name  = "PYTHONUNBUFFERED"
+          value = "1"
         }
 
         env {

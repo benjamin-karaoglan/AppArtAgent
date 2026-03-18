@@ -137,23 +137,28 @@ uv run import-dvf
 
 ### Import Process
 
-The new importer uses Polars for fast CSV processing and PostgreSQL COPY for bulk inserts:
+The new importer uses Polars for fast CSV processing and PostgreSQL COPY for bulk inserts.
+COPY operations are done in 500k-row chunks with progress logging for visibility.
 
 ```mermaid
 flowchart TD
     A["1. Load CSV<br/>Polars reads ~20M rows<br/>~15GB in memory"] --> B
     B["2. Group by id_mutation<br/>Aggregate lot-level data<br/>Compute transaction totals"] --> C
     C["3. Create DVFSale rows<br/>~4.8M unique transactions<br/>Compute adresse_complete, prix_m2"] --> D
-    D["4. Bulk insert DVFSales<br/>COPY FROM STDIN<br/>~30s for 4.8M rows"] --> E
+    D["4. Bulk insert DVFSales<br/>Chunked COPY (500k rows/batch)<br/>~30s for 4.8M rows"] --> E
     E["5. Create DVFSaleLot rows<br/>~13.5M individual lots<br/>Preserve lot details"] --> F
-    F["6. Bulk insert DVFSaleLots<br/>COPY FROM STDIN<br/>~25s for 13.5M rows"]
+    F["6. Bulk insert DVFSaleLots<br/>Chunked COPY (500k rows/batch)<br/>~25s for 13.5M rows"]
 ```
 
 ### Performance
 
+| Environment | Total Import Time | Notes |
+|-------------|-------------------|-------|
+| Local | ~55 seconds | Polars + COPY, no download time |
+| Production (Cloud Run) | ~25 minutes | Includes GCS download, chunked COPY to Cloud SQL |
+
 | Metric | Value |
 |--------|-------|
-| Total Import Time | ~55 seconds |
 | DVFSale Insert | ~30 seconds (4.8M rows) |
 | DVFSaleLot Insert | ~25 seconds (13.5M rows) |
 | Memory Usage | ~15GB peak (Polars groupby) |
@@ -184,6 +189,19 @@ STREET_TYPE_MAPPING = {
 
 This enables accurate address matching in `DVFService.get_exact_address_sales()`.
 
+### GCS URI Support
+
+The import script supports `gs://` URIs for same-region downloads, which bypass the public internet and use Google Cloud's internal network for faster, more reliable transfers.
+
+```bash
+# Local file
+uv run import-dvf --source data/dvf/dvf_geolocalized.csv
+
+# GCS URI (production)
+export DVF_SOURCE_URL=gs://my-bucket/dvf_geolocalized.csv
+uv run import-dvf
+```
+
 ## DVF Service
 
 The `DVFService` class provides high-level methods for price analysis:
@@ -198,6 +216,21 @@ The `DVFService` class provides high-level methods for price analysis:
 | `calculate_market_trend()` | Compute monthly price trend from neighboring sales |
 | `calculate_trend_based_projection()` | Project future price using trend |
 | `calculate_price_analysis()` | Full analysis: exact + comparable + trend projection |
+
+### Address Autocomplete
+
+The frontend's address search field uses **api-adresse.data.gouv.fr** (French government geocoding API) for instant autocomplete suggestions. This provides:
+
+- Real-time address suggestions as the user types
+- Standardized addresses with postal codes
+- Geographic coordinates for mapping
+
+DVF matching happens at price analysis time via:
+
+1. Postal code (from selected address)
+2. Normalized street name (using `STREET_TYPE_MAPPING`)
+
+This two-step approach ensures fast autocomplete UX while maintaining accurate DVF matching.
 
 ### Example: Price Analysis
 
@@ -280,11 +313,12 @@ gcloud run jobs executions logs dvf-import --region europe-west1
 
 **Configuration**:
 
-- **Memory**: 16 GiB
-- **CPU**: 4 vCPU (Polars parallelism)
-- **Timeout**: 30 minutes (actual: ~2 minutes including download)
+- **Memory**: 32 GiB
+- **CPU**: 8 vCPU (Polars parallelism)
+- **Timeout**: 60 minutes
 - **Max retries**: 0 (fail fast for easier debugging)
 - **VPC egress**: `PRIVATE_RANGES_ONLY` — Cloud SQL traffic goes through the VPC connector, public downloads (data.gouv.fr) bypass the VPC directly to the internet
+- **Environment**: `PYTHONUNBUFFERED=1` for real-time log visibility
 - **Trigger**: Manual (via GitHub Actions workflow or `gcloud` command)
 
 ### GitHub Actions Workflows

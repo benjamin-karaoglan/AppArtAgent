@@ -15,7 +15,8 @@ AppArt Agent uses Next.js 14 App Router for file-based routing. All pages are un
     └── /[id]                     # Property detail (protected)
         ├── /documents            # Document management
         ├── /photos               # Photo management
-        └── /redesign-studio      # Photo redesign
+        ├── /redesign-studio      # Photo redesign
+        └── /price-analyst        # AI-powered price analysis with comparable sales, market trends, and projections
 ```
 
 ## Pages
@@ -194,12 +195,13 @@ const requestRedesign = async (photoId: number, style: string) => {
 
 **File**: `src/app/[locale]/properties/[id]/price-analyst/page.tsx`
 
-Dedicated price analysis page for a property, showing:
+AI-powered price analysis page displaying comprehensive market insights:
 
-- Price analysis summary with market comparison
-- Comparable sales table from DVF data
-- Market trend chart with neighboring address data
-- Trend-based price projection
+- **PriceAnalysisSummary**: Summary card showing estimated value, deviation from market average, and recommendation
+- **PriceMetricsGrid**: Grid of key price metrics (asking price, market average, deviation percentage)
+- **ComparableSalesTable**: Displays comparable DVF sales with outlier highlighting and exclusion toggles to refine analysis
+- **TrendProjectionCard**: Shows trend-based price projection with confidence indicator
+- **MarketTrendChart**: SVG chart showing price trends over time with neighboring address data
 
 ## Protected Routes
 
