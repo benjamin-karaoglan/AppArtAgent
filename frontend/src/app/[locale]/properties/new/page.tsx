@@ -25,11 +25,17 @@ interface PropertyFormData {
 }
 
 interface AddressSuggestion {
-  address: string;
-  postal_code: string;
+  /** Full label: "35 Rue Notre-Dame des Champs 75006 Paris" */
+  label: string;
+  /** House number (may be empty for street-level results) */
+  housenumber: string;
+  /** Street name: "Rue Notre-Dame des Champs" */
+  street: string;
+  /** Full name: "35 Rue Notre-Dame des Champs" or "Rue Notre-Dame des Champs" */
+  name: string;
+  postcode: string;
   city: string;
-  property_type: string;
-  count: number;
+  context: string; // "75, Paris, Île-de-France"
 }
 
 function NewPropertyContent() {
@@ -65,46 +71,56 @@ function NewPropertyContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search addresses as user types
+  // Search addresses via French government geocoding API (fast, free, no backend needed)
   useEffect(() => {
     const searchAddresses = async () => {
-      if (addressQuery.length < 2) {
+      if (addressQuery.length < 3) {
         setSuggestions([]);
         return;
       }
 
       setLoadingSuggestions(true);
       try {
-        const response = await api.get(`/api/properties/search-addresses?q=${encodeURIComponent(addressQuery)}&limit=15`);
-        setSuggestions(response.data);
-        setShowSuggestions(true);
+        const params = new URLSearchParams({
+          q: addressQuery,
+          limit: '8',
+          autocomplete: '1',
+        });
+        const resp = await fetch(`https://api-adresse.data.gouv.fr/search/?${params}`);
+        const data = await resp.json();
+        const results: AddressSuggestion[] = (data.features || []).map(
+          (f: { properties: Record<string, string> }) => ({
+            label: f.properties.label || '',
+            housenumber: f.properties.housenumber || '',
+            street: f.properties.street || f.properties.name || '',
+            name: f.properties.name || '',
+            postcode: f.properties.postcode || '',
+            city: f.properties.city || '',
+            context: f.properties.context || '',
+          })
+        );
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
       } catch (err) {
-        console.error('Failed to search addresses:', err);
+        console.error('Address search failed:', err);
         setSuggestions([]);
       } finally {
         setLoadingSuggestions(false);
       }
     };
 
-    const timeoutId = setTimeout(searchAddresses, 400);
+    const timeoutId = setTimeout(searchAddresses, 250);
     return () => clearTimeout(timeoutId);
   }, [addressQuery]);
 
   const selectAddress = (suggestion: AddressSuggestion) => {
-    // Extract the number the user typed (e.g. "35" from "35 rue notre dame")
-    const numberMatch = addressQuery.trim().match(/^(\d+(?:\s*(?:bis|ter|quater|[A-Za-z]))?)\s+/i);
-    const userNumber = numberMatch ? numberMatch[1].trim() : '';
-
-    // Combine user's number with the street name from DVF
-    const fullAddress = userNumber
-      ? `${userNumber} ${suggestion.address}`
-      : suggestion.address;
+    // Use the full name (number + street) from the geocoding API
+    const fullAddress = suggestion.name;
 
     setValue('address', fullAddress);
-    setValue('postal_code', suggestion.postal_code);
+    setValue('postal_code', suggestion.postcode);
     setValue('city', suggestion.city);
-    setValue('property_type', suggestion.property_type.split(', ')[0]); // Take first type if multiple
-    setValue('department', suggestion.postal_code.substring(0, 2));
+    setValue('department', suggestion.postcode.substring(0, 2));
     setAddressQuery(fullAddress);
     setShowSuggestions(false);
   };
@@ -208,11 +224,10 @@ function NewPropertyContent() {
                             className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary-50"
                           >
                             <div className="flex flex-col">
-                              <span className="font-medium text-gray-900">{suggestion.address}</span>
+                              <span className="font-medium text-gray-900">{suggestion.name}</span>
                               <span className="text-sm text-gray-500">
-                                {suggestion.postal_code} {suggestion.city}
-                                {suggestion.property_type && ` \u00B7 ${suggestion.property_type}`}
-                                <span className="ml-2 text-xs text-gray-400">({t('location.salesCount', { count: suggestion.count })})</span>
+                                {suggestion.postcode} {suggestion.city}
+                                <span className="ml-2 text-xs text-gray-400">{suggestion.context}</span>
                               </span>
                             </div>
                           </div>
