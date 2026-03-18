@@ -101,6 +101,12 @@ pnpm lint
 
 ## Key Features
 
+- **Property Management**: Create, edit, and track real estate properties
+- **Document Analysis**: AI-powered analysis of property documents (PV d'AG, diagnostics)
+- **Photo Redesign Studio**: AI-generated apartment redesigns with style presets
+- **Price Analyst**: Comprehensive price analysis with DVF comparable sales, market trends, and projections
+- **Dashboard**: Overview with synthesis summaries and quick stats
+
 ### Server Components
 
 Next.js 14 uses React Server Components by default:

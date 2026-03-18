@@ -50,7 +50,7 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 
 ### 📊 Price Analysis
 
-- Address-based property search with DVF data (2022-2025)
+- Address-based property search with DVF data (2022-2025) using api-adresse.data.gouv.fr for instant autocomplete
 - Historical sales analysis and trend projections
 - Interactive 5-year market evolution chart
 - IQR-based outlier detection for accurate pricing
@@ -303,7 +303,7 @@ The application uses France's open [geolocalized DVF dataset](https://www.data.g
 # 1. Download the dataset (~600 MB compressed, ~2.5 GB extracted)
 uv run download-dvf https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz
 
-# 2. Import into PostgreSQL (~55s for full dataset)
+# 2. Import into PostgreSQL (~55s for full dataset; ~25 min on Cloud Run)
 uv run import-dvf
 
 # Or with a custom CSV path:
@@ -324,7 +324,7 @@ Go to Actions > "DVF Import" > Run workflow. Optionally provide a custom source 
 gcloud run jobs execute dvf-import --region europe-west1
 ```
 
-The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environment variable, which automatically downloads and extracts the `.csv.gz` archive before importing. It runs with 4 vCPUs / 16 GiB RAM to handle the full dataset in memory via Polars. The deploy pipeline (`deploy.yml`) automatically keeps the job's Docker image in sync with the latest backend build.
+The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environment variable, which automatically downloads and extracts the `.csv.gz` archive before importing. It runs with 8 vCPUs / 32 GiB RAM to handle the full dataset in memory via Polars. The deploy pipeline (`deploy.yml`) automatically keeps the job's Docker image in sync with the latest backend build.
 
 See [backend/README.md](./backend/README.md) for schema details and migration management.
 

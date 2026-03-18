@@ -140,7 +140,7 @@ uv run download-dvf https://static.data.gouv.fr/resources/demandes-de-valeurs-fo
 # 2. Run migration (creates empty tables)
 cd backend && uv run alembic upgrade head
 
-# 3. Import data (~55s for 20M rows)
+# 3. Import data (~55s locally for 20M rows; ~25 min on Cloud Run)
 uv run import-dvf
 
 # Or with custom CSV path:

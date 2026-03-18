@@ -97,7 +97,7 @@ flowchart LR
 |---------|-------------|------------|
 | Cloud Run (Frontend) | $0-50/month | $50-100/month |
 | Cloud Run (Backend) | $0-100/month | $100-200/month |
-| Cloud SQL PostgreSQL | ~$10/month (db-f1-micro) | ~$50/month (db-custom-2-4096) |
+| Cloud SQL PostgreSQL | ~$10/month (db-g1-small) | ~$50/month (db-custom-2-4096) |
 | Memorystore Redis | ~$35/month (1GB BASIC) | ~$70/month (1GB STANDARD_HA) |
 | Cloud Storage | ~$1/month | ~$5/month |
 | Load Balancer | ~$20/month | ~$20/month |
@@ -105,7 +105,7 @@ flowchart LR
 
 !!! tip "Cost Optimization"
     - Set `min_instances = 0` in Terraform to enable scale-to-zero (saves ~$50/month per service)
-    - Use `db-f1-micro` for development/staging environments
+    - Use `db-g1-small` for development/staging environments
     - Consider BASIC Redis tier for non-production workloads
 
 ## Quick Start Deployment
@@ -281,7 +281,7 @@ flowchart TD
 | `domain` | Custom domain | `""` (none) |
 | `use_load_balancer` | Use Cloud Load Balancer | `true` |
 | `create_dns_zone` | Create Cloud DNS zone | `true` |
-| `db_tier` | Cloud SQL instance tier | `db-f1-micro` |
+| `db_tier` | Cloud SQL instance tier | `db-g1-small` |
 | `redis_tier` | Redis tier | `BASIC` |
 | `min_instances` | Minimum Cloud Run instances | `0` |
 
@@ -548,12 +548,12 @@ gcloud run jobs describe dvf-import --region $REGION
 
 The `dvf-import` job:
 
-- **Resources**: 4 vCPU, 16 GiB RAM
-- **Timeout**: 30 minutes
+- **Resources**: 8 vCPU, 32 GiB RAM
+- **Timeout**: 60 minutes
 - **Max retries**: 0 (fail fast for easier debugging)
 - **VPC egress**: `PRIVATE_RANGES_ONLY` — only Cloud SQL traffic goes through the VPC; the data.gouv.fr download bypasses the VPC directly to the internet
 - **Process**: Downloads DVF data from data.gouv.fr, extracts `.csv.gz`, imports via polars + COPY FROM STDIN
-- **Duration**: ~55 seconds for full dataset (4.8M sales, 13.5M lots)
+- **Duration**: ~55 seconds locally, ~25 minutes on Cloud Run for full dataset (4.8M sales, 13.5M lots)
 - **Trigger**: Manual via GitHub Actions workflow (`.github/workflows/dvf-import.yml`) or `gcloud` command
 
 To trigger via GitHub Actions:

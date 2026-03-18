@@ -42,8 +42,9 @@
 - **Icons**: Lucide React
 - **PWA**: `@ducanh2912/next-pwa` (installable on mobile, disabled in dev)
 - **API client**: Axios (`frontend/src/lib/api.ts`) hitting `NEXT_PUBLIC_API_URL`
-- **Pages**: `frontend/src/app/[locale]/` (dashboard, properties, documents, photos, redesign-studio)
+- **Pages**: `frontend/src/app/[locale]/` (dashboard, properties, documents, photos, redesign-studio, price-analyst)
 - **Package manager**: pnpm
+- **Address autocomplete**: Property creation uses api-adresse.data.gouv.fr (French government geocoding API) directly from the frontend for instant address suggestions — no backend call needed during typing
 
 #### Design System
 
@@ -287,7 +288,7 @@ First-time GCP setup:
 
 ## Key Domain Concepts
 
-- **DVF** (Demandes de Valeurs Foncieres): French government open dataset of 20M+ geolocalized property transactions. Schema: `dvf_sales` (~4.8M rows, one per transaction) + `dvf_sale_lots` (~13.5M rows, one per lot). Source: [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/). Download with `uv run download-dvf <url>` (extracts into `data/dvf/`). Import with `uv run import-dvf` (polars + COPY FROM STDIN, ~55s for full dataset).
+- **DVF** (Demandes de Valeurs Foncieres): French government open dataset of 20M+ geolocalized property transactions. Schema: `dvf_sales` (~4.8M rows, one per transaction) + `dvf_sale_lots` (~13.5M rows, one per lot). Source: [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/). Download with `uv run download-dvf <url>` (extracts into `data/dvf/`). Import with `uv run import-dvf` (polars + COPY FROM STDIN, ~55s locally; ~25 min on Cloud Run including download).
 - **PV AG** (Proces-Verbal d'Assemblee Generale): Minutes from co-ownership meetings -- analyzed for risk flags, pending works, copropriete health.
 - **Diagnostics**: Building diagnostics (amiante, plomb, DPE/GES energy ratings).
 - **Redesign Studio**: AI-powered apartment photo transformation using Gemini image generation with style presets (modern_norwegian, minimalist_scandinavian, cozy_hygge).

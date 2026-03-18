@@ -144,6 +144,7 @@ All pages are under the `[locale]` segment (e.g., `/fr/dashboard`, `/en/dashboar
 | `/[locale]/properties/[id]` | Property details with price analysis |
 | `/[locale]/properties/[id]/documents` | Document management with AI analysis |
 | `/[locale]/properties/[id]/photos` | Photo redesign studio |
+| `/[locale]/properties/[id]/price-analyst` | AI-powered price analysis with DVF comparables and trends |
 | `/[locale]/auth/login` | Login (email/password + Google OAuth) |
 | `/[locale]/auth/register` | Registration |
 
@@ -225,6 +226,10 @@ const formData = new FormData();
 formData.append('file', file);
 await api.post('/api/documents/upload', formData);
 ```
+
+### Address Autocomplete
+
+Property creation form uses **api-adresse.data.gouv.fr** for French address autocomplete, providing real-time suggestions with postal codes and city names.
 
 ## Docker
 

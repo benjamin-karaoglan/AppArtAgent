@@ -108,7 +108,7 @@ Dashboard statistics card with icon.
 
 **File**: `src/components/ui/Spinner.tsx`
 
-Loading spinner indicator.
+Simple loading spinner component with size variants (sm, md). Uses primary color for brand consistency.
 
 ```tsx
 <Spinner size="sm" />
@@ -165,25 +165,25 @@ SVG logo component with configurable size and color.
 
 **File**: `src/components/PriceAnalysisSummary.tsx`
 
-Summary card showing estimated value, deviation, and recommendation for a property.
+Summary card showing estimated property value, deviation from market average, and AI recommendation. Displays the overall assessment prominently with color-coded deviation indicators (success/warning/danger tokens).
 
 ### PriceMetricsGrid
 
 **File**: `src/components/PriceMetricsGrid.tsx`
 
-Grid of price metrics (price/m², market average, confidence score).
+Grid displaying key price metrics including asking price per m², market average per m², deviation percentage, and confidence score. Uses semantic tokens for value comparisons.
 
 ### ComparableSalesTable
 
 **File**: `src/components/ComparableSalesTable.tsx`
 
-Table of comparable DVF sales with outlier detection and exclusion toggles.
+Interactive table of comparable DVF sales with outlier highlighting (warning tokens) and exclusion toggles. Allows users to refine analysis by excluding outliers, recalculating market averages dynamically. Shows address, date, price, price/m², surface area, and distance from subject property.
 
 ### TrendProjectionCard
 
 **File**: `src/components/TrendProjectionCard.tsx`
 
-Card showing trend-based price projection with neighboring sales data.
+Card showing trend-based price projection with confidence indicator based on neighboring sales data. Displays projected value range and historical trend direction with success/warning/danger color coding.
 
 ## Color Token Reference
 
