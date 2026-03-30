@@ -209,6 +209,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NEXT_PUBLIC_API_URL=${{ env.BACKEND_URL }}
+            NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=${{ secrets.POSTHOG_PROJECT_TOKEN }}
+            NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 
   # ===========================================================================
   # Database Migration (runs after backend build, before deploy)

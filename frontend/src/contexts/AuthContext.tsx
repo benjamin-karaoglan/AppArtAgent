@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { api } from '@/lib/api';
+import posthog from '@/lib/posthog';
+import { POSTHOG_KEY } from '@/lib/posthog';
 import type { User, LoginRequest, RegisterRequest } from '@/types';
 
 interface BetterAuthSession {
@@ -83,6 +85,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       fetchBackendUser();
     }
   }, [session?.user?.id, sessionLoading, mounted]);
+
+  // Identify user in PostHog when session is available
+  useEffect(() => {
+    if (!POSTHOG_KEY) return;
+    if (session?.user) {
+      posthog.identify(session.user.id, {
+        email: session.user.email,
+        name: session.user.name,
+      });
+    }
+  }, [session?.user?.id]);
 
   // Map Better Auth session to legacy User type for backward compatibility
   const user: User | null = useMemo(() => {
@@ -165,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     await authClientRef.current.signOut();
+    if (POSTHOG_KEY) posthog.reset();
     setSession(null);
     setBackendUser(null);
     router.push('/');

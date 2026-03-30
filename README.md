@@ -102,7 +102,7 @@ docker-compose up -d
 
 | Layer | Technologies |
 |-------|--------------|
-| **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, pnpm |
+| **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, PostHog, pnpm |
 | **Backend** | FastAPI, Python 3.10+, SQLAlchemy, UV |
 | **AI** | Google Gemini via `google-genai` SDK (Vertex AI / REST API) |
 | **Database** | PostgreSQL 15, Redis 7 |
@@ -259,6 +259,10 @@ BETTER_AUTH_SECRET=your-better-auth-secret-at-least-32-characters
 # Google OAuth (optional - from Google Cloud Console)
 GOOGLE_CLIENT_ID=your-google-oauth-client-id
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+
+# PostHog Analytics (optional - leave empty to disable)
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=your-posthog-project-token
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
 </details>

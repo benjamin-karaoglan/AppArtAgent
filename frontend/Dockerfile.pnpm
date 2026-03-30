@@ -59,9 +59,14 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@10 --activate
 
-# Build argument for API URL (MUST be set at build time for Next.js)
+# Build arguments (MUST be set at build time for Next.js NEXT_PUBLIC_ vars)
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+ARG NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=
+ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=$NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
+ARG NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
