@@ -14,6 +14,7 @@ The AppArt Agent frontend is a Next.js 14 application using the App Router.
 | next-intl | Internationalization (FR/EN) |
 | React Query | Data fetching and caching |
 | Lucide React | Icons |
+| PostHog | Product analytics (proxied via Next.js rewrites) |
 | @ducanh2912/next-pwa | Progressive Web App (installable on mobile) |
 | pnpm | Package management |
 
@@ -61,7 +62,8 @@ frontend/
 │   ├── lib/
 │   │   ├── api.ts               # Axios API client
 │   │   ├── auth.ts              # Better Auth server config
-│   │   └── auth-client.ts       # Better Auth client
+│   │   ├── auth-client.ts       # Better Auth client
+│   │   └── posthog.ts           # PostHog init + config
 │   ├── middleware.ts            # next-intl locale middleware
 │   └── types/
 │       └── index.ts
@@ -186,6 +188,24 @@ import { Button, Badge, Card } from '@/components/ui';
 ```
 
 See [Components](components.md) for the full design system reference.
+
+### Analytics (PostHog)
+
+Product analytics via [PostHog](https://posthog.com/) (EU cloud). Requests are proxied through the app via Next.js rewrites to bypass ad blockers:
+
+- **Config**: `src/lib/posthog.ts` — initializes PostHog with `api_host: '/ingest'`
+- **Provider**: `src/components/PostHogProvider.tsx` — wraps the app, handles manual pageview tracking
+- **Proxy**: `next.config.js` rewrites `/ingest/*` to `eu.i.posthog.com`
+- **Middleware**: `src/middleware.ts` excludes `/ingest` from next-intl locale routing
+- **Auto-tracked**: pageviews (manual via router), page leaves, autocapture (clicks, form submits)
+- **Disabled**: when `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` is empty
+
+Environment variables:
+
+```bash
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_...  # Leave empty to disable
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+```
 
 ### PWA (Progressive Web App)
 

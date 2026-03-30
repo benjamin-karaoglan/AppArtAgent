@@ -41,6 +41,7 @@
 - **Auth**: Better Auth 1.4 with Google OAuth support
 - **i18n**: next-intl (locales: `fr`, `en`, default: `fr`)
 - **Icons**: Lucide React
+- **Analytics**: PostHog (`posthog-js`) with reverse proxy via Next.js rewrites (`/ingest/*`)
 - **PWA**: `@ducanh2912/next-pwa` (installable on mobile, disabled in dev)
 - **API client**: Axios (`frontend/src/lib/api.ts`) hitting `NEXT_PUBLIC_API_URL`
 - **Pages**: `frontend/src/app/[locale]/` (dashboard, properties, documents, photos, redesign-studio, price-analyst)
@@ -251,6 +252,8 @@ Key variables (see `.env.example` for full list):
 | `STORAGE_BACKEND` | `minio` (dev) or `gcs` (prod) |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | MinIO credentials |
 | `GCS_DOCUMENTS_BUCKET` / `GCS_PHOTOS_BUCKET` | GCS bucket names |
+| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | PostHog project token (optional, leave empty to disable) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host (default: `https://eu.i.posthog.com`) |
 | `LOGFIRE_TOKEN` | Observability (optional) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth (optional) |
 

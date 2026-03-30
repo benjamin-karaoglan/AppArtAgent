@@ -111,6 +111,10 @@ BETTER_AUTH_SECRET=your-better-auth-secret-at-least-32-characters
 # Google OAuth (optional - leave empty to disable)
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+
+# PostHog Analytics (optional - leave empty to disable)
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
 ### Better Auth Setup
@@ -283,3 +287,5 @@ print(f'AI Model: {settings.GEMINI_LLM_MODEL}')
 | `BETTER_AUTH_SECRET` | Yes | - | Session cookie signing secret (32+ chars) |
 | `GOOGLE_CLIENT_ID` | No | - | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | No | - | Google OAuth client secret |
+| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | No | - | PostHog project token (empty = disabled) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | `https://eu.i.posthog.com` | PostHog ingest host |

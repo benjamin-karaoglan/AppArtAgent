@@ -59,6 +59,12 @@ variable "domain" {
   default     = ""
 }
 
+variable "posthog_project_token" {
+  description = "PostHog project token for analytics (public, not a secret)"
+  type        = string
+  default     = ""
+}
+
 variable "create_dns_zone" {
   description = "Whether to create/manage a Cloud DNS zone. Set to false if using external DNS (Cloudflare, etc)."
   type        = bool
@@ -1095,6 +1101,19 @@ resource "google_cloud_run_v2_service" "frontend" {
       env {
         name  = "NODE_ENV"
         value = "production"
+      }
+
+      dynamic "env" {
+        for_each = var.posthog_project_token != "" ? [1] : []
+        content {
+          name  = "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN"
+          value = var.posthog_project_token
+        }
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_POSTHOG_HOST"
+        value = "https://eu.i.posthog.com"
       }
 
       # Better Auth configuration

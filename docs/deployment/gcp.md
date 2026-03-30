@@ -278,6 +278,7 @@ flowchart TD
 | `project_id` | GCP Project ID | Required |
 | `region` | GCP Region | `europe-west1` |
 | `environment` | Environment name | `production` |
+| `posthog_project_token` | PostHog project token | `""` (disabled) |
 | `domain` | Custom domain | `""` (none) |
 | `use_load_balancer` | Use Cloud Load Balancer | `true` |
 | `create_dns_zone` | Create Cloud DNS zone | `true` |
@@ -496,6 +497,8 @@ Environment variables are set via Terraform and Secret Manager:
 | `DATABASE_URL` | Secret Manager | PostgreSQL connection string (for Better Auth) |
 | `BETTER_AUTH_SECRET` | Secret Manager | Session signing secret (min 32 chars) |
 | `NODE_ENV` | Terraform | `production` |
+| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | Terraform / Build arg | PostHog project token (optional) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Terraform / Build arg | PostHog host (`https://eu.i.posthog.com`) |
 | `GOOGLE_CLIENT_ID` | Secret Manager | Google OAuth client ID (optional) |
 | `GOOGLE_CLIENT_SECRET` | Secret Manager | Google OAuth client secret (optional) |
 
@@ -762,6 +765,7 @@ cat deployer-key.json | base64
 | `GCP_PROJECT_ID` | Your project ID |
 | `GCP_REGION` | `europe-west1` |
 | `GCP_SA_KEY` | Base64-encoded service account key |
+| `POSTHOG_PROJECT_TOKEN` | PostHog project token (optional, for analytics) |
 
 ### Deployment Workflow
 
