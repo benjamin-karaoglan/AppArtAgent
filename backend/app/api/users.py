@@ -1,5 +1,7 @@
 """Users API routes for authentication and user management."""
 
+import html as html_module
+import logging
 from datetime import timedelta
 from typing import Optional
 
@@ -20,8 +22,14 @@ from app.core.security import (
     get_password_hash,
     verify_password,
 )
+from app.models.document import Document
+from app.models.photo import Photo, PhotoRedesign
 from app.models.property import Property
 from app.models.user import User
+from app.services.email import send_email
+from app.services.storage import StorageService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -253,3 +261,136 @@ async def get_user_stats(
         redesigns_generated_count=user.redesigns_generated_count or 0,
         total_properties=property_count,
     )
+
+
+class ResetEmailRequest(BaseModel):
+    """Password reset email request."""
+
+    email: EmailStr
+    name: str = ""
+    url: str
+
+
+@router.post("/send-reset-email", status_code=status.HTTP_204_NO_CONTENT)
+async def send_reset_email(data: ResetEmailRequest):
+    """Send a password reset email via Resend. Called by Better Auth's sendResetPassword hook."""
+    safe_name = html_module.escape(data.name or "there")
+    safe_url = html_module.escape(data.url)
+
+    html_body = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #2563eb; font-size: 24px; margin: 0;">AppArt Agent</h1>
+      </div>
+      <h2 style="color: #111827; font-size: 20px;">Reset your password</h2>
+      <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi {safe_name}, we received a request to reset your password. Click the button below to set a new one:
+      </p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{safe_url}" style="background-color: #2563eb; color: white; padding: 12px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block;">
+          Reset Password
+        </a>
+      </div>
+      <p style="color: #6b7280; font-size: 14px; line-height: 1.5;">
+        If you didn't request this, you can safely ignore this email. The link will expire in 1 hour.
+      </p>
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+      <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+        AppArt Agent — AI-powered apartment analysis
+      </p>
+    </div>
+    """
+
+    send_email(
+        to=data.email,
+        subject="[AppArt Agent] Reset your password",
+        html_body=html_body,
+    )
+    # Always return 204 regardless of email success (don't leak whether email exists)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Delete current user account and all associated data.
+
+    Cascading deletion order:
+    1. Delete storage files (photos, documents) — best-effort
+    2. Delete all database records (SQLAlchemy cascade handles most)
+    3. Delete Better Auth data (sessions, accounts, user)
+    4. Delete legacy user record
+    """
+    user = await get_user_from_auth(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    storage = StorageService()
+
+    # 1. Best-effort storage file cleanup
+    # Delete photo redesign files
+    photos = db.query(Photo).filter(Photo.user_id == user.id).all()
+    for photo in photos:
+        redesigns = db.query(PhotoRedesign).filter(PhotoRedesign.photo_id == photo.id).all()
+        for redesign in redesigns:
+            try:
+                storage.delete_file(redesign.storage_key, redesign.storage_bucket)
+            except Exception:
+                logger.warning(f"Failed to delete redesign file: {redesign.storage_key}")
+        # Delete original photo file
+        try:
+            storage.delete_file(photo.storage_key, photo.storage_bucket)
+        except Exception:
+            logger.warning(f"Failed to delete photo file: {photo.storage_key}")
+
+    # Delete document files
+    documents = db.query(Document).filter(Document.user_id == user.id).all()
+    for doc in documents:
+        if doc.storage_key and doc.storage_bucket:
+            try:
+                storage.delete_file(doc.storage_key, doc.storage_bucket)
+            except Exception:
+                logger.warning(f"Failed to delete document file: {doc.storage_key}")
+
+    # 2. Delete Better Auth data if linked
+    if user.ba_user_id:
+        try:
+            from sqlalchemy import text
+
+            # Delete sessions
+            db.execute(
+                text("DELETE FROM ba_session WHERE user_id = :uid"),
+                {"uid": user.ba_user_id},
+            )
+            # Delete accounts (credentials, OAuth)
+            db.execute(
+                text("DELETE FROM ba_account WHERE user_id = :uid"),
+                {"uid": user.ba_user_id},
+            )
+            # Delete verifications by email
+            db.execute(
+                text("DELETE FROM ba_verification WHERE identifier = :email"),
+                {"email": user.email},
+            )
+            # Delete ba_user (must unlink first to avoid FK constraint)
+            db.execute(
+                text("UPDATE users SET ba_user_id = NULL WHERE id = :id"),
+                {"id": user.id},
+            )
+            db.flush()
+            db.execute(
+                text("DELETE FROM ba_user WHERE id = :uid"),
+                {"uid": user.ba_user_id},
+            )
+        except Exception:
+            logger.exception("Failed to clean up Better Auth data")
+
+    # 3. Delete user record (SQLAlchemy cascades handle properties, documents)
+    db.delete(user)
+    db.commit()
+
+    logger.info(f"Account deleted: user_id={user.id}, email={user.email}")

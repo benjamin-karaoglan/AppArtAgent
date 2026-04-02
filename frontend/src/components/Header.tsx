@@ -3,7 +3,7 @@
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User, Globe } from 'lucide-react';
+import { LogOut, User, Globe, Settings } from 'lucide-react';
 import AppArtLogo from './AppArtLogo';
 
 export default function Header() {
@@ -67,6 +67,13 @@ export default function Header() {
                   <User className="h-5 w-5 mr-2 text-gray-400" />
                   <span>{user?.full_name}</span>
                 </div>
+                <Link
+                  href="/settings"
+                  className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  title={t('settings')}
+                >
+                  <Settings className="h-4 w-4" />
+                </Link>
                 <button
                   onClick={logout}
                   className="inline-flex items-center justify-center min-w-[8.5rem] px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"

@@ -20,6 +20,7 @@
     "dashboard": "Dashboard",
     "properties": "Properties",
     "logout": "Logout",
+    "settings": "Settings",
     "login": "Login",
     "getStarted": "Get Started",
     "appName": "AppArt Agent"
@@ -34,6 +35,7 @@
       "passwordPlaceholder": "Password",
       "submit": "Sign in",
       "submitting": "Signing in...",
+      "forgotPassword": "Forgot your password?",
       "googleButton": "Continue with Google",
       "googleLoading": "Connecting to Google...",
       "errors": {
@@ -69,6 +71,104 @@
         "passwordsMismatch": "Passwords do not match",
         "registrationFailed": "Registration failed. Please try again.",
         "googleFailed": "Google sign-up failed. Please try again."
+      }
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "email": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "submit": "Send reset link",
+      "submitting": "Sending...",
+      "successTitle": "Check your email",
+      "successMessage": "If an account exists with that email, we've sent a password reset link. Check your inbox and spam folder.",
+      "backToLogin": "Back to sign in",
+      "errors": {
+        "emailRequired": "Email is required",
+        "emailInvalid": "Invalid email address",
+        "failed": "Failed to send reset link. Please try again."
+      }
+    },
+    "resetPassword": {
+      "title": "Set new password",
+      "subtitle": "Enter your new password below",
+      "newPassword": "New password",
+      "newPasswordPlaceholder": "New password",
+      "confirmPassword": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "submit": "Reset password",
+      "submitting": "Resetting...",
+      "successTitle": "Password reset",
+      "successMessage": "Your password has been reset. You can now sign in with your new password.",
+      "goToLogin": "Sign in",
+      "errors": {
+        "passwordRequired": "Password is required",
+        "passwordMinLength": "Password must be at least {min} characters",
+        "confirmPasswordRequired": "Please confirm your password",
+        "passwordsMismatch": "Passwords do not match",
+        "invalidToken": "This reset link is invalid or has expired. Please request a new one.",
+        "failed": "Failed to reset password. Please try again."
+      }
+    }
+  },
+  "settings": {
+    "title": "Account Settings",
+    "profile": {
+      "title": "Profile",
+      "name": "Display name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "emailReadOnly": "Email cannot be changed",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "saved": "Profile updated",
+      "errors": {
+        "nameRequired": "Name is required",
+        "failed": "Failed to update profile. Please try again."
+      }
+    },
+    "password": {
+      "title": "Change Password",
+      "current": "Current password",
+      "currentPlaceholder": "Current password",
+      "new": "New password",
+      "newPlaceholder": "New password",
+      "confirm": "Confirm new password",
+      "confirmPlaceholder": "Confirm new password",
+      "submit": "Change password",
+      "submitting": "Changing...",
+      "changed": "Password changed successfully",
+      "errors": {
+        "currentRequired": "Current password is required",
+        "newRequired": "New password is required",
+        "newMinLength": "Password must be at least {min} characters",
+        "confirmRequired": "Please confirm your new password",
+        "mismatch": "Passwords do not match",
+        "wrongCurrent": "Current password is incorrect",
+        "failed": "Failed to change password. Please try again."
+      }
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred language",
+      "french": "Français",
+      "english": "English"
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "deleteAccount": "Delete account",
+      "deleteDescription": "Permanently delete your account and all associated data. This action cannot be undone.",
+      "deleteButton": "Delete my account",
+      "confirmTitle": "Delete your account?",
+      "confirmMessage": "This will permanently delete your account, all your properties, documents, photos, and analyses. This action cannot be undone.",
+      "confirmInstruction": "Type DELETE to confirm",
+      "confirmPlaceholder": "Type DELETE",
+      "confirmButton": "Permanently delete account",
+      "deleting": "Deleting account...",
+      "errors": {
+        "confirmRequired": "Please type DELETE to confirm",
+        "confirmMismatch": "Please type DELETE exactly",
+        "failed": "Failed to delete account. Please try again."
       }
     }
   },

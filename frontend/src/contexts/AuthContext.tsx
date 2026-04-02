@@ -22,6 +22,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
+  refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -195,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle,
         register,
         logout,
+        refreshSession,
         isAuthenticated: !!session?.user,
       }}
     >
