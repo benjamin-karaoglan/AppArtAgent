@@ -1,18 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Link, useRouter, usePathname } from '@/i18n/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Globe, Settings, ChevronDown } from 'lucide-react';
+import { LogOut, Settings, ChevronDown } from 'lucide-react';
 import AppArtLogo from './AppArtLogo';
 
 export default function Header() {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const t = useTranslations('header');
-  const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,10 +23,6 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const switchLocale = (newLocale: string) => {
-    router.replace(pathname, { locale: newLocale as 'fr' | 'en' });
-  };
 
   return (
     <header className="bg-white shadow">
@@ -60,16 +53,6 @@ export default function Header() {
           </div>
 
           <div className="flex items-center">
-            {/* Language Switcher */}
-            <button
-              onClick={() => switchLocale(locale === 'fr' ? 'en' : 'fr')}
-              className="inline-flex items-center px-2 py-1 mr-3 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              title={locale === 'fr' ? 'Switch to English' : 'Passer en français'}
-            >
-              <Globe className="h-4 w-4 mr-1" />
-              {locale === 'fr' ? 'EN' : 'FR'}
-            </button>
-
             {loading ? (
               <div className="flex items-center">
                 <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
