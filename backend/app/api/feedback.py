@@ -1,11 +1,14 @@
 """Feedback API endpoint for bug reports and feature requests."""
 
+import html as html_module
 import logging
-from datetime import datetime
+import time
+from collections import defaultdict
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -14,6 +17,23 @@ from app.services.email import send_email
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Simple in-memory rate limiter: 5 requests per minute per IP
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_MAX = 5
+RATE_LIMIT_WINDOW = 60  # seconds
+
+
+def _check_rate_limit(client_ip: str) -> None:
+    now = time.monotonic()
+    timestamps = _rate_limit_store[client_ip]
+    # Prune old entries
+    _rate_limit_store[client_ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
+    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=429, detail="Too many feedback submissions. Please try again later."
+        )
+    _rate_limit_store[client_ip].append(now)
 
 
 class FeedbackType(str, Enum):
@@ -42,7 +62,8 @@ def _build_feedback_html(
     screenshot_url: Optional[str],
 ) -> str:
     type_label = FEEDBACK_TYPE_LABELS[feedback_type]
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    esc = html_module.escape
 
     html = f"""
     <div style="font-family: sans-serif; max-width: 600px;">
@@ -51,13 +72,13 @@ def _build_feedback_html(
 
         <p><strong>Type:</strong> {type_label}</p>
         <p><strong>Timestamp:</strong> {timestamp}</p>
-        {"<p><strong>From:</strong> " + email + "</p>" if email else ""}
-        {"<p><strong>User Agent:</strong> <code>" + user_agent + "</code></p>" if user_agent else ""}
+        {"<p><strong>From:</strong> " + esc(email) + "</p>" if email else ""}
+        {"<p><strong>User Agent:</strong> <code>" + esc(user_agent) + "</code></p>" if user_agent else ""}
 
         <h3>Message</h3>
-        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; white-space: pre-wrap;">{message}</div>
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; white-space: pre-wrap;">{esc(message)}</div>
 
-        {"<h3>Screenshot</h3><p><a href='" + screenshot_url + "'>View Screenshot</a></p>" if screenshot_url else ""}
+        {"<h3>Screenshot</h3><p><a href='" + esc(screenshot_url) + "'>View Screenshot</a></p>" if screenshot_url else ""}
     </div>
     """
     return html
@@ -74,7 +95,11 @@ async def submit_feedback(
     """Submit feedback, bug report, or feature request.
 
     No authentication required — anonymous feedback is welcome.
+    Rate limited to 5 requests per minute per IP.
     """
+    client_ip = request.client.host if request.client else "unknown"
+    _check_rate_limit(client_ip)
+
     user_agent = request.headers.get("user-agent")
     screenshot_url = None
 
@@ -86,9 +111,7 @@ async def submit_feedback(
             storage = get_storage_service()
             file_data = await screenshot.read()
             content_type = screenshot.content_type or "image/png"
-            filename = (
-                f"feedback/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{screenshot.filename}"
-            )
+            filename = f"feedback/{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{screenshot.filename}"
             storage.upload_file(
                 file_data=file_data,
                 filename=filename,
