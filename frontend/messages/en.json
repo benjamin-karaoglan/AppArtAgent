@@ -599,5 +599,190 @@
     "description": "AI-powered platform that helps you make informed apartment purchasing decisions in France",
     "ogTitle": "AppArt Agent - Smart Property Decisions",
     "ogDescription": "AI-powered platform that helps you make informed apartment purchasing decisions in France"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: April 2, 2026",
+      "intro": "AppArt Agent (\"we\", \"us\", \"our\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your personal data when you use our AI-powered apartment purchasing decision platform.",
+      "controller": {
+        "title": "1. Data Controller",
+        "content": "AppArt Agent operates as the data controller for the personal data processed through our platform."
+      },
+      "dataCollected": {
+        "title": "2. Data We Collect",
+        "account": "Account information: name, email address, hashed password",
+        "property": "Property details: addresses, prices, surface areas, room counts, and other property characteristics you enter",
+        "documents": "Uploaded documents: PDFs and images of property-related documents (PV d'AG, diagnostics, tax notices, charges statements)",
+        "photos": "Uploaded photos: apartment photos submitted for AI redesign",
+        "generated": "AI-generated content: property analyses, document summaries, price estimations, and redesigned images",
+        "usage": "Usage data: pages visited, features used (via PostHog analytics, only with your consent)",
+        "technical": "Technical data: browser type, device information, IP address (for security and rate limiting)"
+      },
+      "purpose": {
+        "title": "3. Purpose of Processing",
+        "analysis": "Analyzing property documents and extracting key information using AI",
+        "price": "Estimating property values by comparing with the DVF (Demandes de Valeurs Foncières) dataset",
+        "redesign": "Generating interior redesign visualizations from your photos",
+        "account": "Managing your account and providing access to your saved properties",
+        "improvement": "Improving our services through anonymized analytics (with consent)"
+      },
+      "ai": {
+        "title": "4. AI Processing",
+        "content": "Your documents and photos are processed by Google Gemini (via Vertex AI) for analysis and image generation. This data is sent to Google's servers for processing. We do not use your data to train AI models. Google's data processing terms apply to this processing."
+      },
+      "storage": {
+        "title": "5. Data Storage",
+        "structured": "Structured data (account info, property details, analyses) is stored in PostgreSQL on Google Cloud SQL",
+        "files": "Files (documents, photos, redesigns) are stored in Google Cloud Storage",
+        "location": "All data is stored within the European Union or in regions compliant with EU data protection standards"
+      },
+      "cookies": {
+        "title": "6. Cookies",
+        "essential": "Essential cookies: session authentication, cookie consent preferences (always active)",
+        "analytics": "Analytics cookies: PostHog tracking (opt-in only, disabled by default)"
+      },
+      "retention": {
+        "title": "7. Data Retention",
+        "content": "Your data is retained as long as your account is active. When you delete your account, all associated data (properties, documents, photos, analyses) is permanently deleted."
+      },
+      "rights": {
+        "title": "8. Your Rights (GDPR)",
+        "content": "Under the General Data Protection Regulation (GDPR), you have the right to:",
+        "access": "Access your personal data",
+        "rectification": "Rectify inaccurate data",
+        "erasure": "Request erasure of your data (\"right to be forgotten\")",
+        "portability": "Data portability",
+        "objection": "Object to processing",
+        "contact": "To exercise these rights, contact us at:"
+      },
+      "thirdParty": {
+        "title": "9. Third-Party Services",
+        "content": "We use the following third-party services:",
+        "gcp": "Google Cloud Platform (hosting, storage, database)",
+        "gemini": "Google Gemini / Vertex AI (AI analysis and image generation)",
+        "posthog": "PostHog (analytics, opt-in only)",
+        "resend": "Resend (transactional email delivery)",
+        "betterAuth": "Better Auth (authentication)"
+      },
+      "changes": {
+        "title": "10. Changes to This Policy",
+        "content": "We may update this policy from time to time. We will notify registered users of significant changes via email."
+      },
+      "contactEmail": "privacy@appartagent.com"
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: April 2, 2026",
+      "intro": "By using AppArt Agent, you agree to these Terms of Service. Please read them carefully.",
+      "service": {
+        "title": "1. Service Description",
+        "content": "AppArt Agent is an AI-powered platform that helps apartment buyers in France make informed purchasing decisions by analyzing property documents, comparing prices with public market data (DVF), and generating interior redesign visualizations."
+      },
+      "aiDisclaimer": {
+        "title": "2. AI Disclaimer",
+        "content": "All analyses, estimates, and recommendations provided by AppArt Agent are for informational purposes only. They do not constitute professional legal, financial, or real estate advice. AI-generated content may contain errors or inaccuracies. Always consult qualified professionals before making purchasing decisions."
+      },
+      "userResponsibilities": {
+        "title": "3. User Responsibilities",
+        "accurate": "Provide accurate information about properties",
+        "lawful": "Use the platform for lawful purposes only",
+        "credentials": "Keep your account credentials secure",
+        "rights": "Only upload documents and photos you have the right to use"
+      },
+      "ip": {
+        "title": "4. Intellectual Property",
+        "userContent": "You retain ownership of all content you upload (documents, photos). By uploading, you grant us a limited license to process this content for the purpose of providing our services.",
+        "aiContent": "AI-generated content (analyses, redesigned images) is provided for your personal use. You may download and share it freely.",
+        "platform": "The AppArt Agent platform, including its design, code, and features, remains our intellectual property."
+      },
+      "availability": {
+        "title": "5. Service Availability",
+        "content": "AppArt Agent is provided \"as is\" without warranty. We do not guarantee uninterrupted service availability. We may perform maintenance or updates that temporarily affect access."
+      },
+      "liability": {
+        "title": "6. Limitation of Liability",
+        "content": "To the maximum extent permitted by law, AppArt Agent shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform. This includes decisions made based on AI-generated analyses or estimates."
+      },
+      "termination": {
+        "title": "7. Account Termination",
+        "content": "We may suspend or terminate accounts that violate these terms. You may delete your account at any time, which will permanently remove all your data."
+      },
+      "law": {
+        "title": "8. Governing Law",
+        "content": "These terms are governed by French law. Any disputes shall be subject to the jurisdiction of French courts."
+      },
+      "changes": {
+        "title": "9. Changes to These Terms",
+        "content": "We may update these terms from time to time. Continued use of the platform after changes constitutes acceptance of the new terms."
+      },
+      "contactEmail": "legal@appartagent.com"
+    }
+  },
+  "cookie": {
+    "title": "Cookie Preferences",
+    "description": "We use cookies to improve your experience. Essential cookies are required for the site to function. Analytics cookies help us understand how you use the app.",
+    "acceptAll": "Accept All",
+    "rejectNonEssential": "Reject Non-Essential",
+    "managePreferences": "Manage Preferences",
+    "savePreferences": "Save Preferences",
+    "essential": {
+      "title": "Essential Cookies",
+      "description": "Required for authentication and basic functionality. Cannot be disabled."
+    },
+    "analytics": {
+      "title": "Analytics Cookies",
+      "description": "Help us understand how you use the app to improve it. Powered by PostHog."
+    },
+    "alwaysActive": "Always active"
+  },
+  "feedback": {
+    "button": "Feedback",
+    "title": "Send Feedback",
+    "type": {
+      "label": "Type",
+      "bug_report": "Bug Report",
+      "feature_request": "Feature Request",
+      "general_feedback": "General Feedback"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Describe the issue or suggestion..."
+    },
+    "email": {
+      "label": "Email (optional)",
+      "placeholder": "your@email.com"
+    },
+    "screenshot": {
+      "label": "Screenshot (optional)",
+      "hint": "Drag & drop or click to upload an image (max 5MB)"
+    },
+    "submit": "Send Feedback",
+    "submitting": "Sending...",
+    "success": "Thank you! We'll review your feedback.",
+    "error": "Failed to send feedback. Please try again."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Page Not Found",
+      "description": "The page you're looking for doesn't exist or has been moved.",
+      "goHome": "Go Home",
+      "goBack": "Go Back",
+      "goDashboard": "Go to Dashboard"
+    },
+    "serverError": {
+      "title": "Something Went Wrong",
+      "description": "An unexpected error occurred. Please try again.",
+      "tryAgain": "Try Again",
+      "reportIssue": "Report This Issue",
+      "details": "Error Details"
+    }
+  },
+  "footer": {
+    "copyright": "© 2026 AppArt Agent. All rights reserved.",
+    "tagline": "AI-powered apartment purchasing decisions in France",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "feedback": "Feedback"
   }
 }

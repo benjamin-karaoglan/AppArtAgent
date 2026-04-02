@@ -599,5 +599,190 @@
     "description": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France",
     "ogTitle": "AppArt Agent - Décisions Immobilières Intelligentes",
     "ogDescription": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Politique de Confidentialité",
+      "lastUpdated": "Dernière mise à jour : 2 avril 2026",
+      "intro": "AppArt Agent (« nous », « notre ») s'engage à protéger votre vie privée. Cette Politique de Confidentialité explique comment nous collectons, utilisons et protégeons vos données personnelles lorsque vous utilisez notre plateforme d'aide à l'achat immobilier propulsée par l'IA.",
+      "controller": {
+        "title": "1. Responsable du traitement",
+        "content": "AppArt Agent agit en tant que responsable du traitement des données personnelles traitées via notre plateforme."
+      },
+      "dataCollected": {
+        "title": "2. Données collectées",
+        "account": "Informations de compte : nom, adresse email, mot de passe chiffré",
+        "property": "Détails des biens : adresses, prix, surfaces, nombre de pièces et autres caractéristiques que vous saisissez",
+        "documents": "Documents téléversés : PDF et images de documents liés au bien (PV d'AG, diagnostics, avis d'imposition, appels de charges)",
+        "photos": "Photos téléversées : photos d'appartement soumises pour le redesign par IA",
+        "generated": "Contenu généré par l'IA : analyses de biens, résumés de documents, estimations de prix et images redesignées",
+        "usage": "Données d'utilisation : pages visitées, fonctionnalités utilisées (via PostHog, uniquement avec votre consentement)",
+        "technical": "Données techniques : type de navigateur, informations sur l'appareil, adresse IP (pour la sécurité)"
+      },
+      "purpose": {
+        "title": "3. Finalité du traitement",
+        "analysis": "Analyser les documents immobiliers et extraire les informations clés grâce à l'IA",
+        "price": "Estimer la valeur des biens en comparant avec le jeu de données DVF (Demandes de Valeurs Foncières)",
+        "redesign": "Générer des visualisations de rénovation intérieure à partir de vos photos",
+        "account": "Gérer votre compte et fournir l'accès à vos biens sauvegardés",
+        "improvement": "Améliorer nos services grâce à des analyses anonymisées (avec consentement)"
+      },
+      "ai": {
+        "title": "4. Traitement par l'IA",
+        "content": "Vos documents et photos sont traités par Google Gemini (via Vertex AI) pour l'analyse et la génération d'images. Ces données sont envoyées aux serveurs de Google pour traitement. Nous n'utilisons pas vos données pour entraîner des modèles d'IA. Les conditions de traitement des données de Google s'appliquent."
+      },
+      "storage": {
+        "title": "5. Stockage des données",
+        "structured": "Les données structurées (compte, détails des biens, analyses) sont stockées dans PostgreSQL sur Google Cloud SQL",
+        "files": "Les fichiers (documents, photos, redesigns) sont stockés dans Google Cloud Storage",
+        "location": "Toutes les données sont stockées au sein de l'Union Européenne ou dans des régions conformes aux normes de protection des données de l'UE"
+      },
+      "cookies": {
+        "title": "6. Cookies",
+        "essential": "Cookies essentiels : authentification de session, préférences de cookies (toujours actifs)",
+        "analytics": "Cookies analytiques : suivi PostHog (opt-in uniquement, désactivé par défaut)"
+      },
+      "retention": {
+        "title": "7. Conservation des données",
+        "content": "Vos données sont conservées tant que votre compte est actif. Lorsque vous supprimez votre compte, toutes les données associées (biens, documents, photos, analyses) sont définitivement supprimées."
+      },
+      "rights": {
+        "title": "8. Vos droits (RGPD)",
+        "content": "En vertu du Règlement Général sur la Protection des Données (RGPD), vous avez le droit de :",
+        "access": "Accéder à vos données personnelles",
+        "rectification": "Rectifier les données inexactes",
+        "erasure": "Demander l'effacement de vos données (« droit à l'oubli »)",
+        "portability": "Portabilité des données",
+        "objection": "Vous opposer au traitement",
+        "contact": "Pour exercer ces droits, contactez-nous à :"
+      },
+      "thirdParty": {
+        "title": "9. Services tiers",
+        "content": "Nous utilisons les services tiers suivants :",
+        "gcp": "Google Cloud Platform (hébergement, stockage, base de données)",
+        "gemini": "Google Gemini / Vertex AI (analyse IA et génération d'images)",
+        "posthog": "PostHog (analytique, opt-in uniquement)",
+        "resend": "Resend (envoi d'emails transactionnels)",
+        "betterAuth": "Better Auth (authentification)"
+      },
+      "changes": {
+        "title": "10. Modifications de cette politique",
+        "content": "Nous pouvons mettre à jour cette politique de temps en temps. Nous informerons les utilisateurs inscrits des changements importants par email."
+      },
+      "contactEmail": "privacy@appartagent.com"
+    },
+    "terms": {
+      "title": "Conditions Générales d'Utilisation",
+      "lastUpdated": "Dernière mise à jour : 2 avril 2026",
+      "intro": "En utilisant AppArt Agent, vous acceptez ces Conditions Générales d'Utilisation. Veuillez les lire attentivement.",
+      "service": {
+        "title": "1. Description du service",
+        "content": "AppArt Agent est une plateforme propulsée par l'IA qui aide les acheteurs d'appartements en France à prendre des décisions d'achat éclairées en analysant les documents immobiliers, en comparant les prix avec les données publiques du marché (DVF), et en générant des visualisations de rénovation intérieure."
+      },
+      "aiDisclaimer": {
+        "title": "2. Avertissement IA",
+        "content": "Toutes les analyses, estimations et recommandations fournies par AppArt Agent sont à titre informatif uniquement. Elles ne constituent pas un conseil juridique, financier ou immobilier professionnel. Le contenu généré par l'IA peut contenir des erreurs ou inexactitudes. Consultez toujours des professionnels qualifiés avant de prendre des décisions d'achat."
+      },
+      "userResponsibilities": {
+        "title": "3. Responsabilités de l'utilisateur",
+        "accurate": "Fournir des informations exactes sur les biens",
+        "lawful": "Utiliser la plateforme à des fins légales uniquement",
+        "credentials": "Garder vos identifiants de compte sécurisés",
+        "rights": "Ne téléverser que des documents et photos dont vous avez les droits d'utilisation"
+      },
+      "ip": {
+        "title": "4. Propriété intellectuelle",
+        "userContent": "Vous conservez la propriété de tout contenu que vous téléversez (documents, photos). En téléversant, vous nous accordez une licence limitée pour traiter ce contenu afin de fournir nos services.",
+        "aiContent": "Le contenu généré par l'IA (analyses, images redesignées) est fourni pour votre usage personnel. Vous pouvez le télécharger et le partager librement.",
+        "platform": "La plateforme AppArt Agent, y compris son design, son code et ses fonctionnalités, reste notre propriété intellectuelle."
+      },
+      "availability": {
+        "title": "5. Disponibilité du service",
+        "content": "AppArt Agent est fourni « tel quel » sans garantie. Nous ne garantissons pas une disponibilité ininterrompue du service. Nous pouvons effectuer des maintenances ou mises à jour affectant temporairement l'accès."
+      },
+      "liability": {
+        "title": "6. Limitation de responsabilité",
+        "content": "Dans les limites autorisées par la loi, AppArt Agent ne saurait être tenu responsable de tout dommage indirect, accessoire ou consécutif résultant de votre utilisation de la plateforme. Cela inclut les décisions prises sur la base d'analyses ou estimations générées par l'IA."
+      },
+      "termination": {
+        "title": "7. Résiliation de compte",
+        "content": "Nous pouvons suspendre ou résilier les comptes qui enfreignent ces conditions. Vous pouvez supprimer votre compte à tout moment, ce qui supprimera définitivement toutes vos données."
+      },
+      "law": {
+        "title": "8. Droit applicable",
+        "content": "Ces conditions sont régies par le droit français. Tout litige sera soumis à la juridiction des tribunaux français."
+      },
+      "changes": {
+        "title": "9. Modifications de ces conditions",
+        "content": "Nous pouvons mettre à jour ces conditions de temps en temps. L'utilisation continue de la plateforme après les modifications constitue une acceptation des nouvelles conditions."
+      },
+      "contactEmail": "legal@appartagent.com"
+    }
+  },
+  "cookie": {
+    "title": "Préférences de cookies",
+    "description": "Nous utilisons des cookies pour améliorer votre expérience. Les cookies essentiels sont nécessaires au fonctionnement du site. Les cookies analytiques nous aident à comprendre comment vous utilisez l'application.",
+    "acceptAll": "Tout accepter",
+    "rejectNonEssential": "Refuser les non-essentiels",
+    "managePreferences": "Gérer les préférences",
+    "savePreferences": "Enregistrer les préférences",
+    "essential": {
+      "title": "Cookies essentiels",
+      "description": "Nécessaires à l'authentification et aux fonctionnalités de base. Ne peuvent pas être désactivés."
+    },
+    "analytics": {
+      "title": "Cookies analytiques",
+      "description": "Nous aident à comprendre comment vous utilisez l'application pour l'améliorer. Fournis par PostHog."
+    },
+    "alwaysActive": "Toujours actif"
+  },
+  "feedback": {
+    "button": "Feedback",
+    "title": "Envoyer un feedback",
+    "type": {
+      "label": "Type",
+      "bug_report": "Rapport de bug",
+      "feature_request": "Demande de fonctionnalité",
+      "general_feedback": "Feedback général"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Décrivez le problème ou la suggestion..."
+    },
+    "email": {
+      "label": "Email (optionnel)",
+      "placeholder": "votre@email.com"
+    },
+    "screenshot": {
+      "label": "Capture d'écran (optionnel)",
+      "hint": "Glissez-déposez ou cliquez pour téléverser une image (max 5 Mo)"
+    },
+    "submit": "Envoyer",
+    "submitting": "Envoi en cours...",
+    "success": "Merci ! Nous examinerons votre feedback.",
+    "error": "Échec de l'envoi. Veuillez réessayer."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+      "goHome": "Accueil",
+      "goBack": "Retour",
+      "goDashboard": "Aller au tableau de bord"
+    },
+    "serverError": {
+      "title": "Une erreur est survenue",
+      "description": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+      "tryAgain": "Réessayer",
+      "reportIssue": "Signaler ce problème",
+      "details": "Détails de l'erreur"
+    }
+  },
+  "footer": {
+    "copyright": "© 2026 AppArt Agent. Tous droits réservés.",
+    "tagline": "Aide à la décision d'achat immobilier propulsée par l'IA",
+    "privacy": "Politique de confidentialité",
+    "terms": "CGU",
+    "feedback": "Feedback"
   }
 }
