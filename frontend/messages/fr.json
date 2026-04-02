@@ -234,6 +234,27 @@
       "redesignsGenerated": "Redesigns générés",
       "dvfRecords": "Données DVF disponibles"
     },
+    "gettingStarted": {
+      "title": "Commencez en 4 étapes simples",
+      "subtitle": "Ajoutez un bien et laissez l'IA faire le travail",
+      "cta": "Ajouter votre premier bien",
+      "step1": {
+        "title": "Ajoutez un bien",
+        "description": "Entrez l'adresse et les détails de base de l'appartement que vous envisagez"
+      },
+      "step2": {
+        "title": "Téléchargez les documents",
+        "description": "Déposez PV d'AG, diagnostics, avis d'imposition — l'IA les classe automatiquement"
+      },
+      "step3": {
+        "title": "Analyse IA",
+        "description": "Obtenez l'évaluation des risques, coûts cachés et analyses croisées en quelques secondes"
+      },
+      "step4": {
+        "title": "Analyse de prix",
+        "description": "Comparez avec les données DVF réelles et obtenez une recommandation d'achat"
+      }
+    },
     "properties": {
       "title": "Vos biens",
       "addProperty": "Ajouter un bien",
@@ -687,12 +708,20 @@
     "addProperty": "Ajouter un bien",
     "loading": "Chargement des biens...",
     "empty": {
-      "title": "Aucun bien",
-      "description": "Commencez par ajouter votre premier bien."
+      "title": "Aucun bien pour le moment",
+      "subtitle": "Ajoutez votre premier bien pour débloquer l'analyse par IA",
+      "feature1": "Analyse de documents",
+      "feature2": "Évaluation des risques par IA",
+      "feature3": "Comparaison de prix DVF"
     },
     "deleteTitle": "Supprimer le bien",
     "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
     "deleteFailed": "Échec de la suppression du bien. Veuillez réessayer."
+  },
+  "report": {
+    "downloadReport": "Télécharger le rapport",
+    "exportPdf": "Exporter PDF",
+    "downloading": "Téléchargement..."
   },
   "metadata": {
     "title": "AppArt Agent - Décisions Immobilières Intelligentes",

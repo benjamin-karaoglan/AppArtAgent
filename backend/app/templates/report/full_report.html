@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+    <div class="cover-logo">AppArt Agent</div>
+    <div class="cover-tagline">{{ t.cover_tagline }}</div>
+    <div class="cover-badge">{{ t.cover_badge }}</div>
+    <div class="cover-address">{{ property.address }}</div>
+    <div class="cover-city">{{ property.city }} {{ property.postal_code }}</div>
+    <div class="cover-date">{{ t.generated_on }} {{ export_date }}</div>
+</div>
+
+<!-- PROPERTY SUMMARY -->
+<div class="section">
+    <h2>{{ t.property_summary }}</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">{{ t.address }}</div>
+            <div class="info-value">{{ property.address }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">{{ t.city }}</div>
+            <div class="info-value">{{ property.city }} {{ property.postal_code }}</div>
+        </div>
+        {% if property.property_type %}
+        <div class="info-item">
+            <div class="info-label">{{ t.property_type }}</div>
+            <div class="info-value">{{ property.property_type }}</div>
+        </div>
+        {% endif %}
+        {% if property.asking_price %}
+        <div class="info-item">
+            <div class="info-label">{{ t.asking_price }}</div>
+            <div class="info-value">{{ format_eur(property.asking_price) }}</div>
+        </div>
+        {% endif %}
+        {% if property.surface_area %}
+        <div class="info-item">
+            <div class="info-label">{{ t.surface_area }}</div>
+            <div class="info-value">{{ property.surface_area }} m²</div>
+        </div>
+        {% endif %}
+        {% if property.rooms %}
+        <div class="info-item">
+            <div class="info-label">{{ t.rooms }}</div>
+            <div class="info-value">{{ property.rooms }}</div>
+        </div>
+        {% endif %}
+        {% if property.floor is not none %}
+        <div class="info-item">
+            <div class="info-label">{{ t.floor }}</div>
+            <div class="info-value">{{ property.floor }}</div>
+        </div>
+        {% endif %}
+        {% if property.building_year %}
+        <div class="info-item">
+            <div class="info-label">{{ t.building_year }}</div>
+            <div class="info-value">{{ property.building_year }}</div>
+        </div>
+        {% endif %}
+        {% if property.price_per_sqm %}
+        <div class="info-item">
+            <div class="info-label">{{ t.price_per_sqm }}</div>
+            <div class="info-value">{{ format_eur(property.price_per_sqm) }}/m²</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- PRICE ANALYSIS -->
+{% if price_analysis %}
+<div class="section section-break">
+    <h2>{{ t.price_analysis_title }}</h2>
+    <div class="stats-row">
+        {% if price_analysis.estimated_value %}
+        <div class="stat-card stat-card-primary">
+            <div class="stat-value">{{ format_eur(price_analysis.estimated_value) }}</div>
+            <div class="stat-label">{{ t.estimated_value }}</div>
+        </div>
+        {% endif %}
+        {% if price_analysis.price_deviation_percent is not none %}
+        <div class="stat-card {{ 'stat-card-success' if price_analysis.price_deviation_percent < 0 else 'stat-card-danger' if price_analysis.price_deviation_percent > 5 else 'stat-card-warning' }}">
+            <div class="stat-value {{ 'text-positive' if price_analysis.price_deviation_percent < 0 else 'text-negative' if price_analysis.price_deviation_percent > 5 else 'text-neutral' }}">
+                {{ "%+.1f"|format(price_analysis.price_deviation_percent) }}%
+            </div>
+            <div class="stat-label">{{ t.price_deviation }}</div>
+        </div>
+        {% endif %}
+        {% if price_analysis.market_avg_price_per_sqm %}
+        <div class="stat-card stat-card-primary">
+            <div class="stat-value">{{ format_eur(price_analysis.market_avg_price_per_sqm) }}</div>
+            <div class="stat-label">{{ t.market_avg_sqm }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% if price_analysis.recommendation %}
+    <div class="recommendation-box">
+        <p>{{ price_analysis.recommendation }}</p>
+    </div>
+    {% endif %}
+    {% if comparable_sales %}
+    <h3>{{ t.comparable_sales }} ({{ comparable_sales|length }})</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>{{ t.sale_address }}</th>
+                <th>{{ t.sale_date }}</th>
+                <th>{{ t.sale_price }}</th>
+                <th>{{ t.sale_surface }}</th>
+                <th>{{ t.sale_price_sqm }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in comparable_sales[:10] %}
+            {% if not sale.is_outlier %}
+            <tr>
+                <td>{{ sale.address }}</td>
+                <td>{{ sale.sale_date }}</td>
+                <td>{{ format_eur(sale.sale_price) }}</td>
+                <td>{{ sale.surface_area or '-' }} m²</td>
+                <td>{{ format_eur(sale.price_per_sqm) if sale.price_per_sqm else '-' }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if market_trend and market_trend.years %}
+    <h3>{{ t.market_trend_title }}</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>{{ t.year }}</th>
+                <th>{{ t.avg_price_sqm }}</th>
+                <th>{{ t.yoy_change }}</th>
+                <th>{{ t.sample_count }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(market_trend.years|length) %}
+            <tr>
+                <td>{{ market_trend.years[i] }}</td>
+                <td>{{ format_eur(market_trend.average_prices[i]) }}</td>
+                <td class="{{ 'text-positive' if market_trend.year_over_year_changes[i] > 0 else 'text-negative' if market_trend.year_over_year_changes[i] < 0 else 'text-neutral' }}">
+                    {{ "%+.1f"|format(market_trend.year_over_year_changes[i]) }}%
+                </td>
+                <td>{{ market_trend.sample_counts[i] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- DOCUMENT SYNTHESIS -->
+{% if synthesis %}
+<div class="section section-break">
+    <h2>{{ t.synthesis_title }}</h2>
+    <div class="stats-row">
+        {% if synthesis.risk_level %}
+        <div class="stat-card {{ 'stat-card-success' if synthesis.risk_level == 'low' else 'stat-card-warning' if synthesis.risk_level == 'medium' else 'stat-card-danger' }}">
+            <div class="stat-value">
+                <span class="badge badge-{{ synthesis.risk_level }}">{{ synthesis.risk_level|upper }}</span>
+            </div>
+            <div class="stat-label">{{ t.risk_level }}</div>
+        </div>
+        {% endif %}
+        {% if synthesis.total_annual_cost %}
+        <div class="stat-card stat-card-primary">
+            <div class="stat-value">{{ format_eur(synthesis.total_annual_cost) }}</div>
+            <div class="stat-label">{{ t.annual_costs }}</div>
+        </div>
+        {% endif %}
+        {% if synthesis.total_one_time_cost %}
+        <div class="stat-card stat-card-warning">
+            <div class="stat-value">{{ format_eur(synthesis.total_one_time_cost) }}</div>
+            <div class="stat-label">{{ t.one_time_costs }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% if synthesis.overall_summary %}
+    <div class="section">
+        <h3>{{ t.summary }}</h3>
+        <p>{{ synthesis.overall_summary }}</p>
+    </div>
+    {% endif %}
+    {% if synthesis.key_findings %}
+    <div class="section">
+        <h3>{{ t.key_findings }}</h3>
+        <ul class="findings-list">
+            {% for finding in synthesis.key_findings %}
+            <li>{{ finding }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% if synthesis.recommendations %}
+    <div class="section">
+        <h3>{{ t.recommendations }}</h3>
+        <ul class="findings-list">
+            {% for rec in synthesis.recommendations %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% if annual_cost_breakdown %}
+    <h3>{{ t.annual_cost_breakdown }}</h3>
+    <table>
+        <thead><tr><th>{{ t.cost_category }}</th><th>{{ t.cost_amount }}</th></tr></thead>
+        <tbody>
+            {% for key, value in annual_cost_breakdown.items() %}
+            <tr>
+                <td>{{ format_cost_key(key) }}</td>
+                <td>{{ format_eur(value if value is number else 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if one_time_cost_breakdown %}
+    <h3>{{ t.one_time_cost_breakdown }}</h3>
+    <table>
+        <thead><tr><th>{{ t.cost_description }}</th><th>{{ t.cost_amount }}</th></tr></thead>
+        <tbody>
+            {% for item in one_time_cost_breakdown %}
+            <tr>
+                <td>{{ item.description }}</td>
+                <td>{{ format_eur(item.amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- REDESIGN GALLERY -->
+{% if photos_with_redesigns %}
+<div class="section section-break">
+    <h2>{{ t.redesign_gallery }}</h2>
+    <div class="photo-gallery">
+        {% for photo in photos_with_redesigns %}
+        <div class="photo-card">
+            <img src="{{ photo.data_uri }}" alt="{{ photo.filename }}">
+            <div class="photo-card-label">
+                {{ photo.filename }}
+                {% if photo.room_type %} &mdash; {{ photo.room_type }}{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="report-footer">
+    {{ t.footer_line.format(date=export_date) }}
+</div>
+
+</body>
+</html>

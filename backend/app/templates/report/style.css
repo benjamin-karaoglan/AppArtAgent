@@ -1,0 +1,99 @@
+/* AppArt Agent PDF Report Stylesheet */
+
+@page {
+    size: A4;
+    margin: 20mm 15mm 25mm 15mm;
+    @bottom-center {
+        content: counter(page) " / " counter(pages);
+        font-size: 9px;
+        color: #6b7280;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+}
+
+@page :first {
+    margin-top: 0;
+    margin-bottom: 0;
+    @bottom-center { content: none; }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #111827;
+}
+
+h1 { font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+h2 { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #2563eb; }
+h3 { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+p { margin-bottom: 6px; }
+
+.cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 297mm;
+    text-align: center;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #f8fafc 100%);
+}
+
+.cover-logo { font-size: 32px; font-weight: 800; color: #2563eb; margin-bottom: 8px; letter-spacing: -0.5px; }
+.cover-tagline { font-size: 13px; color: #6b7280; margin-bottom: 48px; }
+.cover-address { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 8px; max-width: 400px; }
+.cover-city { font-size: 15px; color: #4b5563; margin-bottom: 40px; }
+.cover-date { font-size: 12px; color: #9ca3af; }
+.cover-badge { display: inline-block; background: #2563eb; color: white; padding: 6px 20px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 48px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+.section { page-break-inside: avoid; margin-bottom: 24px; }
+.section-break { page-break-before: always; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.info-item { padding: 10px 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb; }
+.info-label { font-size: 10px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; }
+.info-value { font-size: 13px; font-weight: 600; color: #111827; }
+
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-card { padding: 12px; border-radius: 8px; text-align: center; }
+.stat-card-primary { background: #eff6ff; border: 1px solid #bfdbfe; }
+.stat-card-success { background: #ecfdf5; border: 1px solid #a7f3d0; }
+.stat-card-warning { background: #fffbeb; border: 1px solid #fde68a; }
+.stat-card-danger { background: #fef2f2; border: 1px solid #fecaca; }
+.stat-value { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+.stat-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.3px; }
+
+table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 10px; }
+thead th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #d1d5db; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+tbody td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; color: #374151; }
+tbody tr:nth-child(even) { background: #f9fafb; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.badge-low { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.badge-medium { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.badge-high { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+.text-positive { color: #059669; }
+.text-negative { color: #dc2626; }
+.text-neutral { color: #6b7280; }
+
+.recommendation-box { padding: 12px 16px; border-radius: 8px; border-left: 4px solid #2563eb; background: #eff6ff; margin-bottom: 16px; }
+.recommendation-box p { color: #1e40af; font-weight: 500; }
+
+.findings-list { list-style: none; padding: 0; }
+.findings-list li { padding: 6px 0; padding-left: 16px; position: relative; border-bottom: 1px solid #f3f4f6; }
+.findings-list li::before { content: ""; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
+
+.photo-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.photo-card { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; page-break-inside: avoid; }
+.photo-card img { width: 100%; height: auto; display: block; }
+.photo-card-label { padding: 6px 10px; font-size: 10px; color: #374151; background: #f9fafb; font-weight: 500; }
+
+.report-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 9px; color: #9ca3af; }
+
+.standalone-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #2563eb; }
+.standalone-logo { font-size: 16px; font-weight: 700; color: #2563eb; }
+.standalone-meta { text-align: right; font-size: 10px; color: #6b7280; }

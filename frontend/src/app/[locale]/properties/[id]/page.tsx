@@ -7,8 +7,8 @@ import { useTranslations } from 'next-intl';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import PriceAnalysisSummary from '@/components/PriceAnalysisSummary';
-import { api } from '@/lib/api';
-import { ArrowLeft, TrendingUp, FileText, Loader2, Trash2, ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, ShieldAlert, Sparkles, Paintbrush, Image as ImageIcon, X, Columns, Pencil, Check } from 'lucide-react';
+import { api, reportsAPI } from '@/lib/api';
+import { ArrowLeft, TrendingUp, FileText, Loader2, Trash2, ChevronDown, ChevronUp, ShieldCheck, AlertTriangle, ShieldAlert, Sparkles, Paintbrush, Image as ImageIcon, X, Columns, Pencil, Check, Download } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import Spinner from '@/components/ui/Spinner';
 import type { Property } from '@/types';
@@ -17,6 +17,7 @@ function PropertyDetailContent() {
   const t = useTranslations('property');
   const tc = useTranslations('common');
   const tp = useTranslations('photos');
+  const tr = useTranslations('report');
   const params = useParams();
   const router = useRouter();
   const propertyId = params.id as string;
@@ -212,13 +213,24 @@ function PropertyDetailContent() {
                 {property.city} {property.postal_code}
               </p>
             </div>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center px-3 py-2 border border-danger-300 text-sm font-medium rounded-md text-danger-700 bg-white hover:bg-danger-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {tc('delete')}
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href={reportsAPI.downloadFullReport(property.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {tr('downloadReport')}
+              </a>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex items-center px-3 py-2 border border-danger-300 text-sm font-medium rounded-md text-danger-700 bg-white hover:bg-danger-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {tc('delete')}
+              </button>
+            </div>
           </div>
 
           {error && (

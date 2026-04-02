@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import { api } from '@/lib/api';
-import { Plus, Home, Trash2 } from 'lucide-react';
+import { Plus, Home, Trash2, FileText, Sparkles, TrendingUp, ArrowRight } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import type { Property } from '@/types';
 
@@ -95,19 +95,32 @@ function PropertiesContent() {
                   <p className="mt-2 text-sm text-gray-500">{t('loading')}</p>
                 </div>
               ) : properties.length === 0 ? (
-                <div className="text-center py-12">
-                  <Home className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('empty.title')}</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {t('empty.description')}
-                  </p>
-                  <div className="mt-6">
+                <div className="py-8 px-4">
+                  <div className="text-center mb-8">
+                    <Home className="mx-auto h-12 w-12 text-primary-400 mb-3" />
+                    <h3 className="text-lg font-semibold text-gray-900">{t('empty.title')}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{t('empty.subtitle')}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-8">
+                    {[
+                      { icon: <FileText className="h-5 w-5" />, text: t('empty.feature1') },
+                      { icon: <Sparkles className="h-5 w-5" />, text: t('empty.feature2') },
+                      { icon: <TrendingUp className="h-5 w-5" />, text: t('empty.feature3') },
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                        <span className="text-primary-500">{feature.icon}</span>
+                        {feature.text}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center">
                     <button
                       onClick={() => router.push('/properties/new')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                     >
                       <Plus className="h-5 w-5 mr-2" />
                       {t('addProperty')}
+                      <ArrowRight className="h-5 w-5 ml-2" />
                     </button>
                   </div>
                 </div>

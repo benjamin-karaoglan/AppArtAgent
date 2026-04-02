@@ -234,6 +234,27 @@
       "redesignsGenerated": "Redesigns Generated",
       "dvfRecords": "DVF Records Available"
     },
+    "gettingStarted": {
+      "title": "Get started in 4 easy steps",
+      "subtitle": "Add a property and let AI do the heavy lifting",
+      "cta": "Add your first property",
+      "step1": {
+        "title": "Add a property",
+        "description": "Enter the address and basic details of the apartment you're considering"
+      },
+      "step2": {
+        "title": "Upload documents",
+        "description": "Drop in PV d'AG, diagnostics, tax notices — AI classifies them automatically"
+      },
+      "step3": {
+        "title": "AI analysis",
+        "description": "Get risk assessment, hidden costs, and cross-document insights in seconds"
+      },
+      "step4": {
+        "title": "Price insights",
+        "description": "Compare with real DVF market data and get a buying recommendation"
+      }
+    },
     "properties": {
       "title": "Your Properties",
       "addProperty": "Add Property",
@@ -687,12 +708,20 @@
     "addProperty": "Add Property",
     "loading": "Loading properties...",
     "empty": {
-      "title": "No properties",
-      "description": "Get started by adding your first property."
+      "title": "No properties yet",
+      "subtitle": "Add your first property to unlock AI-powered analysis",
+      "feature1": "Document analysis",
+      "feature2": "AI risk assessment",
+      "feature3": "DVF price comparison"
     },
     "deleteTitle": "Delete Property",
     "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
     "deleteFailed": "Failed to delete property. Please try again."
+  },
+  "report": {
+    "downloadReport": "Download Report",
+    "exportPdf": "Export PDF",
+    "downloading": "Downloading..."
   },
   "metadata": {
     "title": "AppArt Agent - Smart Property Decisions",
