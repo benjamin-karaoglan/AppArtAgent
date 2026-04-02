@@ -19,7 +19,7 @@ export const {
 // Password reset & account management — accessed via $fetch to avoid TS inference issues
 // Better Auth exposes these when emailAndPassword is enabled on the server
 export const forgetPassword = async ({ email, redirectTo }: { email: string; redirectTo: string }) => {
-  return authClient.$fetch('/forget-password', {
+  return authClient.$fetch('/request-password-reset', {
     method: 'POST',
     body: { email, redirectTo },
   });
