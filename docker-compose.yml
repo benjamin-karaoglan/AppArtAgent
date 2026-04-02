@@ -80,6 +80,9 @@ services:
       AUTO_IMPORT_DVF: ${AUTO_IMPORT_DVF:-false}
       LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
       LOGFIRE_ENABLED: ${LOGFIRE_ENABLED:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FEEDBACK_EMAIL: ${FEEDBACK_EMAIL:-}
+      EMAIL_FROM: ${EMAIL_FROM:-AppArt Agent <noreply@appartagent.com>}
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv # Preserve venv from Docker image

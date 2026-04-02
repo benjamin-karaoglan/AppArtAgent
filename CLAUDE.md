@@ -254,6 +254,9 @@ Key variables (see `.env.example` for full list):
 | `GCS_DOCUMENTS_BUCKET` / `GCS_PHOTOS_BUCKET` | GCS bucket names |
 | `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | PostHog project token (optional, leave empty to disable) |
 | `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host (default: `https://eu.i.posthog.com`) |
+| `RESEND_API_KEY` | Resend API key for feedback emails (optional) |
+| `FEEDBACK_EMAIL` | Destination email for feedback submissions |
+| `EMAIL_FROM` | Sender address for outgoing emails |
 | `LOGFIRE_TOKEN` | Observability (optional) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth (optional) |
 
