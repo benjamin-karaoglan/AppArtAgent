@@ -7,7 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
-import { Plus, Home, FileText, TrendingUp, Trash2, Palette } from 'lucide-react';
+import { Plus, Home, FileText, TrendingUp, Trash2, Palette, Sparkles, ArrowRight } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import type { Property, PropertyWithSynthesis } from '@/types';
 
@@ -167,19 +167,41 @@ function DashboardContent() {
                   <p className="mt-2 text-sm text-gray-500">{t('properties.loading')}</p>
                 </div>
               ) : properties.length === 0 ? (
-                <div className="text-center py-12">
-                  <Home className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('properties.empty.title')}</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {t('properties.empty.description')}
-                  </p>
-                  <div className="mt-6">
+                <div className="py-8 px-4">
+                  <div className="text-center mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900">{t('gettingStarted.title')}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{t('gettingStarted.subtitle')}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    {[
+                      { step: 1, icon: <Home className="h-6 w-6" />, title: t('gettingStarted.step1.title'), description: t('gettingStarted.step1.description'), active: true },
+                      { step: 2, icon: <FileText className="h-6 w-6" />, title: t('gettingStarted.step2.title'), description: t('gettingStarted.step2.description'), active: false },
+                      { step: 3, icon: <Sparkles className="h-6 w-6" />, title: t('gettingStarted.step3.title'), description: t('gettingStarted.step3.description'), active: false },
+                      { step: 4, icon: <TrendingUp className="h-6 w-6" />, title: t('gettingStarted.step4.title'), description: t('gettingStarted.step4.description'), active: false },
+                    ].map(({ step, icon, title, description, active }) => (
+                      <div
+                        key={step}
+                        className={`relative rounded-lg p-4 ${active ? 'bg-primary-50 border-2 border-primary-200' : 'bg-gray-50 border border-gray-200'}`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${active ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                            {step}
+                          </span>
+                          <span className={active ? 'text-primary-600' : 'text-gray-400'}>{icon}</span>
+                        </div>
+                        <h4 className={`text-sm font-medium ${active ? 'text-gray-900' : 'text-gray-500'}`}>{title}</h4>
+                        <p className={`mt-1 text-xs ${active ? 'text-gray-600' : 'text-gray-400'}`}>{description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center">
                     <button
                       onClick={() => router.push('/properties/new')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                      className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                     >
                       <Plus className="h-5 w-5 mr-2" />
-                      {t('properties.addProperty')}
+                      {t('gettingStarted.cta')}
+                      <ArrowRight className="h-5 w-5 ml-2" />
                     </button>
                   </div>
                 </div>
