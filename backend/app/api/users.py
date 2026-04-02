@@ -280,7 +280,11 @@ async def send_reset_email(data: ResetEmailRequest):
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #2563eb; font-size: 24px; margin: 0;">AppArt Agent</h1>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" width="40" height="40" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+          <path d="M16 4L3 15h4v12h18V15h4L16 4z" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M12 27V19h8v8" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <h1 style="color: #2563eb; font-size: 24px; margin: 0; display: inline-block; vertical-align: middle;">AppArt Agent</h1>
       </div>
       <h2 style="color: #111827; font-size: 20px;">Reset your password</h2>
       <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
