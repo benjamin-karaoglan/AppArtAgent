@@ -120,3 +120,6 @@ deployer-key.json
 
 # Assets
 /assets/
+
+# Superpowers specs and plans
+docs/superpowers/

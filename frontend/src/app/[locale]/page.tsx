@@ -24,7 +24,12 @@ export default function HomePage() {
             {t('hero.subtitle')}
           </p>
           <div className="flex gap-4 justify-center">
-            {!loading && isAuthenticated ? (
+            {loading ? (
+              <>
+                <div className="h-12 min-w-[11.5rem] bg-primary-200 rounded-lg animate-pulse" />
+                <div className="h-12 min-w-[11.5rem] bg-gray-200 rounded-lg animate-pulse" />
+              </>
+            ) : isAuthenticated ? (
               <>
                 <Link href="/dashboard" className="btn-primary text-lg px-8 py-3 text-center min-w-[11.5rem]">
                   {t('hero.goToDashboard')}
@@ -95,7 +100,9 @@ export default function HomePage() {
         <div className="mt-24 text-center bg-primary-600 text-white rounded-2xl p-12">
           <h2 className="text-3xl font-bold mb-4">{t('cta.title')}</h2>
           <p className="text-xl mb-8 opacity-90">{t('cta.subtitle')}</p>
-          {!loading && isAuthenticated ? (
+          {loading ? (
+            <div className="h-12 w-48 bg-white/30 rounded-lg animate-pulse inline-block" />
+          ) : isAuthenticated ? (
             <Link href="/dashboard" className="bg-white text-primary-600 hover:bg-gray-100 font-medium py-3 px-8 rounded-lg transition-colors inline-block">
               {t('cta.goToDashboard')}
             </Link>
@@ -106,14 +113,6 @@ export default function HomePage() {
           )}
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-16">
-        <div className="container mx-auto px-4 text-center">
-          <p>{t('footer.copyright')}</p>
-          <p className="text-gray-400 mt-2">{t('footer.tagline')}</p>
-        </div>
-      </footer>
     </div>
   )
 }

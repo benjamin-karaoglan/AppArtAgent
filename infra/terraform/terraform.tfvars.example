@@ -131,6 +131,25 @@ api_subdomain = "api"
 logfire_token = ""
 
 # =============================================================================
+# OPTIONAL: EMAIL (Resend)
+# =============================================================================
+
+# Resend API key for transactional emails (feedback, notifications)
+# Sign up at https://resend.com (free tier: 3,000 emails/month)
+#
+# Setup:
+#   1. Create a Resend account and verify your domain (appartagent.com)
+#   2. Generate an API key
+#   3. Set it here or after deployment:
+#      echo -n 'KEY' | gcloud secrets versions add resend-api-key --data-file=-
+#
+# Leave empty to disable email delivery (feedback still accepted, just not emailed)
+resend_api_key = ""
+
+# Email address to receive feedback submissions
+feedback_email = "feedback@appartagent.com"
+
+# =============================================================================
 # OPTIONAL: GOOGLE OAUTH
 # =============================================================================
 
