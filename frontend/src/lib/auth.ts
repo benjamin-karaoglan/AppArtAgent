@@ -17,7 +17,8 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      // Server-side: use internal Docker network name; NEXT_PUBLIC_API_URL is for the browser
+      const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       try {
         await fetch(`${apiUrl}/api/users/send-reset-email`, {
           method: "POST",
