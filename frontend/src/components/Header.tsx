@@ -7,7 +7,7 @@ import { LogOut, User, Globe } from 'lucide-react';
 import AppArtLogo from './AppArtLogo';
 
 export default function Header() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const t = useTranslations('header');
   const locale = useLocale();
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function Header() {
               <span className="ml-2 text-xl font-bold text-gray-900">{t('appName')}</span>
             </Link>
 
-            {isAuthenticated && (
+            {!loading && isAuthenticated && (
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                 <Link
                   href="/dashboard"
@@ -56,7 +56,12 @@ export default function Header() {
               {locale === 'fr' ? 'EN' : 'FR'}
             </button>
 
-            {isAuthenticated ? (
+            {loading ? (
+              <div className="flex items-center space-x-4">
+                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+                <div className="h-9 w-32 bg-gray-200 rounded-md animate-pulse" />
+              </div>
+            ) : isAuthenticated ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center text-sm text-gray-700">
                   <User className="h-5 w-5 mr-2 text-gray-400" />
