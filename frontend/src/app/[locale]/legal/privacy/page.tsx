@@ -1,25 +1,35 @@
-import { useTranslations } from 'next-intl'
-import { getTranslations } from 'next-intl/server'
-import { Shield } from 'lucide-react'
-import type { Metadata } from 'next'
+'use client'
 
-type Props = { params: Promise<{ locale: string }> }
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: 'legal.privacy' })
-  return { title: t('title') }
-}
+import { useTranslations, useLocale } from 'next-intl'
+import { useRouter, usePathname } from '@/i18n/navigation'
+import { Shield, Globe } from 'lucide-react'
 
 export default function PrivacyPolicyPage() {
   const t = useTranslations('legal.privacy')
+  const locale = useLocale()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const switchLocale = (newLocale: string) => {
+    router.replace(pathname, { locale: newLocale as 'fr' | 'en' })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-12 max-w-3xl">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="w-8 h-8 text-primary-600" />
-          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Shield className="w-8 h-8 text-primary-600" />
+            <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+          </div>
+          <button
+            onClick={() => switchLocale(locale === 'fr' ? 'en' : 'fr')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            title={locale === 'fr' ? 'Switch to English' : 'Passer en français'}
+          >
+            <Globe className="w-4 h-4" />
+            {locale === 'fr' ? 'EN' : 'FR'}
+          </button>
         </div>
         <p className="text-sm text-gray-500 mb-8">{t('lastUpdated')}</p>
 
