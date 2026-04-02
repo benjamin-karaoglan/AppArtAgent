@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     LOGFIRE_TOKEN: str = os.getenv("LOGFIRE_TOKEN", "")
     LOGFIRE_ENABLED: bool = os.getenv("LOGFIRE_ENABLED", "false").lower() == "true"
 
+    # Email (Resend)
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    FEEDBACK_EMAIL: str = os.getenv("FEEDBACK_EMAIL", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "AppArt Agent <noreply@appartagent.com>")
+
     # Redis Cache
     REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
@@ -108,6 +113,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 settings = Settings()

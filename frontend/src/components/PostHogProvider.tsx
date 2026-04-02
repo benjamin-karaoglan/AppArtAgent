@@ -1,10 +1,11 @@
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import posthog from 'posthog-js'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
-import { initPostHog, POSTHOG_KEY } from '@/lib/posthog'
+import { POSTHOG_KEY, POSTHOG_CONFIG } from '@/lib/posthog'
+import { getAnalyticsConsent } from '@/components/ui/CookieConsent'
 
 function PostHogPageView() {
   const pathname = usePathname()
@@ -20,11 +21,36 @@ function PostHogPageView() {
 }
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const [analyticsAllowed, setAnalyticsAllowed] = useState(false)
+
   useEffect(() => {
-    initPostHog()
+    // Check initial consent
+    setAnalyticsAllowed(getAnalyticsConsent())
+
+    // Listen for consent changes
+    const handleConsentChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      setAnalyticsAllowed(detail.analytics)
+
+      if (detail.analytics && POSTHOG_KEY) {
+        posthog.init(POSTHOG_KEY, POSTHOG_CONFIG)
+      } else if (!detail.analytics && posthog.__loaded) {
+        posthog.opt_out_capturing()
+      }
+    }
+
+    window.addEventListener('cookie-consent-change', handleConsentChange)
+    return () => window.removeEventListener('cookie-consent-change', handleConsentChange)
   }, [])
 
-  if (!POSTHOG_KEY) {
+  // Initialize PostHog if consent was already given (returning user)
+  useEffect(() => {
+    if (analyticsAllowed && POSTHOG_KEY && !posthog.__loaded) {
+      posthog.init(POSTHOG_KEY, POSTHOG_CONFIG)
+    }
+  }, [analyticsAllowed])
+
+  if (!POSTHOG_KEY || !analyticsAllowed) {
     return <>{children}</>
   }
 

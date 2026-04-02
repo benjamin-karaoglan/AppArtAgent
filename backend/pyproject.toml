@@ -47,6 +47,7 @@ dependencies = [
     "logfire[fastapi,sqlalchemy,google-genai,httpx]>=4.22.0",
     # Google Cloud (for GCP deployment)
     "google-cloud-storage>=2.14.0",
+    "resend>=2.0.0",
 ]
 
 [project.optional-dependencies]
