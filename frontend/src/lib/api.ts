@@ -181,5 +181,18 @@ export const feedbackAPI = {
   },
 }
 
+// Reports API (PDF exports)
+export const reportsAPI = {
+  downloadFullReport: (propertyId: number): string => {
+    return `${API_URL}/api/properties/${propertyId}/report/pdf`
+  },
+  downloadPriceAnalysis: (propertyId: number): string => {
+    return `${API_URL}/api/properties/${propertyId}/report/price-analysis/pdf`
+  },
+  downloadSynthesis: (propertyId: number): string => {
+    return `${API_URL}/api/properties/${propertyId}/report/synthesis/pdf`
+  },
+}
+
 // Default export for convenience
 export default api

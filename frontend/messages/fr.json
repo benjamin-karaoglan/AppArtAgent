@@ -718,6 +718,11 @@
     "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
     "deleteFailed": "Échec de la suppression du bien. Veuillez réessayer."
   },
+  "report": {
+    "downloadReport": "Télécharger le rapport",
+    "exportPdf": "Exporter PDF",
+    "downloading": "Téléchargement..."
+  },
   "metadata": {
     "title": "AppArt Agent - Décisions Immobilières Intelligentes",
     "description": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France",

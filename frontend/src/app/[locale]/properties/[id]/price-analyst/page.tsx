@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, TrendingUp } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Download } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { Link } from '@/i18n/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -12,11 +12,12 @@ import PriceMetricsGrid from '@/components/PriceMetricsGrid';
 import MarketTrendChart from '@/components/MarketTrendChart';
 import TrendProjectionCard from '@/components/TrendProjectionCard';
 import ComparableSalesTable from '@/components/ComparableSalesTable';
-import { api } from '@/lib/api';
+import { api, reportsAPI } from '@/lib/api';
 import type { Property, PriceAnalysisFull } from '@/types';
 
 function PriceAnalystContent() {
   const t = useTranslations('property');
+  const tr = useTranslations('report');
   const params = useParams();
   const propertyId = params.id as string;
 
@@ -114,18 +115,31 @@ function PriceAnalystContent() {
 
           {/* Page title */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-primary-600" />
-              {t('priceAnalyst.title')}
-            </h1>
-            {property && (
-              <p className="mt-2 text-sm text-gray-600">
-                {property.address} - {property.city} {property.postal_code}
-                {property.asking_price && (
-                  <span className="ml-3 font-semibold">{formatCurrency(property.asking_price)}</span>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <TrendingUp className="h-8 w-8 text-primary-600" />
+                  {t('priceAnalyst.title')}
+                </h1>
+                {property && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    {property.address} - {property.city} {property.postal_code}
+                    {property.asking_price && (
+                      <span className="ml-3 font-semibold">{formatCurrency(property.asking_price)}</span>
+                    )}
+                  </p>
                 )}
-              </p>
-            )}
+              </div>
+              <a
+                href={reportsAPI.downloadPriceAnalysis(Number(propertyId))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {tr('exportPdf')}
+              </a>
+            </div>
           </div>
 
           {!analysis?.estimated_value ? (

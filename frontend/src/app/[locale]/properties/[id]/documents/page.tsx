@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import Spinner from '@/components/ui/Spinner';
-import { api } from '@/lib/api';
+import { api, reportsAPI } from '@/lib/api';
 import {
   ArrowLeft,
   FileText,
@@ -24,6 +24,7 @@ import {
   X,
   Undo2,
   Save,
+  Download,
 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
@@ -168,6 +169,7 @@ function getAnnualCostEntry(value: number | { amount: number; source?: string | 
 function DocumentsPageContent() {
   const t = useTranslations('documents');
   const tc = useTranslations('common');
+  const tr = useTranslations('report');
   const params = useParams();
   const router = useRouter();
   const propertyId = params.id as string;
@@ -1044,6 +1046,15 @@ function DocumentsPageContent() {
                   {t('propertySynthesis.title')}
                 </h2>
                 <div className="flex items-center gap-3">
+                  <a
+                    href={reportsAPI.downloadSynthesis(Number(propertyId))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    {tr('exportPdf')}
+                  </a>
                   <button
                     onClick={handleRegenerateSynthesis}
                     disabled={regenerating}
