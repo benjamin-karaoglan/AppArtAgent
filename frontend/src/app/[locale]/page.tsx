@@ -106,14 +106,6 @@ export default function HomePage() {
           )}
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-16">
-        <div className="container mx-auto px-4 text-center">
-          <p>{t('footer.copyright')}</p>
-          <p className="text-gray-400 mt-2">{t('footer.tagline')}</p>
-        </div>
-      </footer>
     </div>
   )
 }
