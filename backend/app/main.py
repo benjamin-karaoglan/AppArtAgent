@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import analysis, documents, feedback, photos, properties, users, webhooks
+from app.api import analysis, documents, feedback, photos, properties, reports, users, webhooks
 from app.core.config import settings
 from app.core.logging import instrument_fastapi, setup_logfire, setup_logging
 
@@ -81,6 +81,7 @@ app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
 app.include_router(photos.router, prefix="/api/photos", tags=["photos"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["feedback"])
+app.include_router(reports.router, prefix="/api/properties", tags=["reports"])
 
 
 @app.get("/")

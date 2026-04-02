@@ -19,6 +19,10 @@ RUN apt-get update && apt-get install -y \
     libmupdf-dev \
     mupdf-tools \
     ca-certificates \
+    libpango1.0-dev \
+    libcairo2-dev \
+    libgdk-pixbuf2.0-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -55,6 +59,11 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     libmupdf-dev \
     graphviz \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi8 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -92,6 +101,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     libmupdf-dev \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi8 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the virtual environment from builder
