@@ -2,7 +2,7 @@
 
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, usePathname } from '@/i18n/navigation'
-import { FileText, Globe } from 'lucide-react'
+import { FileText, Globe, ArrowLeft } from 'lucide-react'
 
 export default function TermsOfServicePage() {
   const t = useTranslations('legal.terms')
@@ -17,6 +17,13 @@ export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-12 max-w-3xl">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {locale === 'fr' ? 'Retour' : 'Back'}
+        </button>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <FileText className="w-8 h-8 text-primary-600" />

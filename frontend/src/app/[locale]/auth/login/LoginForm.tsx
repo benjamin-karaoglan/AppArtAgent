@@ -157,6 +157,15 @@ export default function LoginForm({ googleAuthEnabled }: { googleAuthEnabled: bo
             </div>
           </div>
 
+          <div className="flex justify-end">
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm text-primary-600 hover:text-primary-500"
+            >
+              {t('login.forgotPassword')}
+            </Link>
+          </div>
+
           <div>
             <button
               type="submit"

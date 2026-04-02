@@ -20,6 +20,7 @@
     "dashboard": "Tableau de bord",
     "properties": "Biens",
     "logout": "Déconnexion",
+    "settings": "Paramètres",
     "login": "Connexion",
     "getStarted": "Commencer",
     "appName": "AppArt Agent"
@@ -34,6 +35,7 @@
       "passwordPlaceholder": "Mot de passe",
       "submit": "Se connecter",
       "submitting": "Connexion en cours...",
+      "forgotPassword": "Mot de passe oublié ?",
       "googleButton": "Continuer avec Google",
       "googleLoading": "Connexion à Google...",
       "errors": {
@@ -69,6 +71,104 @@
         "passwordsMismatch": "Les mots de passe ne correspondent pas",
         "registrationFailed": "L'inscription a échoué. Veuillez réessayer.",
         "googleFailed": "L'inscription Google a échoué. Veuillez réessayer."
+      }
+    },
+    "forgotPassword": {
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "Entrez votre email et nous vous enverrons un lien de réinitialisation",
+      "email": "Adresse email",
+      "emailPlaceholder": "vous@exemple.com",
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi en cours...",
+      "successTitle": "Vérifiez votre email",
+      "successMessage": "Si un compte existe avec cet email, nous avons envoyé un lien de réinitialisation. Vérifiez votre boîte de réception et vos spams.",
+      "backToLogin": "Retour à la connexion",
+      "errors": {
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Adresse email invalide",
+        "failed": "Échec de l'envoi du lien. Veuillez réessayer."
+      }
+    },
+    "resetPassword": {
+      "title": "Nouveau mot de passe",
+      "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+      "newPassword": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "confirmPasswordPlaceholder": "Confirmer le nouveau mot de passe",
+      "submit": "Réinitialiser le mot de passe",
+      "submitting": "Réinitialisation...",
+      "successTitle": "Mot de passe réinitialisé",
+      "successMessage": "Votre mot de passe a été réinitialisé. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+      "goToLogin": "Se connecter",
+      "errors": {
+        "passwordRequired": "Le mot de passe est requis",
+        "passwordMinLength": "Le mot de passe doit contenir au moins {min} caractères",
+        "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+        "passwordsMismatch": "Les mots de passe ne correspondent pas",
+        "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
+        "failed": "Échec de la réinitialisation. Veuillez réessayer."
+      }
+    }
+  },
+  "settings": {
+    "title": "Paramètres du compte",
+    "profile": {
+      "title": "Profil",
+      "name": "Nom d'affichage",
+      "namePlaceholder": "Votre nom",
+      "email": "Email",
+      "emailReadOnly": "L'email ne peut pas être modifié",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "saved": "Profil mis à jour",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "failed": "Échec de la mise à jour du profil. Veuillez réessayer."
+      }
+    },
+    "password": {
+      "title": "Changer le mot de passe",
+      "current": "Mot de passe actuel",
+      "currentPlaceholder": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "newPlaceholder": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "confirmPlaceholder": "Confirmer le nouveau mot de passe",
+      "submit": "Changer le mot de passe",
+      "submitting": "Modification...",
+      "changed": "Mot de passe modifié avec succès",
+      "errors": {
+        "currentRequired": "Le mot de passe actuel est requis",
+        "newRequired": "Le nouveau mot de passe est requis",
+        "newMinLength": "Le mot de passe doit contenir au moins {min} caractères",
+        "confirmRequired": "Veuillez confirmer votre nouveau mot de passe",
+        "mismatch": "Les mots de passe ne correspondent pas",
+        "wrongCurrent": "Le mot de passe actuel est incorrect",
+        "failed": "Échec du changement de mot de passe. Veuillez réessayer."
+      }
+    },
+    "language": {
+      "title": "Langue",
+      "description": "Choisissez votre langue préférée",
+      "french": "Français",
+      "english": "English"
+    },
+    "dangerZone": {
+      "title": "Zone de danger",
+      "deleteAccount": "Supprimer le compte",
+      "deleteDescription": "Supprimez définitivement votre compte et toutes les données associées. Cette action est irréversible.",
+      "deleteButton": "Supprimer mon compte",
+      "confirmTitle": "Supprimer votre compte ?",
+      "confirmMessage": "Cela supprimera définitivement votre compte, tous vos biens, documents, photos et analyses. Cette action est irréversible.",
+      "confirmInstruction": "Tapez SUPPRIMER pour confirmer",
+      "confirmPlaceholder": "Tapez SUPPRIMER",
+      "confirmButton": "Supprimer définitivement le compte",
+      "deleting": "Suppression du compte...",
+      "errors": {
+        "confirmRequired": "Veuillez taper SUPPRIMER pour confirmer",
+        "confirmMismatch": "Veuillez taper SUPPRIMER exactement",
+        "failed": "Échec de la suppression du compte. Veuillez réessayer."
       }
     }
   },

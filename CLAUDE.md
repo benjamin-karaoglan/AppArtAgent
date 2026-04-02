@@ -27,8 +27,9 @@
 - **Caching**: Redis via fault-tolerant `app/core/cache.py` -- Redis down = cache miss, never an error. Key cached endpoints: `/api/properties/dvf-stats` (1h TTL), `/api/properties/{id}/price-analysis` (30min TTL), `/api/properties/{id}/price-analysis/full` (30min TTL)
 - **Entry point**: `backend/app/main.py`
 - **Config**: `backend/app/core/config.py` (Pydantic settings from env vars)
-- **API routes**: `backend/app/api/` (users, properties, documents, photos, analysis, webhooks)
-- **Services**: `backend/app/services/` (ai/, documents/, storage, dvf_service, price_analysis)
+- **Email**: Resend SDK for transactional emails (password reset, feedback). Best-effort delivery via `app/services/email.py`
+- **API routes**: `backend/app/api/` (users, properties, documents, photos, analysis, webhooks, feedback)
+- **Services**: `backend/app/services/` (ai/, documents/, storage, dvf_service, price_analysis, email)
 - **Models**: `backend/app/models/` (user, property, document, photo, analysis, dvf)
 
 ### Frontend (`frontend/`)
@@ -41,10 +42,10 @@
 - **Auth**: Better Auth 1.4 with Google OAuth support
 - **i18n**: next-intl (locales: `fr`, `en`, default: `fr`)
 - **Icons**: Lucide React
-- **Analytics**: PostHog (`posthog-js`) with reverse proxy via Next.js rewrites (`/ingest/*`)
+- **Analytics**: PostHog (`posthog-js`) with reverse proxy via Next.js rewrites (`/ingest/*`). Gated on GDPR cookie consent — PostHog only initializes after user accepts analytics cookies
 - **PWA**: `@ducanh2912/next-pwa` (installable on mobile, disabled in dev)
 - **API client**: Axios (`frontend/src/lib/api.ts`) hitting `NEXT_PUBLIC_API_URL`
-- **Pages**: `frontend/src/app/[locale]/` (dashboard, properties, documents, photos, redesign-studio, price-analyst)
+- **Pages**: `frontend/src/app/[locale]/` (dashboard, properties, documents, photos, redesign-studio, price-analyst, settings, legal/privacy, legal/terms, auth/forgot-password, auth/reset-password)
 - **Package manager**: pnpm
 - **Address autocomplete**: Property creation uses api-adresse.data.gouv.fr (French government geocoding API) directly from the frontend for instant address suggestions — no backend call needed during typing
 
@@ -69,6 +70,10 @@ Shared UI components live in `frontend/src/components/ui/`:
 | `Card` | Consistent card wrapper with padding options |
 | `SectionHeader` | Section title with icon and optional action |
 | `StatCard` | Dashboard stat card with icon |
+| `Footer` | Site footer with copyright, tagline, links to legal pages |
+| `CookieConsent` | GDPR cookie consent banner (accept/reject/manage). Exports `getAnalyticsConsent()` |
+| `FeedbackButton` | Floating feedback button + modal (bug report, feature request, general feedback) |
+| `FeedbackModal` | Feedback form with type selector, message, email, screenshot upload (5MB max) |
 
 Utility CSS classes are defined in `globals.css` (`btn-primary`, `btn-secondary`, `badge-success`, etc.).
 
@@ -254,9 +259,10 @@ Key variables (see `.env.example` for full list):
 | `GCS_DOCUMENTS_BUCKET` / `GCS_PHOTOS_BUCKET` | GCS bucket names |
 | `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | PostHog project token (optional, leave empty to disable) |
 | `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host (default: `https://eu.i.posthog.com`) |
-| `RESEND_API_KEY` | Resend API key for feedback emails (optional) |
+| `RESEND_API_KEY` | Resend API key for transactional emails: password reset, feedback (optional) |
 | `FEEDBACK_EMAIL` | Destination email for feedback submissions |
 | `EMAIL_FROM` | Sender address for outgoing emails |
+| `INTERNAL_API_URL` | Backend URL for server-side calls inside Docker (`http://backend:8000`). Used by Better Auth's password reset hook. Not needed outside Docker. |
 | `LOGFIRE_TOKEN` | Observability (optional) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth (optional) |
 
@@ -311,6 +317,21 @@ First-time GCP setup:
 `.github/workflows/dvf-import.yml`: Manually triggered workflow that executes the `dvf-import` Cloud Run Job (downloads + imports full DVF dataset into Cloud SQL).
 
 `.github/workflows/docs.yml`: Builds and deploys MkDocs to GitHub Pages.
+
+## Trust & Safety
+
+- **Legal pages**: Privacy policy (`/legal/privacy`) and Terms of Service (`/legal/terms`), fully translated FR/EN with in-page language switcher and back button
+- **GDPR cookie consent**: Banner with accept/reject/manage. PostHog analytics only initializes after user consents. Consent stored in `cookie_consent` cookie, communicated via `CustomEvent('cookie-consent-change')`
+- **Error pages**: Custom 404 (root-level `not-found.tsx`) and 500 error boundary (`error.tsx` with i18n)
+- **Feedback system**: Floating button + modal → `POST /api/feedback` (public, rate-limited 5/min/IP, XSS-safe) → email via Resend. Supports bug reports, feature requests, general feedback with optional screenshot
+- **Footer**: Shared footer on all pages with copyright, tagline, legal page links
+
+## Account Management
+
+- **Settings page** (`/settings`): Protected page with profile editing (name via Better Auth `updateUser`), password change (via Better Auth `changePassword`), FR/EN language toggle, and danger zone for account deletion
+- **Password reset flow**: "Forgot password?" link on login → `/auth/forgot-password` (email form) → Better Auth's `/request-password-reset` endpoint → `sendResetPassword` hook calls `POST /api/users/send-reset-email` → Resend delivers branded email with reset link → `/auth/reset-password` (new password form) → Better Auth's `/reset-password` endpoint
+- **Account deletion**: `DELETE /api/users/me` — cascading cleanup: storage files (photos, documents, best-effort), Better Auth data (sessions, accounts, verifications, ba_user), then user record (SQLAlchemy cascades handle properties, documents). Requires typing DELETE/SUPPRIMER to confirm
+- **Header**: User name with chevron dropdown → Settings and Logout. Language auto-detected from browser `Accept-Language` (next-intl `localeDetection: true`), changeable in Settings
 
 ## Key Domain Concepts
 
