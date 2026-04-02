@@ -108,6 +108,19 @@ variable "logfire_token" {
   sensitive   = true
 }
 
+variable "resend_api_key" {
+  description = "Resend API key for transactional emails (optional). Can also be set via: echo -n 'KEY' | gcloud secrets versions add resend-api-key --data-file=-"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "feedback_email" {
+  description = "Email address to receive feedback submissions"
+  type        = string
+  default     = "feedback@appartagent.com"
+}
+
 variable "google_oauth_client_id" {
   description = "Google OAuth 2.0 Client ID (optional)"
   type        = string
@@ -621,6 +634,30 @@ resource "google_secret_manager_secret_version" "google_oauth_client_secret" {
   secret_data = var.google_oauth_client_secret
 }
 
+# Resend API Key (for email delivery)
+resource "google_secret_manager_secret" "resend_api_key" {
+  secret_id = "resend-api-key"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "resend_api_key" {
+  count = var.resend_api_key != "" ? 1 : 0
+
+  secret      = google_secret_manager_secret.resend_api_key.id
+  secret_data = var.resend_api_key
+}
+
+resource "google_secret_manager_secret_iam_member" "backend_resend_api_key" {
+  secret_id = google_secret_manager_secret.resend_api_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.backend.email}"
+}
+
 # Grant frontend service account access to new secrets
 resource "google_secret_manager_secret_iam_member" "frontend_better_auth_secret" {
   secret_id = google_secret_manager_secret.better_auth_secret.id
@@ -797,6 +834,30 @@ resource "google_cloud_run_v2_service" "backend" {
             }
           }
         }
+      }
+
+      # Email (Resend) - feedback and notifications
+      dynamic "env" {
+        for_each = var.resend_api_key != "" ? [1] : []
+        content {
+          name = "RESEND_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.resend_api_key.secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      env {
+        name  = "FEEDBACK_EMAIL"
+        value = var.feedback_email
+      }
+
+      env {
+        name  = "EMAIL_FROM"
+        value = "AppArt Agent <noreply@appartagent.com>"
       }
 
       # CORS - Allow custom domain if configured
