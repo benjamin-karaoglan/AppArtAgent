@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useRef, useEffect } from 'react';
 import { Link, useRouter, usePathname } from '@/i18n/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User, Globe, Settings } from 'lucide-react';
+import { LogOut, Globe, Settings, ChevronDown } from 'lucide-react';
 import AppArtLogo from './AppArtLogo';
 
 export default function Header() {
@@ -12,6 +13,19 @@ export default function Header() {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const switchLocale = (newLocale: string) => {
     router.replace(pathname, { locale: newLocale as 'fr' | 'en' });
@@ -57,30 +71,39 @@ export default function Header() {
             </button>
 
             {loading ? (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center">
                 <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
-                <div className="h-9 w-32 bg-gray-200 rounded-md animate-pulse" />
               </div>
             ) : isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center text-sm text-gray-700">
-                  <User className="h-5 w-5 mr-2 text-gray-400" />
-                  <span>{user?.full_name}</span>
-                </div>
-                <Link
-                  href="/settings"
-                  className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-                  title={t('settings')}
-                >
-                  <Settings className="h-4 w-4" />
-                </Link>
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={logout}
-                  className="inline-flex items-center justify-center min-w-[8.5rem] px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {t('logout')}
+                  <span>{user?.full_name}</span>
+                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                    <Link
+                      href="/settings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-gray-400" />
+                      {t('settings')}
+                    </Link>
+                    <hr className="my-1 border-gray-100" />
+                    <button
+                      onClick={() => { setDropdownOpen(false); logout(); }}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4 text-gray-400" />
+                      {t('logout')}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center space-x-4">
