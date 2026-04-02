@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libpango1.0-dev \
     libcairo2-dev \
-    libgdk-pixbuf2.0-dev \
+    libgdk-pixbuf-2.0-dev \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -62,7 +62,7 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libcairo2 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi8 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -104,7 +104,7 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libcairo2 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi8 \
     && rm -rf /var/lib/apt/lists/*
 
