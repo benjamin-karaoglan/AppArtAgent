@@ -234,27 +234,27 @@ docker-compose exec minio-setup mc ls local/documents/
 
 ## Development Workflow
 
-### Using dev.sh Script
+### Using Task Commands
 
 ```bash
 # Start services
-./dev.sh start
+task start
 
 # View logs
-./dev.sh logs
-./dev.sh logs backend
+task logs
+task logs -- backend
 
 # Restart service
-./dev.sh restart backend
+task restart -- backend
 
 # Stop services
-./dev.sh stop
+task stop
 
 # Open shell in container
-./dev.sh shell backend
+task shell -- backend
 
 # Rebuild service
-./dev.sh rebuild backend
+task rebuild -- backend
 ```
 
 ### Hot Reload

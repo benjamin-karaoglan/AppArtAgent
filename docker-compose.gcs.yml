@@ -3,7 +3,7 @@
 # Usage:
 #   docker-compose -f docker-compose.yml -f docker-compose.gcs.yml up -d backend frontend db redis
 #   OR
-#   ./dev.sh start-gcs
+#   task start-gcs
 #
 # Requirements:
 #   1. Set GCS_DOCUMENTS_BUCKET and GCS_PHOTOS_BUCKET in your .env
@@ -26,12 +26,12 @@
 #     --impersonate-service-account=appart-backend@YOUR_PROJECT.iam.gserviceaccount.com
 #
 #   # 3. Start services
-#   ./dev.sh start-gcs
+#   task start-gcs
 #
 # Alternative: Direct ADC (uses your personal Google account permissions)
 # =======================================================================
 #   gcloud auth application-default login
-#   ./dev.sh start-gcs
+#   task start-gcs
 
 services:
   backend:

@@ -1,0 +1,184 @@
+# https://taskfile.dev
+version: "3"
+
+vars:
+  DC: docker compose
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  start:
+    desc: Start all services with hot-reload (uses MinIO)
+    cmds:
+      - "{{.DC}} up -d"
+      - sleep 5
+      - task: _status-check
+    silent: true
+
+  start-gcs:
+    desc: Start services using GCS instead of MinIO
+    preconditions:
+      - sh: '[ -n "$GOOGLE_CLOUD_PROJECT" ]'
+        msg: |
+          GOOGLE_CLOUD_PROJECT is required.
+            export GOOGLE_CLOUD_PROJECT=your-project-id
+      - sh: '[ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] || [ -f "$HOME/.config/gcloud/application_default_credentials.json" ]'
+        msg: |
+          Google Cloud credentials not found.
+            Run: gcloud auth application-default login
+            Or set: export GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+    cmds:
+      - "{{.DC}} -f docker-compose.yml -f docker-compose.gcs.yml up -d backend frontend db redis"
+      - sleep 5
+      - task: _status-check-gcs
+    silent: true
+
+  stop:
+    desc: Stop all services
+    cmds:
+      - "{{.DC}} down"
+
+  restart:
+    desc: "Restart a specific service (e.g. task restart -- backend)"
+    cmds:
+      - "{{.DC}} restart {{.CLI_ARGS}}"
+    preconditions:
+      - sh: '[ -n "{{.CLI_ARGS}}" ]'
+        msg: "Please specify a service: task restart -- backend"
+
+  rebuild:
+    desc: "Rebuild and restart service(s) (e.g. task rebuild -- backend)"
+    cmds:
+      - "{{.DC}} up -d --build {{.CLI_ARGS}}"
+
+  logs:
+    desc: "Follow logs (e.g. task logs, task logs -- backend)"
+    interactive: true
+    cmds:
+      - "{{.DC}} logs -f {{.CLI_ARGS}}"
+
+  status:
+    desc: Show services status
+    cmds:
+      - "{{.DC}} ps"
+
+  shell:
+    desc: "Open shell in container (e.g. task shell, task shell -- frontend)"
+    interactive: true
+    vars:
+      SERVICE: '{{if .CLI_ARGS}}{{.CLI_ARGS}}{{else}}backend{{end}}'
+    cmds:
+      - "{{.DC}} exec {{.SERVICE}} /bin/sh"
+
+  test-reload:
+    desc: Test hot-reload functionality
+    cmds:
+      - |
+        echo "Testing Backend Hot-Reload..."
+        echo "# Test file for hot-reload" > backend/app/_test_reload.py
+        echo "TEST = 'Hot reload works!'" >> backend/app/_test_reload.py
+        echo "Created test file: backend/app/_test_reload.py"
+        {{.DC}} logs --tail=10 backend | grep -i reload || true
+        rm -f backend/app/_test_reload.py
+        echo "Test file removed"
+        echo ""
+        echo "Testing Frontend Hot-Reload..."
+        echo "Open http://localhost:3000 and edit any .tsx file"
+        echo "Changes should appear instantly in the browser!"
+
+  # --- Testing ---
+
+  test:
+    desc: Run backend tests
+    dir: backend
+    cmds:
+      - uv run pytest {{.CLI_ARGS}}
+
+  "test:cov":
+    desc: Run backend tests with coverage
+    dir: backend
+    cmds:
+      - uv run pytest --cov {{.CLI_ARGS}}
+
+  # --- Linting ---
+
+  lint:
+    desc: Run all linters (Python + Frontend)
+    cmds:
+      - task: "lint:py"
+      - task: "lint:fe"
+
+  "lint:py":
+    desc: Lint and format Python code
+    cmds:
+      - uv run ruff check backend/
+      - uv run ruff format --check backend/
+
+  "lint:fe":
+    desc: Lint frontend code
+    dir: frontend
+    cmds:
+      - pnpm lint
+
+  fmt:
+    desc: Auto-format Python code
+    cmds:
+      - uv run ruff format backend/
+
+  # --- Documentation ---
+
+  docs:
+    desc: Serve MkDocs documentation locally
+    cmds:
+      - uv run --extra docs mkdocs serve
+
+  # --- Internal tasks ---
+
+  _status-check:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        cat <<'EOF'
+        ========================================
+          Development Environment Started
+        ========================================
+
+          Backend    http://localhost:8000  (API docs at /docs)
+          Frontend   http://localhost:3000  (Next.js with HMR)
+          PostgreSQL localhost:5432
+          Redis      localhost:6379
+          MinIO      http://localhost:9000  (Console at :9001)
+
+          Hot-Reload is Active!
+            Backend (Python)  ~1 second restart
+            Frontend (React)  Instant HMR
+
+          View logs with: task logs
+        EOF
+
+  _status-check-gcs:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        cat <<'EOF'
+        ========================================
+          Development Environment Started (GCS)
+        ========================================
+
+          Backend    http://localhost:8000  (API docs at /docs)
+          Frontend   http://localhost:3000  (Next.js with HMR)
+          PostgreSQL localhost:5432
+          Redis      localhost:6379
+          Storage    Google Cloud Storage
+
+          Hot-Reload with GCS is Active!
+            Backend (Python)  ~1 second restart
+            Frontend (React)  Instant HMR
+
+          View logs with: task logs
+        EOF

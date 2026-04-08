@@ -17,8 +17,8 @@ Hot reload enables instant feedback during development:
 ### Start Services
 
 ```bash
-# Using dev script
-./dev.sh start
+# Using task
+task start
 
 # Or directly
 docker-compose up -d
@@ -87,7 +87,7 @@ frontend:
    ```
 
 4. Save file
-5. Check logs: `./dev.sh logs backend`
+5. Check logs: `task logs -- backend`
 
 ### Frontend Test
 

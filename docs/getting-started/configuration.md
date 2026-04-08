@@ -205,7 +205,7 @@ gcloud auth application-default login \
   --impersonate-service-account=appart-backend@your-project-id.iam.gserviceaccount.com
 
 # 3. Start with GCS backend
-./dev.sh start-gcs
+task start-gcs
 ```
 
 !!! tip "Why use impersonation?"
