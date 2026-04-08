@@ -94,23 +94,24 @@ The app is installable on mobile devices via `@ducanh2912/next-pwa`. Configurati
 ### Prerequisites
 
 - Docker and Docker Compose
+- [`go-task`](https://taskfile.dev) CLI
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Node.js 18+ with pnpm 10+
 - Copy `.env.example` to `.env` and fill in required values
 
 ### Running the Dev Environment
 
-Everything runs via Docker Compose. Use the helper script:
+Everything runs via Docker Compose. Use [`go-task`](https://taskfile.dev):
 
 ```bash
-./dev.sh start          # Start all services (MinIO storage)
-./dev.sh start-gcs      # Start with Google Cloud Storage instead
-./dev.sh stop           # Stop all services
-./dev.sh logs [service] # Follow logs (backend, frontend, db, redis, minio)
-./dev.sh restart <svc>  # Restart a specific service
-./dev.sh rebuild [svc]  # Rebuild and restart
-./dev.sh status         # Show service status
-./dev.sh shell [svc]    # Shell into container (default: backend)
+task start              # Start all services (MinIO storage)
+task start-gcs          # Start with Google Cloud Storage instead
+task stop               # Stop all services
+task logs [-- service]  # Follow logs (backend, frontend, db, redis, minio)
+task restart -- <svc>   # Restart a specific service
+task rebuild [-- svc]   # Rebuild and restart
+task status             # Show service status
+task shell [-- svc]     # Shell into container (default: backend)
 ```
 
 ### Services (docker-compose)
