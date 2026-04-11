@@ -18,9 +18,9 @@ flowchart TB
 
         subgraph Components["Reusable Components"]
             C1["Header / Navigation"]
-            C2["Charts (Recharts)"]
-            C3["Forms & Inputs"]
-            C4["Modals & Tooltips"]
+            C2["Design System (ui/)"]
+            C3["Charts (Custom SVG)"]
+            C4["Forms & Tooltips"]
         end
 
         subgraph APIClient["API Client"]
@@ -41,7 +41,7 @@ flowchart TB
         subgraph Services["Service Layer"]
             S1["AI Services<br/>Native PDF | Thinking | Synthesis"]
             S2["Storage Service<br/>MinIO | GCS abstraction"]
-            S3["DVF Service<br/>5.4M+ transactions"]
+            S3["DVF Service<br/>4.8M sales + 13.5M lots"]
             S4["Price Analysis<br/>Trends & projections"]
         end
     end
@@ -103,7 +103,7 @@ flowchart LR
 |-----------|---------|
 | `src/app/[locale]/` | Locale-scoped App Router pages |
 | `src/app/api/auth/` | Better Auth API route handler |
-| `src/components/` | Reusable React components |
+| `src/components/` | Reusable React components (includes `ui/` design system) |
 | `src/contexts/` | React context providers (Auth) |
 | `src/i18n/` | Internationalization config and routing |
 | `src/lib/` | Utilities, API client, and auth config |
@@ -115,7 +115,8 @@ flowchart LR
 - **React 18** with Server Components
 - **Better Auth** for authentication (email/password + Google OAuth)
 - **next-intl** for internationalization (FR/EN)
-- **Tailwind CSS** for styling
+- **Tailwind CSS** with semantic design tokens for styling
+- **Lucide React** for icons
 - **React Query** for data fetching and caching
 - **TypeScript** for type safety
 - **pnpm** for package management
@@ -169,7 +170,7 @@ flowchart TB
 - **FastAPI** for async HTTP handling
 - **SQLAlchemy 2.0** for ORM
 - **Pydantic v2** for validation
-- **Google Generative AI SDK** for Gemini
+- **Google Generative AI SDK** (`google-genai`) for Gemini (Vertex AI or REST API)
 - **UV** for fast package management
 
 ### Data Layer
@@ -180,7 +181,7 @@ flowchart LR
         Users["users"]
         Properties["properties"]
         Documents["documents"]
-        DVF["dvf_records<br/>5.4M+ rows"]
+        DVF["dvf_sales (4.8M)<br/>dvf_sale_lots (13.5M)"]
     end
 
     subgraph Redis["Redis 7"]
@@ -208,7 +209,9 @@ Stores structured data:
 | `properties` | ~100s | Properties and their metadata |
 | `documents` | ~1000s | Documents and analysis results (5 categories) |
 | `document_summaries` | ~100s | Cross-document synthesis with user overrides |
-| `dvf_records` | 5.4M+ | French property transactions (2022-2025) |
+| `price_analyses` | ~100s | Cached DVF price analysis results |
+| `dvf_sales` | 4.8M | French property transactions (2015-2025) |
+| `dvf_sale_lots` | 13.5M | Individual lots within transactions |
 
 #### Redis
 
@@ -217,6 +220,10 @@ In-memory caching for:
 - Session data (7-day TTL)
 - Frequently accessed queries (1-hour TTL)
 - Rate limiting counters
+- **API response caching** via `app/core/cache.py` (fault-tolerant -- Redis down = cache miss, never an error):
+  - DVF stats: `dvf_stats` key, 1h TTL
+  - Price analysis summary: `price_analysis_summary:{id}`, 30min TTL
+  - Price analysis full: `price_analysis_full:{id}`, 30min TTL
 
 #### Object Storage (MinIO / GCS)
 

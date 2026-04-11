@@ -17,9 +17,13 @@
   </a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/node-18%2B-green" alt="Node.js">
+  <a href="https://appartagent.com">
+    <img src="https://img.shields.io/badge/Live%20App-appartagent.com-brightgreen" alt="Live App">
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://appartagent.com">Try it Live</a> •
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#documentation">Documentation</a> •
@@ -29,11 +33,15 @@
 
 ---
 
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="AppArt Agent Demo" width="800">
+</p>
+
 ## Overview
 
 AppArt Agent helps buyers make informed real estate decisions by combining:
 
-- **5.4M+ French property transactions** from DVF (Demandes de Valeurs Foncières) data
+- **4.8M+ geolocalized French property transactions** from the DVF (Demandes de Valeurs Foncières) open dataset
 - **AI-powered document analysis** using Google Gemini for PV d'AG, diagnostics, taxes, and charges
 - **Photo redesign visualization** to explore renovation potential
 - **Comprehensive decision dashboard** with cost breakdown and risk assessment
@@ -42,7 +50,7 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 
 ### 📊 Price Analysis
 
-- Address-based property search with DVF data (2022-2025)
+- Address-based property search with DVF data (2022-2025) using api-adresse.data.gouv.fr for instant autocomplete
 - Historical sales analysis and trend projections
 - Interactive 5-year market evolution chart
 - IQR-based outlier detection for accurate pricing
@@ -65,7 +73,8 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-- [Google Cloud API key](https://aistudio.google.com/) for Gemini AI
+- [`go-task`](https://taskfile.dev) CLI
+- Google Cloud project with Vertex AI enabled, **or** a [Gemini API key](https://aistudio.google.com/) for development
 
 ### Installation
 
@@ -76,13 +85,10 @@ cd AppArtAgent
 
 # Configure environment
 cp .env.example .env
-# Edit .env and add your GOOGLE_CLOUD_API_KEY
+# Edit .env — set GEMINI_USE_VERTEXAI=true (production) or add GOOGLE_CLOUD_API_KEY (dev)
 
-# Start all services
-docker-compose up -d
-
-# Run database migrations
-docker-compose exec backend alembic upgrade head
+# Start all services (migrations run automatically)
+task start
 ```
 
 ### Access the Application
@@ -97,9 +103,9 @@ docker-compose exec backend alembic upgrade head
 
 | Layer | Technologies |
 |-------|--------------|
-| **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, pnpm |
+| **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, PostHog, pnpm |
 | **Backend** | FastAPI, Python 3.10+, SQLAlchemy, UV |
-| **AI/ML** | Google Gemini (multimodal), LangChain |
+| **AI** | Google Gemini via `google-genai` SDK (Vertex AI / REST API) |
 | **Database** | PostgreSQL 15, Redis 7 |
 | **Storage** | MinIO (local), Google Cloud Storage (production) |
 | **Infrastructure** | Docker, Terraform, GCP Cloud Run |
@@ -121,8 +127,8 @@ AppArtAgent/
 ├── frontend/               # Next.js frontend
 │   └── src/
 │       ├── app/            # App Router pages
-│       ├── components/     # React components
-│       └── lib/            # Utilities
+│       ├── components/     # React components + ui/ design system
+│       └── lib/            # Utilities, API client, auth
 ├── docs/                   # Documentation (MkDocs)
 ├── infra/terraform/        # Infrastructure as Code
 └── docker-compose.yml      # Local development stack
@@ -144,8 +150,7 @@ Full documentation is available at **[benjamin-karaoglan.github.io/AppArtAgent](
 ### Run Documentation Locally
 
 ```bash
-pip install -r docs/requirements.txt
-mkdocs serve
+uv run --extra docs mkdocs serve
 ```
 
 ## Development
@@ -154,13 +159,13 @@ mkdocs serve
 
 ```bash
 # Start services with hot-reload
-./dev.sh start
+task start
 
 # View logs
-./dev.sh logs backend
+task logs -- backend
 
 # Stop services
-./dev.sh stop
+task stop
 ```
 
 ### Local Development
@@ -170,9 +175,8 @@ mkdocs serve
 
 ```bash
 cd backend
-uv venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
-uvicorn app.main:app --reload
+uv sync
+uv run uvicorn app.main:app --reload
 ```
 
 </details>
@@ -195,12 +199,15 @@ pnpm dev
 
 ```bash
 DATABASE_URL=postgresql://appart:appart@db:5432/appart_agent
-GOOGLE_CLOUD_API_KEY=your_google_api_key
 SECRET_KEY=your-secret-key-at-least-32-characters
 STORAGE_BACKEND=minio
 MINIO_ENDPOINT=minio:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
+
+# AI — choose one:
+GEMINI_USE_VERTEXAI=false
+GOOGLE_CLOUD_API_KEY=your_google_api_key    # Only needed when GEMINI_USE_VERTEXAI=false
 ```
 
 </details>
@@ -236,7 +243,7 @@ GOOGLE_CLOUD_LOCATION=europe-west1
 GEMINI_USE_VERTEXAI=true
 ```
 
-Start with: `./dev.sh start-gcs`
+Start with: `task start-gcs`
 </details>
 
 <details>
@@ -253,6 +260,10 @@ BETTER_AUTH_SECRET=your-better-auth-secret-at-least-32-characters
 # Google OAuth (optional - from Google Cloud Console)
 GOOGLE_CLIENT_ID=your-google-oauth-client-id
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+
+# PostHog Analytics (optional - leave empty to disable)
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=your-posthog-project-token
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
 </details>
@@ -280,26 +291,67 @@ The backend validates sessions by checking the `better-auth.session_token` cooki
 docker-compose exec backend alembic upgrade head
 ```
 
-**Migrate existing users to Better Auth:**
-
-```bash
-docker-compose exec backend python scripts/migrate_users_to_better_auth.py --dry-run
-docker-compose exec backend python scripts/migrate_users_to_better_auth.py
-```
-
 </details>
 
 ## DVF Data
 
-The application uses France's open [DVF data](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres/) for price analysis.
+The application uses France's open [geolocalized DVF dataset](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/) (20M+ rows with GPS coordinates) for price analysis.
+
+**Schema**: Two normalized tables built from the raw CSV via Polars groupby + PostgreSQL `COPY FROM STDIN`:
+
+- `dvf_sales` (~4.8M rows) — one row per transaction, with aggregated surface/rooms/type counts and computed `prix_m2`
+- `dvf_sale_lots` (~13.5M rows) — one row per lot/component within a transaction
+
+### Local Import
 
 ```bash
-# Import DVF data
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024
+# 1. Download the dataset (~600 MB compressed, ~2.5 GB extracted)
+uv run download-dvf https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz
+
+# 2. Import into PostgreSQL (~55s for full dataset; ~25 min on Cloud Run)
+uv run import-dvf
+
+# Or with a custom CSV path:
+uv run import-dvf --csv /path/to/dvf.csv
 ```
 
-See [DVF Import Guide](./backend/scripts/DVF_IMPORT_GUIDE.md) for detailed instructions.
+### Production Import (GCP)
+
+In production, DVF data is imported via a **Cloud Run Job** (`dvf-import`) that downloads and imports the dataset directly into Cloud SQL. It can be triggered in two ways:
+
+**Via GitHub Actions** (recommended):
+
+Go to Actions > "DVF Import" > Run workflow. Optionally provide a custom source URL.
+
+**Via gcloud CLI**:
+
+```bash
+gcloud run jobs execute dvf-import --region europe-west1
+```
+
+The job uses the same `import_dvf.py` script with the `DVF_SOURCE_URL` environment variable, which automatically downloads and extracts the `.csv.gz` archive before importing. It runs with 8 vCPUs / 32 GiB RAM to handle the full dataset in memory via Polars. The deploy pipeline (`deploy.yml`) automatically keeps the job's Docker image in sync with the latest backend build.
+
+See [backend/README.md](./backend/README.md) for schema details and migration management.
+
+## Performance & Load Testing
+
+### Optimizations
+
+- **Redis caching** on high-traffic endpoints (`/dvf-stats`, `/price-analysis`) to avoid repeated expensive queries on 4.8M+ rows
+- **N+1 query elimination** on `/api/properties/with-synthesis` (3N+1 queries reduced to 4 total)
+- **Cloud Run concurrency tuning** (`backend_max_concurrency = 20`) for earlier autoscaling under load
+
+### Load Testing with Locust
+
+```bash
+# Backend API (Web UI at http://localhost:8089)
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com
+
+# Headless mode for CI
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com --headless -u 50 -r 5 --run-time 2m AppArtUser
+```
+
+Set `LOCUST_AUTH_TOKEN` (session cookie) and optionally `LOCUST_PROPERTY_ID` before running.
 
 ## Contributing
 

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="standalone-header">
+    <div class="standalone-logo">AppArt Agent</div>
+    <div class="standalone-meta">
+        <div>{{ property.address }}</div>
+        <div>{{ property.city }} {{ property.postal_code }}</div>
+        <div>{{ export_date }}</div>
+    </div>
+</div>
+
+<h2>{{ t.price_analysis_title }}</h2>
+
+<div class="stats-row">
+    {% if price_analysis.estimated_value %}
+    <div class="stat-card stat-card-primary">
+        <div class="stat-value">{{ format_eur(price_analysis.estimated_value) }}</div>
+        <div class="stat-label">{{ t.estimated_value }}</div>
+    </div>
+    {% endif %}
+    {% if price_analysis.price_deviation_percent is not none %}
+    <div class="stat-card {{ 'stat-card-success' if price_analysis.price_deviation_percent < 0 else 'stat-card-danger' if price_analysis.price_deviation_percent > 5 else 'stat-card-warning' }}">
+        <div class="stat-value {{ 'text-positive' if price_analysis.price_deviation_percent < 0 else 'text-negative' if price_analysis.price_deviation_percent > 5 else 'text-neutral' }}">
+            {{ "%+.1f"|format(price_analysis.price_deviation_percent) }}%
+        </div>
+        <div class="stat-label">{{ t.price_deviation }}</div>
+    </div>
+    {% endif %}
+    {% if price_analysis.market_avg_price_per_sqm %}
+    <div class="stat-card stat-card-primary">
+        <div class="stat-value">{{ format_eur(price_analysis.market_avg_price_per_sqm) }}</div>
+        <div class="stat-label">{{ t.market_avg_sqm }}</div>
+    </div>
+    {% endif %}
+</div>
+
+{% if price_analysis.recommendation %}
+<div class="recommendation-box">
+    <p>{{ price_analysis.recommendation }}</p>
+</div>
+{% endif %}
+
+<div class="info-grid">
+    {% if property.asking_price %}
+    <div class="info-item">
+        <div class="info-label">{{ t.asking_price }}</div>
+        <div class="info-value">{{ format_eur(property.asking_price) }}</div>
+    </div>
+    {% endif %}
+    {% if property.surface_area %}
+    <div class="info-item">
+        <div class="info-label">{{ t.surface_area }}</div>
+        <div class="info-value">{{ property.surface_area }} m²</div>
+    </div>
+    {% endif %}
+    {% if price_analysis.comparables_count %}
+    <div class="info-item">
+        <div class="info-label">{{ t.comparables_count }}</div>
+        <div class="info-value">{{ price_analysis.comparables_count }}</div>
+    </div>
+    {% endif %}
+</div>
+
+{% if comparable_sales %}
+<h3>{{ t.comparable_sales }} ({{ comparable_sales|length }})</h3>
+<table>
+    <thead>
+        <tr>
+            <th>{{ t.sale_address }}</th>
+            <th>{{ t.sale_date }}</th>
+            <th>{{ t.sale_price }}</th>
+            <th>{{ t.sale_surface }}</th>
+            <th>{{ t.sale_price_sqm }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sale in comparable_sales[:10] %}
+        {% if not sale.is_outlier %}
+        <tr>
+            <td>{{ sale.address }}</td>
+            <td>{{ sale.sale_date }}</td>
+            <td>{{ format_eur(sale.sale_price) }}</td>
+            <td>{{ sale.surface_area or '-' }} m²</td>
+            <td>{{ format_eur(sale.price_per_sqm) if sale.price_per_sqm else '-' }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if market_trend and market_trend.years %}
+<h3>{{ t.market_trend_title }}</h3>
+<table>
+    <thead>
+        <tr>
+            <th>{{ t.year }}</th>
+            <th>{{ t.avg_price_sqm }}</th>
+            <th>{{ t.yoy_change }}</th>
+            <th>{{ t.sample_count }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for i in range(market_trend.years|length) %}
+        <tr>
+            <td>{{ market_trend.years[i] }}</td>
+            <td>{{ format_eur(market_trend.average_prices[i]) }}</td>
+            <td class="{{ 'text-positive' if market_trend.year_over_year_changes[i] > 0 else 'text-negative' if market_trend.year_over_year_changes[i] < 0 else 'text-neutral' }}">
+                {{ "%+.1f"|format(market_trend.year_over_year_changes[i]) }}%
+            </td>
+            <td>{{ market_trend.sample_counts[i] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<div class="report-footer">
+    {{ t.footer_line.format(date=export_date) }}
+</div>
+
+</body>
+</html>

@@ -5,14 +5,16 @@ from datetime import datetime
 
 from sqlalchemy import (
     Column,
+    Computed,
     Date,
     DateTime,
     Float,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
+    SmallInteger,
     String,
-    Text,
 )
 from sqlalchemy.orm import relationship
 
@@ -61,168 +63,110 @@ class Property(Base):
         "Document", back_populates="related_property", cascade="all, delete-orphan"
     )
     analyses = relationship("Analysis", back_populates="property", cascade="all, delete-orphan")
+    price_analysis = relationship(
+        "PriceAnalysis", back_populates="property", uselist=False, cascade="all, delete-orphan"
+    )
 
 
-class DVFRecord(Base):
-    """DVF (Demandes de Valeurs Foncières) records from French government data."""
+class DVFSale(Base):
+    """
+    DVF sale record from the geolocalized dataset.
 
-    __tablename__ = "dvf_records"
+    One row per real estate transaction (~4.8M rows).
+    Pre-aggregated from the raw CSV via polars groupby on id_mutation.
+    """
 
-    id = Column(Integer, primary_key=True, index=True)
+    __tablename__ = "dvf_sales"
 
-    # Transaction information
-    sale_date = Column(Date, index=True)
-    sale_price = Column(Float)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_mutation = Column(String, unique=True, nullable=False, index=True)
 
-    # Property information
-    address = Column(String)
-    postal_code = Column(String, index=True)
-    city = Column(String, index=True)
-    department = Column(String, index=True)
+    # Transaction
+    date_mutation = Column(Date, nullable=False, index=True)
+    nature_mutation = Column(String)
+    prix = Column(Numeric)
 
-    # Property details
-    property_type = Column(String)  # Maison, Appartement, etc.
-    surface_area = Column(Float)
-    rooms = Column(Integer)
-    land_surface = Column(Float)
+    # Address
+    adresse_numero = Column(Integer)
+    adresse_nom_voie = Column(String)
+    adresse_complete = Column(
+        String,
+        Computed("COALESCE(adresse_numero::text || ' ', '') || adresse_nom_voie", persisted=True),
+    )
+    code_postal = Column(String(5), index=True)
+    code_commune = Column(String(5))
+    nom_commune = Column(String)
+    code_departement = Column(String(3), index=True)
 
-    # Calculated fields
-    price_per_sqm = Column(Float)
+    # Geolocation
+    longitude = Column(Float)
+    latitude = Column(Float)
 
-    # Raw data for reference
-    raw_data = Column(Text)  # JSON string of full record
+    # Aggregated property info
+    type_principal = Column(String)
+    surface_bati = Column(Integer)
+    nombre_pieces = Column(Integer)
+    surface_terrain = Column(Integer)
+    nombre_lots = Column(Integer)
 
-    # Versioning and tracking fields (for production-ready import management)
-    data_year = Column(Integer, index=True)  # Year of DVF dataset (e.g., 2023)
-    source_file = Column(String)  # Original filename
-    source_file_hash = Column(String(64))  # SHA256 hash of source file
-    import_batch_id = Column(String(36), index=True)  # UUID for this import batch
-    imported_at = Column(DateTime, default=datetime.utcnow)  # When this record was imported
+    # Counts by type
+    n_appartements = Column(SmallInteger)
+    n_maisons = Column(SmallInteger)
+    n_dependances = Column(SmallInteger)
+    n_parcelles_terrain = Column(SmallInteger)
 
-    # Transaction grouping (multiple properties sold together)
-    transaction_group_id = Column(
-        String(32), index=True
-    )  # Hash of (sale_date, price, address, postal)
+    # Derived
+    prix_m2 = Column(Numeric)
+    annee = Column(SmallInteger, index=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # Relationship
+    lots = relationship("DVFSaleLot", back_populates="sale", cascade="all, delete-orphan")
 
-    # Composite indexes for query optimization
     __table_args__ = (
-        # Unique constraint for deduplication - DVF business key
+        Index("idx_dvf_sales_postal_type", "code_postal", "type_principal"),
+        Index("idx_dvf_sales_postal_type_date", "code_postal", "type_principal", "date_mutation"),
         Index(
-            "idx_dvf_unique_sale",
-            "sale_date",
-            "sale_price",
-            "address",
-            "postal_code",
-            "surface_area",
-            unique=True,
-        ),
-        # Composite indexes for common query patterns
-        Index("idx_dvf_postal_type_address", "postal_code", "property_type", "address"),
-        Index("idx_dvf_date_postal_type", "sale_date", "postal_code", "property_type"),
-        Index("idx_dvf_postal_type_surface", "postal_code", "property_type", "surface_area"),
-        # GIN index for fast ILIKE queries on address (requires pg_trgm extension)
-        Index(
-            "idx_dvf_address_gin",
-            "address",
+            "idx_dvf_sales_adresse_gin",
+            "adresse_complete",
             postgresql_using="gin",
-            postgresql_ops={"address": "gin_trgm_ops"},
+            postgresql_ops={"adresse_complete": "gin_trgm_ops"},
         ),
-        # Partial index for price_per_sqm (only non-null positive values)
-        Index("idx_dvf_price_per_sqm", "price_per_sqm", postgresql_where="price_per_sqm > 0"),
+        Index(
+            "idx_dvf_sales_prix_m2",
+            "prix_m2",
+            postgresql_where=Column("prix_m2") > 0,
+        ),
     )
 
 
-class DVFImport(Base):
-    """Track DVF import operations for audit trail and rollback capability."""
+class DVFSaleLot(Base):
+    """
+    Individual lot/component within a DVF sale.
 
-    __tablename__ = "dvf_imports"
+    One row per lot in the raw CSV (~13.5M rows).
+    Links back to DVFSale via id_mutation.
+    """
 
-    id = Column(Integer, primary_key=True, index=True)
-    batch_id = Column(String(36), unique=True, index=True, nullable=False)  # UUID
-    source_file = Column(String, nullable=False)  # Filename
-    source_file_hash = Column(String(64), nullable=False, unique=True)  # SHA256
-    data_year = Column(Integer, index=True, nullable=False)  # DVF year (2023, 2024, etc.)
+    __tablename__ = "dvf_sale_lots"
 
-    # Import statistics
-    total_records = Column(Integer)  # Total records in source file
-    inserted_records = Column(Integer)  # New records added
-    updated_records = Column(Integer)  # Existing records updated
-    skipped_records = Column(Integer)  # Duplicate records skipped
-    error_records = Column(Integer, default=0)  # Records that failed
-
-    # Timing information
-    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    completed_at = Column(DateTime)  # Null if still running
-    duration_seconds = Column(Float)  # Total import time
-
-    # Status tracking
-    status = Column(String, nullable=False)  # 'running', 'completed', 'failed', 'rolled_back'
-    error_message = Column(Text)  # Error details if status='failed'
-
-    # Indexes for querying
-    __table_args__ = (
-        Index("idx_dvf_imports_status", "status"),
-        Index("idx_dvf_imports_year_status", "data_year", "status"),
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_mutation = Column(
+        String, ForeignKey("dvf_sales.id_mutation", ondelete="CASCADE"), nullable=False, index=True
     )
 
+    # Lot details
+    lot_type = Column(String, index=True)
+    nature_culture = Column(String)
+    surface_bati = Column(Integer)
+    nombre_pieces = Column(Integer)
+    surface_terrain = Column(Integer)
 
-class DVFStats(Base):
-    """
-    Aggregate statistics for DVF records.
+    # Parcel
+    id_parcelle = Column(String)
 
-    Single row table that tracks overall DVF data metrics.
-    Updated after DVF imports complete.
-    """
+    # Geolocation (per-lot, may differ from sale-level)
+    longitude = Column(Float)
+    latitude = Column(Float)
 
-    __tablename__ = "dvf_stats"
-
-    id = Column(Integer, primary_key=True)
-    total_records = Column(Integer, default=0)
-    total_imports = Column(Integer, default=0)
-    last_import_date = Column(DateTime)
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class DVFGroupedTransaction(Base):
-    """
-    Materialized view of grouped DVF transactions.
-
-    Multi-unit sales (same transaction_group_id) are aggregated into single records.
-    Each row represents ONE real estate transaction, even if it involved multiple lots/units.
-    """
-
-    __tablename__ = "dvf_grouped_transactions"
-
-    id = Column(Integer, primary_key=True)
-    transaction_group_id = Column(String(32), unique=True, index=True, nullable=False)
-
-    # Transaction information
-    sale_date = Column(Date, index=True, nullable=False)
-    sale_price = Column(Float, nullable=False)
-
-    # Address information
-    address = Column(String, nullable=False)
-    postal_code = Column(String, index=True)
-    city = Column(String)
-    department = Column(String)
-    property_type = Column(String, index=True)
-
-    # Aggregated metrics (sum across all lots)
-    total_surface_area = Column(Float)  # SUM of surface_area
-    total_land_surface = Column(Float)  # SUM of land_surface
-    total_rooms = Column(Integer)  # SUM of rooms
-    unit_count = Column(Integer, nullable=False)  # Number of lots/units in transaction
-
-    # Calculated grouped price per sqm
-    grouped_price_per_sqm = Column(Float)  # sale_price / total_surface_area
-
-    # Metadata
-    data_year = Column(Integer, index=True)
-    source_file = Column(String)
-    import_batch_id = Column(String(36))
-    created_at = Column(DateTime)
-
-    # Lot details for drill-down (JSON array)
-    lots_detail = Column(Text)  # JSON: [{"id": 123, "surface_area": 54, "rooms": 2, ...}, ...]
+    # Relationship
+    sale = relationship("DVFSale", back_populates="lots")

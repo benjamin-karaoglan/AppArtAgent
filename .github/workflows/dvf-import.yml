@@ -1,0 +1,82 @@
+# =============================================================================
+# DVF Data Import - Cloud Run Job
+# =============================================================================
+#
+# Imports the full geolocalized DVF dataset (~20M rows, ~4.8M sales) into
+# Cloud SQL via a Cloud Run Job.
+#
+# Triggers:
+#   - Manual dispatch (workflow_dispatch) with optional custom source URL
+#   - Automatically after deploy when import script changes
+#
+# The job downloads the CSV (from GCS or data.gouv.fr), processes it with Polars,
+# and loads it into dvf_sales + dvf_sale_lots via chunked COPY FROM STDIN.
+# Typical runtime: ~25 minutes (dominated by Cloud SQL insert speed).
+#
+# =============================================================================
+
+name: DVF Import
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: "DVF CSV source URL (leave empty for default)"
+        required: false
+        type: string
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION || 'europe-west1' }}
+  ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION || 'europe-west1' }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/appart-agent
+
+jobs:
+  dvf-import:
+    name: Import DVF Data
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Update DVF import job with latest image
+        run: |
+          gcloud run jobs update dvf-import \
+            --image ${{ env.ARTIFACT_REGISTRY }}/backend:latest \
+            --region ${{ env.GCP_REGION }}
+
+      - name: Override source URL (if provided)
+        if: ${{ inputs.source_url != '' }}
+        run: |
+          gcloud run jobs update dvf-import \
+            --set-env-vars "DVF_SOURCE_URL=${{ inputs.source_url }}" \
+            --region ${{ env.GCP_REGION }}
+
+      - name: Execute DVF import
+        run: |
+          echo "Starting DVF import..."
+          gcloud run jobs execute dvf-import \
+            --region ${{ env.GCP_REGION }} \
+            --wait
+          echo "✅ DVF import completed successfully"
+
+      - name: Summary
+        run: |
+          echo "## 📊 DVF Import Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The geolocalized DVF dataset has been imported into Cloud SQL." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | \`dvf-import\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | \`${{ env.GCP_REGION }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.source_url }}" ]; then
+            echo "| Source | Custom URL |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Source | Default (data.gouv.fr) |" >> $GITHUB_STEP_SUMMARY
+          fi

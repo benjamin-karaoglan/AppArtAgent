@@ -1,21 +1,28 @@
 "use client";
 
-import { Link, useRouter, usePathname } from '@/i18n/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { useState, useRef, useEffect } from 'react';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User, Globe } from 'lucide-react';
+import { LogOut, Settings, ChevronDown } from 'lucide-react';
 import AppArtLogo from './AppArtLogo';
 
 export default function Header() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const t = useTranslations('header');
-  const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const switchLocale = (newLocale: string) => {
-    router.replace(pathname, { locale: newLocale as 'fr' | 'en' });
-  };
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="bg-white shadow">
@@ -27,17 +34,17 @@ export default function Header() {
               <span className="ml-2 text-xl font-bold text-gray-900">{t('appName')}</span>
             </Link>
 
-            {isAuthenticated && (
+            {!loading && isAuthenticated && (
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                 <Link
                   href="/dashboard"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center justify-center min-w-[9rem] px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-primary-500 hover:text-primary-600 inline-flex items-center justify-center min-w-[9rem] px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
                 >
                   {t('dashboard')}
                 </Link>
                 <Link
                   href="/properties"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center justify-center min-w-[5.5rem] px-1 pt-1 border-b-2 text-sm font-medium"
+                  className="border-transparent text-gray-500 hover:border-primary-500 hover:text-primary-600 inline-flex items-center justify-center min-w-[5.5rem] px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
                 >
                   {t('properties')}
                 </Link>
@@ -46,29 +53,40 @@ export default function Header() {
           </div>
 
           <div className="flex items-center">
-            {/* Language Switcher */}
-            <button
-              onClick={() => switchLocale(locale === 'fr' ? 'en' : 'fr')}
-              className="inline-flex items-center px-2 py-1 mr-3 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              title={locale === 'fr' ? 'Switch to English' : 'Passer en français'}
-            >
-              <Globe className="h-4 w-4 mr-1" />
-              {locale === 'fr' ? 'EN' : 'FR'}
-            </button>
-
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center text-sm text-gray-700">
-                  <User className="h-5 w-5 mr-2 text-gray-400" />
-                  <span>{user?.full_name}</span>
-                </div>
+            {loading ? (
+              <div className="flex items-center">
+                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ) : isAuthenticated ? (
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={logout}
-                  className="inline-flex items-center justify-center min-w-[8.5rem] px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {t('logout')}
+                  <span>{user?.full_name}</span>
+                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                    <Link
+                      href="/settings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Settings className="h-4 w-4 text-gray-400" />
+                      {t('settings')}
+                    </Link>
+                    <hr className="my-1 border-gray-100" />
+                    <button
+                      onClick={() => { setDropdownOpen(false); logout(); }}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4 text-gray-400" />
+                      {t('logout')}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center space-x-4">

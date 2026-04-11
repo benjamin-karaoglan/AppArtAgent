@@ -64,11 +64,10 @@ Property overview with AI synthesis summary, risk level badges, annual/one-time 
 git clone https://github.com/benjamin-karaoglan/appart-agent.git
 cd appart-agent
 cp .env.example .env
-# Add your GOOGLE_CLOUD_API_KEY to .env
+# Configure AI: set GEMINI_USE_VERTEXAI=true or add GOOGLE_CLOUD_API_KEY
 
-# Start services
+# Start services (migrations run automatically)
 docker-compose up -d
-docker-compose exec backend alembic upgrade head
 
 # Access
 # Frontend: http://localhost:3000

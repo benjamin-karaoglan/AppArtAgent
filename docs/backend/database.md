@@ -125,29 +125,58 @@ class PhotoRedesign(Base):
     created_at: datetime
 ```
 
-### DVFRecord
+### DVFSale & DVFSaleLot
 
 ```python
 # app/models/property.py
-class DVFRecord(Base):
-    __tablename__ = "dvf_records"
+class DVFSale(Base):
+    __tablename__ = "dvf_sales"
 
     id: int
-    sale_date: date
-    sale_price: float
-    address: str               # Indexed (GIN trigram)
-    postal_code: str           # Indexed
-    city: str
-    property_type: str
-    surface_area: float
-    rooms: int
-    price_per_sqm: float       # Calculated
-    data_year: int             # Import year
-    import_batch_id: str       # For rollback
+    id_mutation: str           # Unique transaction ID (indexed)
+    date_mutation: date        # Sale date
+    nature_mutation: str       # Type: Vente, Échange, etc.
+    prix: float                # Total transaction price
+    adresse_numero: str        # Street number
+    adresse_nom_voie: str      # Street name
+    adresse_complete: str      # Computed full address (GIN trigram indexed)
+    code_postal: str           # Postal code (indexed)
+    code_commune: str          # INSEE commune code
+    nom_commune: str           # City name
+    code_departement: str      # Department code
+    longitude: float           # Longitude
+    latitude: float            # Latitude
+    type_principal: str        # Primary property type
+    surface_bati: float        # Total built surface
+    nombre_pieces: int         # Total rooms
+    surface_terrain: float     # Land surface
+    nombre_lots: int           # Number of lots
+    n_appartements: int
+    n_maisons: int
+    n_dependances: int
+    n_parcelles_terrain: int
+    prix_m2: float             # Price per sqm (indexed)
+    annee: int                 # Year
 
     # Indexes
-    # - postal_code + property_type + address (composite)
-    # - address (GIN trigram for fuzzy search)
+    # - (code_postal, type_principal) composite
+    # - (code_postal, type_principal, date_mutation) composite
+    # - adresse_complete (GIN trigram for fuzzy search)
+    # - prix_m2 (partial index WHERE prix_m2 IS NOT NULL)
+
+class DVFSaleLot(Base):
+    __tablename__ = "dvf_sale_lots"
+
+    id: int
+    id_mutation: str           # Foreign key to DVFSale
+    lot_type: str              # Appartement, Maison, Dépendance, Terrain
+    nature_culture: str        # Land type
+    surface_bati: float        # Built surface of this lot
+    nombre_pieces: int         # Rooms in this lot
+    surface_terrain: float     # Land surface of this lot
+    id_parcelle: str           # Cadastral parcel ID
+    longitude: float           # Lot-specific longitude
+    latitude: float            # Lot-specific latitude
 ```
 
 ### DocumentSummary
@@ -166,6 +195,17 @@ class DocumentSummary(Base):
     recommendations: JSON
     synthesis_data: JSON       # Full synthesis result
     last_updated: datetime
+
+class PriceAnalysis(Base):
+    __tablename__ = "price_analyses"
+
+    id: int
+    property_id: int           # Foreign key
+    analysis_data: JSON        # Full DVF analysis result
+    excluded_sale_ids: JSON    # Outlier sale IDs removed
+    excluded_neighboring_sale_ids: JSON  # Trend outlier IDs removed
+    created_at: datetime
+    updated_at: datetime
 ```
 
 ## Entity Relationship Diagram
@@ -176,9 +216,10 @@ erDiagram
     Property ||--o{ Document : has
     Property ||--o{ Photo : has
     Property ||--o| DocumentSummary : has
+    Property ||--o| PriceAnalysis : has
     Photo ||--o{ PhotoRedesign : has
     Photo ||--o| PhotoRedesign : promotes
-    DVFImport ||--o{ DVFRecord : contains
+    DVFSale ||--o{ DVFSaleLot : contains
 
     User {
         int id PK
@@ -249,21 +290,31 @@ erDiagram
         json user_overrides
     }
 
-    DVFRecord {
+    PriceAnalysis {
         int id PK
-        date sale_date
-        float sale_price
-        string address
-        string postal_code
-        string import_batch_id FK
+        int property_id FK
+        json analysis_data
+        json excluded_sale_ids
+        json excluded_neighboring_sale_ids
+        datetime created_at
     }
 
-    DVFImport {
-        string batch_id PK
-        string source_file
-        int data_year
-        string status
-        int total_records
+    DVFSale {
+        int id PK
+        string id_mutation UK
+        date date_mutation
+        float prix
+        string adresse_complete
+        string code_postal
+        float prix_m2
+    }
+
+    DVFSaleLot {
+        int id PK
+        string id_mutation FK
+        string lot_type
+        float surface_bati
+        int nombre_pieces
     }
 ```
 
@@ -300,7 +351,9 @@ alembic/versions/
 ├── 25ffc9523881_merge_photo_redesign_uuid_heads.py
 ├── i0j1k2l3m4n5_rename_minio_to_storage.py       # Rename minio_key/bucket → storage_key/bucket
 ├── j1k2l3m4n5o6_add_promoted_redesign_to_photos.py  # Add promoted_redesign_id FK
-└── k2l3m4n5o6p7_add_building_floors_to_properties.py  # Add building_floors column
+├── k2l3m4n5o6p7_add_building_floors_to_properties.py  # Add building_floors column
+├── l3m4n5o6p7q8_migrate_dvf_to_geolocalized_schema.py  # Drop dvf_records, create dvf_sales + dvf_sale_lots
+└── m4n5o6p7q8r9_add_price_analyses_table.py      # Add price_analyses table
 ```
 
 ## Indexes
@@ -309,15 +362,26 @@ alembic/versions/
 
 ```sql
 -- DVF address search (trigram for fuzzy matching)
-CREATE INDEX idx_dvf_address_gin ON dvf_records
-USING GIN (address gin_trgm_ops);
+CREATE INDEX idx_dvf_sales_address_gin ON dvf_sales
+USING GIN (adresse_complete gin_trgm_ops);
 
--- Common query pattern
-CREATE INDEX idx_dvf_postal_type_addr ON dvf_records
-(postal_code, property_type, address);
+-- Common query pattern (composite)
+CREATE INDEX idx_dvf_sales_composite ON dvf_sales
+(code_postal, type_principal);
 
--- Date range queries
-CREATE INDEX idx_dvf_sale_date ON dvf_records (sale_date);
+-- Trend queries (composite with date)
+CREATE INDEX idx_dvf_sales_composite_date ON dvf_sales
+(code_postal, type_principal, date_mutation);
+
+-- Price analysis (partial index)
+CREATE INDEX idx_dvf_sales_prix_m2 ON dvf_sales (prix_m2)
+WHERE prix_m2 IS NOT NULL;
+
+-- Transaction lookup
+CREATE INDEX idx_dvf_sales_id_mutation ON dvf_sales (id_mutation);
+
+-- Lot lookup
+CREATE INDEX idx_dvf_sale_lots_id_mutation ON dvf_sale_lots (id_mutation);
 
 -- Document lookup
 CREATE INDEX idx_documents_property ON documents (property_id);
@@ -327,9 +391,9 @@ CREATE INDEX idx_documents_status ON documents (status);
 ### Unique Constraints
 
 ```sql
--- Prevent duplicate DVF records
-ALTER TABLE dvf_records ADD CONSTRAINT uq_dvf_sale
-UNIQUE (sale_date, sale_price, address, postal_code, surface_area);
+-- Prevent duplicate DVF transactions
+ALTER TABLE dvf_sales ADD CONSTRAINT uq_dvf_id_mutation
+UNIQUE (id_mutation);
 
 -- Prevent duplicate documents (by hash)
 ALTER TABLE documents ADD CONSTRAINT uq_doc_hash
@@ -353,15 +417,15 @@ def get_user_properties(db: Session, user_id: int):
 ### DVF Search
 
 ```python
-from app.models.property import DVFRecord
+from app.models.property import DVFSale
 from sqlalchemy import func
 
 def search_dvf(db: Session, address: str, postal_code: str):
-    return db.query(DVFRecord).filter(
-        DVFRecord.postal_code == postal_code,
-        func.similarity(DVFRecord.address, address) > 0.3
+    return db.query(DVFSale).filter(
+        DVFSale.code_postal == postal_code,
+        func.similarity(DVFSale.adresse_complete, address) > 0.3
     ).order_by(
-        func.similarity(DVFRecord.address, address).desc()
+        func.similarity(DVFSale.adresse_complete, address).desc()
     ).limit(100).all()
 ```
 
@@ -372,15 +436,33 @@ from sqlalchemy import func
 
 def get_price_stats(db: Session, postal_code: str, year: int):
     return db.query(
-        func.count(DVFRecord.id).label('count'),
-        func.avg(DVFRecord.price_per_sqm).label('avg_price'),
-        func.min(DVFRecord.price_per_sqm).label('min_price'),
-        func.max(DVFRecord.price_per_sqm).label('max_price')
+        func.count(DVFSale.id).label('count'),
+        func.avg(DVFSale.prix_m2).label('avg_price'),
+        func.min(DVFSale.prix_m2).label('min_price'),
+        func.max(DVFSale.prix_m2).label('max_price')
     ).filter(
-        DVFRecord.postal_code == postal_code,
-        DVFRecord.data_year == year
+        DVFSale.code_postal == postal_code,
+        DVFSale.annee == year
     ).first()
 ```
+
+## Query Optimizations
+
+### N+1 Query Fix
+
+The `/api/properties/with-synthesis` endpoint was optimized from 3N+1 queries to 4 total queries. Instead of fetching related data per-property in a loop, it uses batch `.in_()` fetches and dictionary lookups.
+
+### Redis Caching Layer
+
+Expensive read endpoints are cached in Redis via the fault-tolerant `app/core/cache.py` module. If Redis is unavailable, requests fall through to the database without error.
+
+| Endpoint | Cache Key | TTL |
+|----------|-----------|-----|
+| `/api/properties/dvf-stats` | `dvf_stats` | 1 hour |
+| `/api/properties/{id}/price-analysis` | `price_analysis_summary:{id}` | 30 min |
+| `/api/properties/{id}/price-analysis/full` | `price_analysis_full:{id}` | 30 min |
+
+Cache is invalidated on refresh or exclude-sales operations.
 
 ## Database Management
 

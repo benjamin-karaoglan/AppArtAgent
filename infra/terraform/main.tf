@@ -4,6 +4,7 @@
 #
 # This Terraform configuration deploys:
 # - Cloud Run services for Frontend and Backend
+# - Cloud Run Jobs for DB migrations and DVF data import
 # - Cloud SQL PostgreSQL database
 # - Memorystore Redis cache
 # - Cloud Storage buckets
@@ -58,6 +59,12 @@ variable "domain" {
   default     = ""
 }
 
+variable "posthog_project_token" {
+  description = "PostHog project token for analytics (public, not a secret)"
+  type        = string
+  default     = ""
+}
+
 variable "create_dns_zone" {
   description = "Whether to create/manage a Cloud DNS zone. Set to false if using external DNS (Cloudflare, etc)."
   type        = bool
@@ -79,7 +86,7 @@ variable "api_subdomain" {
 variable "db_tier" {
   description = "Cloud SQL instance tier"
   type        = string
-  default     = "db-f1-micro" # Use db-custom-2-4096 for production
+  default     = "db-g1-small" # Minimum for DVF import; use db-custom-2-4096 for high traffic
 }
 
 variable "redis_tier" {
@@ -101,6 +108,19 @@ variable "logfire_token" {
   sensitive   = true
 }
 
+variable "resend_api_key" {
+  description = "Resend API key for transactional emails (optional). Can also be set via: echo -n 'KEY' | gcloud secrets versions add resend-api-key --data-file=-"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "feedback_email" {
+  description = "Email address to receive feedback submissions"
+  type        = string
+  default     = "feedback@appartagent.com"
+}
+
 variable "google_oauth_client_id" {
   description = "Google OAuth 2.0 Client ID (optional)"
   type        = string
@@ -118,7 +138,13 @@ variable "google_oauth_client_secret" {
 variable "min_instances" {
   description = "Minimum instances for Cloud Run services. Set to 1 for always-on (better latency, ~$50/month/service), 0 for scale-to-zero (cold starts, lower cost)"
   type        = number
-  default     = 0
+  default     = 1
+}
+
+variable "backend_max_concurrency" {
+  description = "Max concurrent requests per Cloud Run backend instance. Lower values trigger autoscaling sooner. Default 20 (vs Cloud Run default of 80) for DB-heavy workloads."
+  type        = number
+  default     = 20
 }
 
 variable "use_load_balancer" {
@@ -608,6 +634,30 @@ resource "google_secret_manager_secret_version" "google_oauth_client_secret" {
   secret_data = var.google_oauth_client_secret
 }
 
+# Resend API Key (for email delivery)
+resource "google_secret_manager_secret" "resend_api_key" {
+  secret_id = "resend-api-key"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "resend_api_key" {
+  count = var.resend_api_key != "" ? 1 : 0
+
+  secret      = google_secret_manager_secret.resend_api_key.id
+  secret_data = var.resend_api_key
+}
+
+resource "google_secret_manager_secret_iam_member" "backend_resend_api_key" {
+  secret_id = google_secret_manager_secret.resend_api_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.backend.email}"
+}
+
 # Grant frontend service account access to new secrets
 resource "google_secret_manager_secret_iam_member" "frontend_better_auth_secret" {
   secret_id = google_secret_manager_secret.better_auth_secret.id
@@ -668,6 +718,8 @@ resource "google_cloud_run_v2_service" "backend" {
       min_instance_count = var.min_instances
       max_instance_count = 10
     }
+
+    max_instance_request_concurrency = var.backend_max_concurrency
 
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/backend:latest"
@@ -784,6 +836,30 @@ resource "google_cloud_run_v2_service" "backend" {
         }
       }
 
+      # Email (Resend) - feedback and notifications
+      dynamic "env" {
+        for_each = var.resend_api_key != "" ? [1] : []
+        content {
+          name = "RESEND_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.resend_api_key.secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      env {
+        name  = "FEEDBACK_EMAIL"
+        value = var.feedback_email
+      }
+
+      env {
+        name  = "EMAIL_FROM"
+        value = "AppArt Agent <noreply@appartagent.com>"
+      }
+
       # CORS - Allow custom domain if configured
       dynamic "env" {
         for_each = var.domain != "" ? [1] : []
@@ -884,10 +960,10 @@ resource "google_cloud_run_v2_job" "db_migrate" {
       timeout         = "600s"
       max_retries     = 1
 
-      # VPC access required for private Cloud SQL
+      # VPC for Cloud SQL; no external access needed
       vpc_access {
         connector = google_vpc_access_connector.connector.id
-        egress    = "ALL_TRAFFIC"
+        egress    = "PRIVATE_RANGES_ONLY"
       }
 
       volumes {
@@ -911,6 +987,94 @@ resource "google_cloud_run_v2_job" "db_migrate" {
         volume_mounts {
           name       = "cloudsql"
           mount_path = "/cloudsql"
+        }
+
+        env {
+          name = "DATABASE_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.database_url.secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    google_project_service.apis,
+    google_secret_manager_secret_version.database_url,
+    google_sql_database.database,
+    google_vpc_access_connector.connector,
+  ]
+}
+
+# =============================================================================
+# Cloud Run Job - DVF Data Import
+# =============================================================================
+# Imports the full geolocalized DVF dataset (~20M rows) into Cloud SQL.
+# Downloads the CSV from data.gouv.fr, processes with Polars, and loads via
+# COPY FROM STDIN. Requires 4 vCPUs + 16 GiB RAM for in-memory processing.
+#
+# Trigger manually:
+#   gcloud run jobs execute dvf-import --region europe-west1
+#
+# Or schedule via Cloud Scheduler (see google_cloud_scheduler_job below).
+
+variable "dvf_source_url" {
+  description = "DVF source: gs:// URI (recommended, same-region GCS) or https:// URL (data.gouv.fr)"
+  type        = string
+  default     = ""
+}
+
+resource "google_cloud_run_v2_job" "dvf_import" {
+  name     = "dvf-import"
+  location = var.region
+
+  template {
+    template {
+      service_account = google_service_account.backend.email
+      timeout         = "3600s" # 60 min — import takes ~25 min with db-g1-small
+      max_retries     = 0       # No retries — fail fast for easier debugging
+
+      # VPC for Cloud SQL; public traffic (GCS/data.gouv.fr) bypasses VPC
+      vpc_access {
+        connector = google_vpc_access_connector.connector.id
+        egress    = "PRIVATE_RANGES_ONLY"
+      }
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.postgres.connection_name]
+        }
+      }
+
+      containers {
+        image   = "${var.region}-docker.pkg.dev/${var.project_id}/appart-agent/backend:latest"
+        command = ["/app/.venv/bin/python", "scripts/import_dvf.py"]
+
+        resources {
+          limits = {
+            cpu    = "8"      # Polars parallelism
+            memory = "32Gi"   # Peak RSS ~27 GiB for 20M-row dataset
+          }
+        }
+
+        volume_mounts {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+
+        env {
+          name  = "DVF_SOURCE_URL"
+          value = var.dvf_source_url
+        }
+
+        env {
+          name  = "PYTHONUNBUFFERED"
+          value = "1"
         }
 
         env {
@@ -998,6 +1162,19 @@ resource "google_cloud_run_v2_service" "frontend" {
       env {
         name  = "NODE_ENV"
         value = "production"
+      }
+
+      dynamic "env" {
+        for_each = var.posthog_project_token != "" ? [1] : []
+        content {
+          name  = "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN"
+          value = var.posthog_project_token
+        }
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_POSTHOG_HOST"
+        value = "https://eu.i.posthog.com"
       }
 
       # Better Auth configuration
@@ -1657,6 +1834,11 @@ output "vpc_connector" {
 output "migration_job" {
   description = "Database migration Cloud Run Job name"
   value       = google_cloud_run_v2_job.db_migrate.name
+}
+
+output "dvf_import_job" {
+  description = "DVF data import Cloud Run Job name"
+  value       = google_cloud_run_v2_job.dvf_import.name
 }
 
 output "deployer_service_account" {

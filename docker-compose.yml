@@ -67,16 +67,22 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/app/.secrets/adc.json}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       ENVIRONMENT: development
-      STORAGE_BACKEND: minio
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-minio}
       MINIO_ENDPOINT: minio:9000
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: documents
       MINIO_SECURE: "false"
+      GCS_DOCUMENTS_BUCKET: ${GCS_DOCUMENTS_BUCKET:-}
+      GCS_PHOTOS_BUCKET: ${GCS_PHOTOS_BUCKET:-}
+      GCS_SIGNING_SERVICE_ACCOUNT: ${GCS_SIGNING_SERVICE_ACCOUNT:-}
       AUTO_IMPORT_DVF: ${AUTO_IMPORT_DVF:-false}
       LOGFIRE_TOKEN: ${LOGFIRE_TOKEN:-}
       LOGFIRE_ENABLED: ${LOGFIRE_ENABLED:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FEEDBACK_EMAIL: ${FEEDBACK_EMAIL:-}
+      EMAIL_FROM: ${EMAIL_FROM:-AppArt Agent <noreply@appartagent.com>}
     volumes:
       - ./backend:/app
       - backend_venv:/app/.venv # Preserve venv from Docker image
@@ -101,7 +107,10 @@ services:
       target: dev
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      INTERNAL_API_URL: http://backend:8000
       NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: ${NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN:-}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://eu.i.posthog.com}
       DATABASE_URL: postgresql://appart:appart@db:5432/appart_agent
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-secret-change-in-production-at-least-32-chars}
       BETTER_AUTH_URL: http://localhost:3000

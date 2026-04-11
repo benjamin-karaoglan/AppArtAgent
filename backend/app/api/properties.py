@@ -1,5 +1,10 @@
 """Properties API routes."""
 
+import json
+import logging
+import statistics
+from collections import defaultdict
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -8,33 +13,38 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.better_auth_security import get_current_user_hybrid as get_current_user
+from app.core.cache import cache_get, cache_set, get_redis
 from app.core.database import get_db
 from app.core.i18n import get_local, translate
 from app.models.document import Document, DocumentSummary
 from app.models.photo import Photo, PhotoRedesign
-from app.models.property import DVFRecord, DVFStats, Property
+from app.models.price_analysis import PriceAnalysis
+from app.models.property import DVFSale, Property
 from app.schemas.property import (
-    DVFGroupedTransactionResponse,
-    PriceAnalysisResponse,
+    ExcludeSalesRequest,
+    PriceAnalysisFullResponse,
+    PriceAnalysisSummaryResponse,
     PropertyCreate,
     PropertyResponse,
     PropertySynthesisPreview,
     PropertyUpdate,
     PropertyWithSynthesisResponse,
 )
-from app.services.dvf_service import dvf_service
+from app.services.dvf_service import DVFService, _street_ilike_pattern, dvf_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 class AddressSearchResult(BaseModel):
-    """Address search result."""
+    """Address search result — one per street + postal code."""
 
-    address: str
+    address: str  # Street name (e.g. "RUE NOTRE-DAME DES CHAMPS")
     postal_code: str
     city: str
     property_type: str
-    count: int  # Number of sales at this address
+    count: int  # Number of sales on this street
 
 
 class DVFStatsResponse(BaseModel):
@@ -58,18 +68,12 @@ async def get_dvf_stats(
     """
     get_local(request)
 
-    # Get stats from dvf_stats table
-    stats = db.query(DVFStats).filter(DVFStats.id == 1).first()
+    # Check Redis cache first
+    cached = cache_get("dvf_stats")
+    if cached:
+        return DVFStatsResponse(**json.loads(cached))
 
-    if stats:
-        total = stats.total_records
-        last_updated = stats.last_updated.isoformat() if stats.last_updated else None
-        total_imports = stats.total_imports
-    else:
-        # Fallback: count directly from dvf_records (slower for large datasets)
-        total = db.query(func.count(DVFRecord.id)).scalar() or 0
-        last_updated = None
-        total_imports = 0
+    total = db.query(func.count(DVFSale.id)).scalar() or 0
 
     # Format the count for display
     if total >= 1_000_000:
@@ -79,12 +83,17 @@ async def get_dvf_stats(
     else:
         formatted = str(total)
 
-    return DVFStatsResponse(
+    result = DVFStatsResponse(
         total_records=total,
-        total_imports=total_imports,
-        last_updated=last_updated,
+        total_imports=0,
+        last_updated=None,
         formatted_count=formatted,
     )
+
+    # Cache for 1 hour — count only changes on DVF import
+    cache_set("dvf_stats", json.dumps(result.model_dump()), 3600)
+
+    return result
 
 
 @router.get("/search-addresses", response_model=List[AddressSearchResult])
@@ -97,58 +106,40 @@ async def search_addresses(
     current_user: str = Depends(get_current_user),
 ):
     """
-    Search for addresses in DVF database.
-    Returns unique addresses with sale history.
-    Searches for street names (voie) - user can type partial street name.
+    Search for streets in DVF database.
+
+    Strips leading number from query so "35 rue notre dame" finds
+    all sales on "RUE NOTRE-DAME DES CHAMPS" regardless of house number.
+    Results are grouped by street + postal code + city.
     """
     get_local(request)
 
-    # Normalize search query to uppercase (DVF data is in uppercase)
-    search_query = q.upper().strip()
+    # Strip leading number: "35 rue notre dame" → "rue notre dame"
+    _, street_name = DVFService.extract_street_info(q)
+    search_text = street_name if street_name else q
 
-    # Build query - search in address field
-    # User might type: "56 notre" or just "notre dame" or "56"
+    # Normalize for fuzzy matching: "notre dame" → "NOTRE%DAME"
+    search_pattern = _street_ilike_pattern(search_text)
+
+    # Group by street name (adresse_nom_voie), not full address
     query = db.query(
-        DVFRecord.address,
-        DVFRecord.postal_code,
-        DVFRecord.city,
-        DVFRecord.property_type,
-        func.count(DVFRecord.id).label("count"),
-    ).filter(DVFRecord.address.isnot(None), DVFRecord.address != "")
-
-    # Search strategy: match anywhere in address for better results
-    # This handles cases like "18 rue jean mermoz" or just "jean mermoz"
-    query = query.filter(DVFRecord.address.ilike(f"%{search_query}%"))
-
-    # Filter by postal code if provided
-    if postal_code:
-        query = query.filter(DVFRecord.postal_code == postal_code)
-
-    # Group by unique address + postal code + city ONLY
-    # Aggregate property types to show all types at this address
-    from sqlalchemy import func as sqlfunc
-
-    query = db.query(
-        DVFRecord.address,
-        DVFRecord.postal_code,
-        DVFRecord.city,
-        sqlfunc.string_agg(sqlfunc.distinct(DVFRecord.property_type), ", ").label("property_types"),
-        func.count(DVFRecord.id).label("count"),
+        DVFSale.adresse_nom_voie,
+        DVFSale.code_postal,
+        DVFSale.nom_commune,
+        func.string_agg(func.distinct(DVFSale.type_principal), ", ").label("property_types"),
+        func.count(DVFSale.id).label("count"),
     ).filter(
-        DVFRecord.address.isnot(None),
-        DVFRecord.address != "",
-        DVFRecord.address.ilike(f"%{search_query}%"),
+        DVFSale.adresse_nom_voie.isnot(None),
+        DVFSale.adresse_nom_voie != "",
+        DVFSale.adresse_nom_voie.ilike(f"%{search_pattern}%"),
     )
 
-    # Filter by postal code if provided
     if postal_code:
-        query = query.filter(DVFRecord.postal_code == postal_code)
+        query = query.filter(DVFSale.code_postal == postal_code)
 
     query = (
-        query.group_by(DVFRecord.address, DVFRecord.postal_code, DVFRecord.city)
-        .order_by(
-            func.count(DVFRecord.id).desc()  # Most sales first
-        )
+        query.group_by(DVFSale.adresse_nom_voie, DVFSale.code_postal, DVFSale.nom_commune)
+        .order_by(func.count(DVFSale.id).desc())
         .limit(limit)
     )
 
@@ -156,10 +147,10 @@ async def search_addresses(
 
     return [
         AddressSearchResult(
-            address=r.address,
-            postal_code=r.postal_code,
-            city=r.city,
-            property_type=r.property_types or "Appartement",  # Default to Appartement
+            address=r.adresse_nom_voie,
+            postal_code=r.code_postal,
+            city=r.nom_commune,
+            property_type=r.property_types or "Appartement",
             count=r.count,
         )
         for r in results
@@ -185,27 +176,46 @@ async def list_properties_with_synthesis(
         .all()
     )
 
+    if not properties:
+        return []
+
+    prop_ids = [p.id for p in properties]
+
+    # Batch fetch syntheses (one query instead of N)
+    syntheses = (
+        db.query(DocumentSummary)
+        .filter(
+            DocumentSummary.property_id.in_(prop_ids),
+            DocumentSummary.category == None,
+        )
+        .all()
+    )
+    synthesis_map = {s.property_id: s for s in syntheses}
+
+    # Batch fetch document counts (one query instead of N)
+    doc_counts = (
+        db.query(Document.property_id, func.count(Document.id))
+        .filter(Document.property_id.in_(prop_ids))
+        .group_by(Document.property_id)
+        .all()
+    )
+    doc_count_map: dict[int, int] = dict(doc_counts)
+
+    # Batch fetch redesign counts (one query instead of N)
+    redesign_counts = (
+        db.query(Photo.property_id, func.count(PhotoRedesign.id))
+        .join(PhotoRedesign, PhotoRedesign.photo_id == Photo.id)
+        .filter(Photo.property_id.in_(prop_ids))
+        .group_by(Photo.property_id)
+        .all()
+    )
+    redesign_count_map: dict[int, int] = dict(redesign_counts)
+
     result = []
     for prop in properties:
-        # Get overall synthesis (category=NULL)
-        synthesis = (
-            db.query(DocumentSummary)
-            .filter(DocumentSummary.property_id == prop.id, DocumentSummary.category == None)
-            .first()
-        )
-
-        # Get document count
-        doc_count = (
-            db.query(func.count(Document.id)).filter(Document.property_id == prop.id).scalar()
-        ) or 0
-
-        # Get redesign count
-        redesign_count = (
-            db.query(func.count(PhotoRedesign.id))
-            .join(Photo, PhotoRedesign.photo_id == Photo.id)
-            .filter(Photo.property_id == prop.id)
-            .scalar()
-        ) or 0
+        synthesis = synthesis_map.get(prop.id)
+        doc_count = doc_count_map.get(prop.id, 0)
+        redesign_count = redesign_count_map.get(prop.id, 0)
 
         synthesis_preview = None
         if synthesis:
@@ -243,7 +253,6 @@ async def create_property(
 
     property = Property(**property_data.dict(), user_id=int(current_user))
 
-    # Calculate initial price per sqm if data available
     if property.asking_price and property.surface_area:
         property.price_per_sqm = property.asking_price / property.surface_area
 
@@ -320,11 +329,9 @@ async def update_property(
             status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
         )
 
-    # Update fields
     for field, value in property_update.dict(exclude_unset=True).items():
         setattr(property, field, value)
 
-    # Recalculate price per sqm if needed
     if property.asking_price and property.surface_area:
         property.price_per_sqm = property.asking_price / property.surface_area
 
@@ -359,352 +366,59 @@ async def delete_property(
     return None
 
 
-@router.post("/{property_id}/analyze-price", response_model=PriceAnalysisResponse)
-async def analyze_property_price(
-    property_id: int,
-    request: Request,
-    analysis_type: str = Query("simple", description="Analysis type: 'simple' or 'trend'"),
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
-):
-    """
-    Analyze property price against DVF comparable sales data.
-
-    Analysis types:
-    - 'simple': Use exact address sales (or neighbors if none found)
-    - 'trend': Project 2025 value using neighboring address trends
-    """
-    locale = get_local(request)
-
-    property = (
-        db.query(Property)
-        .filter(Property.id == property_id, Property.user_id == int(current_user))
-        .first()
-    )
-
-    if not property:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
-        )
-
-    if not property.asking_price or not property.surface_area:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=translate("property_needs_price_surface", locale),
-        )
-
-    if analysis_type == "trend":
-        # TREND ANALYSIS: Get GROUPED exact address sales + neighboring sales for trend
-        grouped_exact_sales = dvf_service.get_grouped_exact_address_sales(
-            db=db,
-            postal_code=property.postal_code or "",
-            property_type=property.property_type or "Appartement",
-            address=property.address or "",
-        )
-
-        # Convert grouped sales to compatible format for analysis
-        exact_sales = []
-        for sale in grouped_exact_sales:
-
-            class CompatibleSale:
-                def __init__(self, grouped_sale):
-                    self.id = grouped_sale.id
-                    self.sale_date = grouped_sale.sale_date
-                    self.sale_price = grouped_sale.sale_price
-                    self.surface_area = grouped_sale.total_surface_area
-                    self.price_per_sqm = grouped_sale.grouped_price_per_sqm
-                    self.address = grouped_sale.address
-                    self.city = grouped_sale.city
-                    self.postal_code = grouped_sale.postal_code
-
-            exact_sales.append(CompatibleSale(sale))
-
-        # Get neighboring sales for trend (ONLY 2024-2025 data for projection)
-        neighboring_sales = dvf_service.get_neighboring_sales_for_trend(
-            db=db,
-            postal_code=property.postal_code or "",
-            property_type=property.property_type or "Appartement",
-            surface_area=property.surface_area,
-            address=property.address or "",
-            months_back=24,  # Only current + past year (2024-2025)
-        )
-
-        # Check if we have enough data
-        if not exact_sales and not neighboring_sales:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=translate("no_comparable_sales", locale),
-            )
-
-        # Detect outliers in neighboring sales
-        neighboring_outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
-
-        # CRITICAL: Filter out outliers for consistent trend calculation (same as chart)
-        filtered_neighboring_sales = [
-            sale for i, sale in enumerate(neighboring_sales) if not neighboring_outlier_flags[i]
-        ]
-
-        outliers_excluded = len(neighboring_sales) - len(filtered_neighboring_sales)
-
-        print(f"\n🎯 INITIAL TREND ANALYSIS for property {property_id}")
-        print(f"   Exact address sales: {len(exact_sales)}")
-        print(f"   Total neighboring sales: {len(neighboring_sales)}")
-        print(f"   Outliers excluded: {outliers_excluded}")
-        print(f"   Filtered neighboring sales: {len(filtered_neighboring_sales)}")
-
-        # Calculate trend-based projection with FILTERED sales (outliers removed)
-        trend_projection = dvf_service.calculate_trend_based_projection(
-            exact_address_sales=exact_sales,
-            neighboring_sales=filtered_neighboring_sales,  # Use filtered sales WITHOUT outliers
-            surface_area=property.surface_area,
-        )
-
-        print(f"   Initial trend_used: {trend_projection.get('trend_used', 'N/A')}%")
-        print(f"   Initial sample size: {trend_projection.get('trend_sample_size', 'N/A')}")
-
-        # Detect outliers in exact/comparable sales
-        comparable_for_analysis = exact_sales if exact_sales else neighboring_sales
-        outlier_flags = dvf_service.detect_outliers_iqr(comparable_for_analysis)
-        outlier_indices = [i for i, is_outlier in enumerate(outlier_flags) if is_outlier]
-
-        # Use regular analysis as base (excluding outliers)
-        analysis = dvf_service.calculate_price_analysis(
-            asking_price=property.asking_price,
-            surface_area=property.surface_area,
-            comparable_sales=comparable_for_analysis,
-            exclude_indices=outlier_indices,
-            apply_time_adjustment=False,  # Use raw prices for base analysis
-            locale=locale,
-        )
-
-        # Add trend projection data and data source info
-        # Include neighboring sales list in the trend_projection for the UI
-        trend_projection_with_sales = trend_projection.copy()
-        trend_projection_with_sales["neighboring_sales"] = [
-            {
-                "id": sale.id,  # CRITICAL: Include ID for frontend toggling
-                "address": sale.address,
-                "sale_date": sale.sale_date.isoformat()
-                if hasattr(sale.sale_date, "isoformat")
-                else str(sale.sale_date),
-                "sale_price": sale.sale_price,
-                "surface_area": sale.surface_area,
-                "price_per_sqm": sale.price_per_sqm,
-                "is_outlier": neighboring_outlier_flags[i]
-                if i < len(neighboring_outlier_flags)
-                else False,
-            }
-            for i, sale in enumerate(neighboring_sales)
-        ]
-
-        analysis.update(
-            {
-                "analysis_type": "trend",
-                "trend_projection": trend_projection_with_sales,
-                "data_source": "exact_address" if exact_sales else "neighboring_addresses",
-                "exact_sales_count": len(exact_sales),
-                "neighboring_sales_count": len(
-                    filtered_neighboring_sales
-                ),  # Use filtered count (outliers excluded)
-            }
-        )
-
-        # Add outlier flags to comparable sales response (using grouped format)
-        comparable_sales_response = []
-        for i, sale in enumerate(grouped_exact_sales[:10]):
-            sale_response = DVFGroupedTransactionResponse.from_orm(sale)
-            sale_response.is_outlier = outlier_flags[i] if i < len(outlier_flags) else False
-            sale_response.is_multi_unit = sale.unit_count > 1
-            comparable_sales_response.append(sale_response)
-
-    else:
-        # SIMPLE ANALYSIS: Use GROUPED exact address sales (multi-unit aggregated)
-        grouped_sales = dvf_service.get_grouped_exact_address_sales(
-            db=db,
-            postal_code=property.postal_code or "",
-            property_type=property.property_type or "Appartement",
-            address=property.address or "",
-        )
-
-        if not grouped_sales:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=translate("no_exact_address_sales", locale, address=property.address),
-            )
-
-        # Convert grouped sales to format compatible with analysis
-        # Use total_surface_area and grouped_price_per_sqm for correct calculations
-        comparable_sales_for_analysis = []
-        for sale in grouped_sales:
-            # Create a compatible object for analysis
-            class CompatibleSale:
-                def __init__(self, grouped_sale):
-                    self.sale_date = grouped_sale.sale_date
-                    self.sale_price = grouped_sale.sale_price
-                    self.surface_area = grouped_sale.total_surface_area
-                    self.price_per_sqm = grouped_sale.grouped_price_per_sqm
-
-            comparable_sales_for_analysis.append(CompatibleSale(sale))
-
-        # Detect outliers using IQR method
-        outlier_flags = dvf_service.detect_outliers_iqr(comparable_sales_for_analysis)
-
-        # Calculate price analysis (excluding outliers by default)
-        outlier_indices = [i for i, is_outlier in enumerate(outlier_flags) if is_outlier]
-        analysis = dvf_service.calculate_price_analysis(
-            asking_price=property.asking_price,
-            surface_area=property.surface_area,
-            comparable_sales=comparable_sales_for_analysis,
-            exclude_indices=outlier_indices,
-            apply_time_adjustment=False,  # Use raw prices for simple analysis
-            locale=locale,
-        )
-
-        analysis["analysis_type"] = "simple"
-
-        # Convert grouped sales to response format with multi-unit details
-        comparable_sales_response = []
-        for i, sale in enumerate(grouped_sales[:10]):
-            sale_response = DVFGroupedTransactionResponse.from_orm(sale)
-            sale_response.is_outlier = outlier_flags[i] if i < len(outlier_flags) else False
-            sale_response.is_multi_unit = sale.unit_count > 1
-            comparable_sales_response.append(sale_response)
-
-    # Update property with analysis results
-    property.estimated_value = analysis["estimated_value"]
-    property.market_comparison_score = analysis["confidence_score"]
-    property.recommendation = analysis["recommendation"]
-
-    db.commit()
-
-    return PriceAnalysisResponse(**analysis, comparable_sales=comparable_sales_response)
-
-
-@router.post("/{property_id}/recalculate-analysis")
-async def recalculate_analysis(
-    property_id: int,
-    request: Request,
-    excluded_sale_ids: List[int],
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
-):
-    """
-    Recalculate price analysis excluding specific sales by their IDs.
-    Used when user toggles outlier inclusion/exclusion checkboxes.
-    """
-    locale = get_local(request)
-
-    property = (
-        db.query(Property)
-        .filter(Property.id == property_id, Property.user_id == int(current_user))
-        .first()
-    )
-
-    if not property:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
-        )
-
-    # Get the latest analysis data from property (we need to know what sales were used)
-    # Use GROUPED sales to match the original analysis
-    grouped_sales = dvf_service.get_grouped_exact_address_sales(
-        db=db,
-        postal_code=property.postal_code or "",
-        property_type=property.property_type or "Appartement",
-        address=property.address or "",
-    )
-
-    if not grouped_sales:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=translate("no_comparable_sales_short", locale),
-        )
-
-    # Convert grouped sales to compatible format
-    comparable_sales_for_analysis = []
-    for sale in grouped_sales:
-
-        class CompatibleSale:
-            def __init__(self, grouped_sale):
-                self.id = grouped_sale.id
-                self.sale_date = grouped_sale.sale_date
-                self.sale_price = grouped_sale.sale_price
-                self.surface_area = grouped_sale.total_surface_area
-                self.price_per_sqm = grouped_sale.grouped_price_per_sqm
-
-        comparable_sales_for_analysis.append(CompatibleSale(sale))
-
-    # Build exclusion indices based on sale IDs
-    sale_id_set = set(excluded_sale_ids)
-    exclude_indices = [
-        i for i, sale in enumerate(comparable_sales_for_analysis) if sale.id in sale_id_set
-    ]
-
-    # Recalculate analysis (use raw prices, no time adjustment for simple analysis)
-    analysis = dvf_service.calculate_price_analysis(
-        asking_price=property.asking_price,
-        surface_area=property.surface_area,
-        comparable_sales=comparable_sales_for_analysis,
-        exclude_indices=exclude_indices,
-        apply_time_adjustment=False,
-        locale=locale,
-    )
-
-    # Log the calculated values for debugging
-    print("🔍 RECALCULATE ANALYSIS:")
-    print(f"   Excluded indices: {exclude_indices}")
-    print(f"   Total sales: {len(comparable_sales_for_analysis)}")
-    print(f"   Filtered sales: {len(comparable_sales_for_analysis) - len(exclude_indices)}")
-    print(f"   Estimated value: {analysis['estimated_value']:.2f} €")
-    print(f"   Market avg: {analysis['market_avg_price_per_sqm']:.2f} €/m²")
-    print(f"   Surface area: {property.surface_area} m²")
-
-    # Return all analysis metrics
-    return {
-        "estimated_value": analysis["estimated_value"],
-        "price_per_sqm": analysis["price_per_sqm"],
-        "market_avg_price_per_sqm": analysis["market_avg_price_per_sqm"],
-        "market_median_price_per_sqm": analysis.get("market_median_price_per_sqm"),
-        "price_deviation_percent": analysis["price_deviation_percent"],
-        "recommendation": analysis["recommendation"],
-        "confidence_score": analysis["confidence_score"],
-        "comparables_count": analysis.get("comparables_count"),
-        "market_trend_annual": analysis.get("market_trend_annual"),
+def _serialize_sale(sale: DVFSale, is_outlier: bool = False) -> dict:
+    """Serialize a DVFSale to a JSON-safe dict for persistence."""
+    result = {
+        "id": sale.id,
+        "address": sale.adresse_complete or "",
+        "sale_date": sale.date_mutation.isoformat()
+        if hasattr(sale.date_mutation, "isoformat")
+        else str(sale.date_mutation),
+        "sale_price": float(sale.prix) if sale.prix else 0,
+        "postal_code": sale.code_postal or "",
+        "city": sale.nom_commune or "",
+        "property_type": sale.type_principal or "",
+        "surface_area": sale.surface_bati,
+        "rooms": sale.nombre_pieces,
+        "price_per_sqm": float(sale.prix_m2) if sale.prix_m2 else None,
+        "unit_count": sale.nombre_lots,
+        "is_multi_unit": (sale.nombre_lots or 1) > 1,
+        "is_outlier": is_outlier,
+        "longitude": sale.longitude,
+        "latitude": sale.latitude,
     }
 
+    # Include individual lot details for multi-unit sales
+    if (sale.nombre_lots or 1) > 1 and hasattr(sale, "lots") and sale.lots:
+        total_surface = sum(lot.surface_bati or 0 for lot in sale.lots)
+        result["lots_detail"] = [
+            {
+                "lot_type": lot.lot_type,
+                "surface_area": lot.surface_bati,
+                "rooms": lot.nombre_pieces,
+                "price_per_sqm": (
+                    round(float(sale.prix) / total_surface, 2)
+                    if sale.prix and total_surface > 0 and lot.surface_bati
+                    else None
+                ),
+            }
+            for lot in sale.lots
+        ]
+        # Use actual lot count from data (nombre_lots can be unreliable)
+        result["unit_count"] = len(sale.lots)
 
-@router.get("/{property_id}/market-trend")
-async def get_market_trend(
-    property_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
-):
-    """
-    Get year-over-year market trend data for visualization.
-    Returns average price per m² by year with year-over-year change percentages.
-    """
-    locale = get_local(request)
+    return result
 
-    property = (
-        db.query(Property)
-        .filter(Property.id == property_id, Property.user_id == int(current_user))
-        .first()
-    )
 
-    if not property:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
-        )
-
-    # Get all neighboring sales for trend (last 5 years)
+def _compute_market_trend_json(property_obj: Property, db: Session) -> dict:
+    """Compute yearly market trend data for chart."""
     neighboring_sales = dvf_service.get_neighboring_sales_for_trend(
         db=db,
-        postal_code=property.postal_code or "",
-        property_type=property.property_type or "Appartement",
-        surface_area=property.surface_area,
-        address=property.address or "",
-        months_back=60,  # 5 years
+        postal_code=property_obj.postal_code or "",
+        property_type=property_obj.property_type or "Appartement",
+        surface_area=property_obj.surface_area,
+        address=property_obj.address or "",
+        months_back=60,
     )
 
     if not neighboring_sales:
@@ -717,31 +431,16 @@ async def get_market_trend(
             "outliers_excluded": 0,
         }
 
-    # CRITICAL: Detect and EXCLUDE outliers for consistent trend calculation
     outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
     filtered_sales = [sale for i, sale in enumerate(neighboring_sales) if not outlier_flags[i]]
-
     outliers_excluded = len(neighboring_sales) - len(filtered_sales)
 
-    print(f"\n📊 MARKET TREND CHART for property {property_id}")
-    print(f"   Total sales (5 years): {len(neighboring_sales)}")
-    print(f"   Outliers detected: {outliers_excluded}")
-    print(f"   Sales after filtering: {len(filtered_sales)}")
+    sales_by_year: dict[int, list[float]] = defaultdict(list)
+    for sale in filtered_sales:
+        if sale.date_mutation and sale.prix_m2 and float(sale.prix_m2) > 0:
+            sales_by_year[sale.date_mutation.year].append(float(sale.prix_m2))
 
-    # Group sales by year and calculate averages
-    import statistics
-    from collections import defaultdict
-
-    sales_by_year = defaultdict(list)
-    for sale in filtered_sales:  # Use filtered sales WITHOUT outliers
-        if sale.sale_date and sale.price_per_sqm and sale.price_per_sqm > 0:
-            year = sale.sale_date.year
-            sales_by_year[year].append(sale.price_per_sqm)
-
-    # Sort years
     sorted_years = sorted(sales_by_year.keys())
-
-    # Calculate averages and YoY changes
     years = []
     average_prices = []
     year_over_year_changes = []
@@ -752,136 +451,472 @@ async def get_market_trend(
         years.append(year)
         average_prices.append(round(avg_price, 2))
         sample_counts.append(len(sales_by_year[year]))
-
         if i > 0:
             prev_avg = statistics.mean(sales_by_year[sorted_years[i - 1]])
             yoy_change = ((avg_price - prev_avg) / prev_avg) * 100
             year_over_year_changes.append(round(yoy_change, 2))
         else:
-            year_over_year_changes.append(0)  # No change for first year
+            year_over_year_changes.append(0)
 
-    # Extract street name for display
-    from app.services.dvf_service import DVFService
-
-    _, street_name = DVFService.extract_street_info(property.address or "")
+    _, street_name = DVFService.extract_street_info(property_obj.address or "")
 
     return {
         "years": years,
         "average_prices": average_prices,
         "year_over_year_changes": year_over_year_changes,
         "sample_counts": sample_counts,
-        "street_name": street_name or property.address or "Unknown",
+        "street_name": street_name or property_obj.address or "Unknown",
         "total_sales": len(neighboring_sales),
         "outliers_excluded": outliers_excluded,
     }
 
 
-@router.post("/{property_id}/recalculate-trend")
-async def recalculate_trend(
-    property_id: int,
-    request: Request,
-    excluded_neighboring_sale_ids: List[int],
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
-):
+def _run_trend_analysis(
+    property_obj: Property,
+    db: Session,
+    locale: str = "fr",
+    excluded_sale_ids: list[int] | None = None,
+    excluded_neighboring_sale_ids: list[int] | None = None,
+) -> PriceAnalysis:
     """
-    Recalculate trend analysis excluding specific neighboring sales by their IDs.
+    Run full trend analysis, persist results, return PriceAnalysis row.
+
+    excluded_sale_ids / excluded_neighboring_sale_ids are the **complete**
+    exclusion lists (including auto-detected outliers on first run).
+    The backend uses ONLY these lists to decide what is excluded — there is
+    no additional auto-outlier filtering on top.
     """
-    locale = get_local(request)
+    excluded_sale_ids = excluded_sale_ids or []
+    excluded_neighboring_sale_ids = excluded_neighboring_sale_ids or []
 
-    property = (
-        db.query(Property)
-        .filter(Property.id == property_id, Property.user_id == int(current_user))
-        .first()
-    )
-
-    if not property:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
-        )
-
-    # Get GROUPED exact address sales (same as initial analysis)
-    grouped_exact_sales = dvf_service.get_grouped_exact_address_sales(
+    exact_sales = dvf_service.get_exact_address_sales(
         db=db,
-        postal_code=property.postal_code or "",
-        property_type=property.property_type or "Appartement",
-        address=property.address or "",
+        postal_code=property_obj.postal_code or "",
+        property_type=property_obj.property_type or "Appartement",
+        address=property_obj.address or "",
     )
 
-    # Convert to compatible format
-    exact_sales = []
-    for sale in grouped_exact_sales:
-
-        class CompatibleSale:
-            def __init__(self, grouped_sale):
-                self.id = grouped_sale.id
-                self.sale_date = grouped_sale.sale_date
-                self.sale_price = grouped_sale.sale_price
-                self.surface_area = grouped_sale.total_surface_area
-                self.price_per_sqm = grouped_sale.grouped_price_per_sqm
-
-        exact_sales.append(CompatibleSale(sale))
-
-    # Get neighboring sales (ONLY 2024-2025, matching initial analysis)
     neighboring_sales = dvf_service.get_neighboring_sales_for_trend(
         db=db,
-        postal_code=property.postal_code or "",
-        property_type=property.property_type or "Appartement",
-        surface_area=property.surface_area,
-        address=property.address or "",
-        months_back=24,  # Only current + past year
+        postal_code=property_obj.postal_code or "",
+        property_type=property_obj.property_type or "Appartement",
+        surface_area=property_obj.surface_area,
+        address=property_obj.address or "",
+        months_back=60,
     )
 
-    if not exact_sales and not neighboring_sales:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=translate("no_trend_sales", locale)
-        )
-
-    # Detect outliers in ALL neighboring sales
+    # Detect outliers
     neighboring_outlier_flags = dvf_service.detect_outliers_iqr(neighboring_sales)
 
-    # Filter based on user selections (excluded_neighboring_sale_ids)
-    excluded_id_set = set(excluded_neighboring_sale_ids)
+    # On first run (empty exclusion lists), auto-populate with detected outlier IDs
+    if not excluded_neighboring_sale_ids:
+        excluded_neighboring_sale_ids = [
+            int(sale.id) for i, sale in enumerate(neighboring_sales) if neighboring_outlier_flags[i]
+        ]
+
+    # Filter neighboring sales using the persisted exclusion list only
+    excluded_neighboring_set = set(excluded_neighboring_sale_ids)
     filtered_neighboring_sales = [
-        sale for sale in neighboring_sales if sale.id not in excluded_id_set
+        sale for sale in neighboring_sales if sale.id not in excluded_neighboring_set
     ]
 
-    print(f"\n🔄 RECALCULATE TREND for property {property_id}")
-    print(f"   Total neighboring sales: {len(neighboring_sales)}")
-    print(f"   Excluded sale IDs: {excluded_id_set}")
-    print(f"   Filtered neighboring sales: {len(filtered_neighboring_sales)}")
-
-    # Recalculate trend projection with user-filtered sales
+    # Trend projection
     trend_projection = dvf_service.calculate_trend_based_projection(
         exact_address_sales=exact_sales,
-        neighboring_sales=filtered_neighboring_sales,  # Use filtered based on user choices
-        surface_area=property.surface_area,
+        neighboring_sales=filtered_neighboring_sales,
+        surface_area=property_obj.surface_area,
     )
 
-    print(f"   Recalculated trend_used: {trend_projection.get('trend_used', 'N/A')}%")
-    print(f"   Recalculated sample size: {trend_projection.get('trend_sample_size', 'N/A')}")
+    # Price analysis on comparable sales
+    comparable_for_analysis = exact_sales if exact_sales else neighboring_sales
 
-    # Include full neighboring sales list with outlier flags for UI
-    trend_projection_with_sales = trend_projection.copy()
-    trend_projection_with_sales["neighboring_sales"] = [
+    # Eagerly load lot details for multi-unit sales (needed for serialization)
+    multi_unit_ids = [sale.id for sale in comparable_for_analysis if (sale.nombre_lots or 1) > 1]
+    if multi_unit_ids:
+        from app.models.property import DVFSaleLot
+
+        lots_by_mutation = defaultdict(list)
+        lots = (
+            db.query(DVFSaleLot)
+            .join(DVFSale, DVFSaleLot.id_mutation == DVFSale.id_mutation)
+            .filter(DVFSale.id.in_(multi_unit_ids))
+            .all()
+        )
+        for lot in lots:
+            lots_by_mutation[lot.id_mutation].append(lot)
+        for sale in comparable_for_analysis:
+            if sale.id in multi_unit_ids:
+                sale.lots = lots_by_mutation.get(sale.id_mutation, [])
+
+    outlier_flags = dvf_service.detect_outliers_iqr(comparable_for_analysis)
+
+    # On first run, auto-populate with detected outlier IDs
+    if not excluded_sale_ids:
+        excluded_sale_ids = [
+            int(sale.id) for i, sale in enumerate(comparable_for_analysis) if outlier_flags[i]
+        ]
+
+    # Build exclude indices from the persisted exclusion list only
+    excluded_sale_set = set(excluded_sale_ids)
+    exclude_indices = [
+        i for i, sale in enumerate(comparable_for_analysis) if sale.id in excluded_sale_set
+    ]
+
+    analysis = dvf_service.calculate_price_analysis(
+        asking_price=property_obj.asking_price,
+        surface_area=property_obj.surface_area,
+        comparable_sales=comparable_for_analysis,
+        exclude_indices=exclude_indices,
+        apply_time_adjustment=False,
+        locale=locale,
+    )
+
+    # Build serialized comparable sales (with lots detail for multi-unit sales)
+    comparable_sales_json = [
+        _serialize_sale(sale, is_outlier=outlier_flags[i] if i < len(outlier_flags) else False)
+        for i, sale in enumerate(comparable_for_analysis)
+    ]
+
+    # Build trend projection with neighboring sales (ensure date objects are serialized)
+    trend_projection_json = {
+        k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in trend_projection.items()
+    }
+    trend_projection_json["neighboring_sales"] = [
         {
-            "id": sale.id,
-            "address": sale.address,
-            "sale_date": sale.sale_date.isoformat()
-            if hasattr(sale.sale_date, "isoformat")
-            else str(sale.sale_date),
-            "sale_price": sale.sale_price,
-            "surface_area": sale.surface_area,
-            "price_per_sqm": sale.price_per_sqm,
-            "is_outlier": neighboring_outlier_flags[i]
-            if i < len(neighboring_outlier_flags)
-            else False,
+            **_serialize_sale(
+                sale,
+                is_outlier=neighboring_outlier_flags[i]
+                if i < len(neighboring_outlier_flags)
+                else False,
+            ),
         }
         for i, sale in enumerate(neighboring_sales)
     ]
 
-    # Return updated trend projection with sales list
+    # Compute market trend for chart
+    market_trend_json = _compute_market_trend_json(property_obj, db)
+
+    # Upsert PriceAnalysis
+    pa = db.query(PriceAnalysis).filter(PriceAnalysis.property_id == property_obj.id).first()
+    if not pa:
+        pa = PriceAnalysis(property_id=property_obj.id)
+        db.add(pa)
+
+    pa.estimated_value = analysis["estimated_value"]
+    pa.price_per_sqm = analysis["price_per_sqm"]
+    pa.market_avg_price_per_sqm = analysis["market_avg_price_per_sqm"]
+    pa.market_median_price_per_sqm = analysis.get("market_median_price_per_sqm")
+    pa.price_deviation_percent = analysis["price_deviation_percent"]
+    pa.confidence_score = analysis["confidence_score"]
+    pa.market_trend_annual = analysis.get("market_trend_annual")
+    pa.recommendation = analysis["recommendation"]
+    pa.comparables_count = analysis.get("comparables_count")
+
+    pa.estimated_value_2025 = trend_projection.get("estimated_value_2025")
+    pa.projected_price_per_sqm = trend_projection.get("projected_price_per_sqm")
+    pa.trend_used = trend_projection.get("trend_used")
+    pa.trend_source = trend_projection.get("trend_source")
+    pa.trend_sample_size = trend_projection.get("trend_sample_size")
+
+    pa.comparable_sales_json = comparable_sales_json
+    pa.trend_projection_json = trend_projection_json
+    pa.market_trend_json = market_trend_json
+
+    pa.excluded_sale_ids = excluded_sale_ids
+    pa.excluded_neighboring_sale_ids = excluded_neighboring_sale_ids
+
+    # Also update property-level fields
+    property_obj.estimated_value = analysis["estimated_value"]
+    property_obj.market_comparison_score = analysis["confidence_score"]
+    property_obj.recommendation = analysis["recommendation"]
+
+    # Set pa.updated_at AFTER property updates so it's always >= property.updated_at
+    # (property.updated_at has onupdate=datetime.utcnow which fires on commit)
+    now = datetime.utcnow()
+    pa.updated_at = now
+    property_obj.updated_at = now
+
+    db.commit()
+    db.refresh(pa)
+    return pa
+
+
+def _is_stale(pa: PriceAnalysis, property_obj: Property) -> bool:
+    """Check if analysis is stale (property updated after analysis, or >30 days old)."""
+    if not pa.updated_at:
+        return True
+    if property_obj.updated_at and property_obj.updated_at > pa.updated_at:
+        return True
+    if (datetime.utcnow() - pa.updated_at).days > 30:
+        return True
+    return False
+
+
+def _pa_to_summary(pa: PriceAnalysis, stale: bool) -> dict:
+    """Convert PriceAnalysis row to summary dict."""
     return {
-        "trend_projection": trend_projection_with_sales,
-        "neighboring_sales_count": len(filtered_neighboring_sales),
+        "estimated_value": pa.estimated_value,
+        "price_deviation_percent": pa.price_deviation_percent,
+        "recommendation": pa.recommendation,
+        "confidence_score": pa.confidence_score,
+        "comparables_count": pa.comparables_count,
+        "estimated_value_2025": pa.estimated_value_2025,
+        "trend_used": pa.trend_used,
+        "updated_at": pa.updated_at,
+        "is_stale": stale,
     }
+
+
+def _pa_to_full(pa: PriceAnalysis, stale: bool) -> dict:
+    """Convert PriceAnalysis row to full dict."""
+    return {
+        **_pa_to_summary(pa, stale),
+        "price_per_sqm": pa.price_per_sqm,
+        "market_avg_price_per_sqm": pa.market_avg_price_per_sqm,
+        "market_median_price_per_sqm": pa.market_median_price_per_sqm,
+        "market_trend_annual": pa.market_trend_annual,
+        "projected_price_per_sqm": pa.projected_price_per_sqm,
+        "trend_source": pa.trend_source,
+        "trend_sample_size": pa.trend_sample_size,
+        "comparable_sales": pa.comparable_sales_json or [],
+        "trend_projection": pa.trend_projection_json,
+        "market_trend": pa.market_trend_json,
+        "excluded_sale_ids": pa.excluded_sale_ids or [],
+        "excluded_neighboring_sale_ids": pa.excluded_neighboring_sale_ids or [],
+    }
+
+
+def _get_or_run_analysis(
+    property_obj: Property, db: Session, locale: str, auto_refresh_if_stale: bool = False
+) -> tuple[PriceAnalysis | None, bool]:
+    """
+    Get cached analysis or auto-run if missing.
+    Returns (PriceAnalysis, is_stale) or (None, False) if can't run.
+    """
+    pa = db.query(PriceAnalysis).filter(PriceAnalysis.property_id == property_obj.id).first()
+
+    if pa:
+        stale = _is_stale(pa, property_obj)
+        if stale and auto_refresh_if_stale:
+            pa = _run_trend_analysis(
+                property_obj,
+                db,
+                locale,
+                excluded_sale_ids=pa.excluded_sale_ids or [],
+                excluded_neighboring_sale_ids=pa.excluded_neighboring_sale_ids or [],
+            )
+            return pa, False
+        return pa, stale
+
+    # No existing analysis — auto-run if property has required fields
+    if property_obj.asking_price and property_obj.surface_area:
+        pa = _run_trend_analysis(property_obj, db, locale)
+        return pa, False
+
+    return None, False
+
+
+@router.get("/{property_id}/price-analysis", response_model=PriceAnalysisSummaryResponse)
+async def get_price_analysis_summary(
+    property_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Get price analysis summary. Auto-runs on first visit if property has
+    asking_price + surface_area. Returns cached results on subsequent visits.
+    """
+    locale = get_local(request)
+
+    # Check Redis cache first
+    cache_key = f"price_analysis_summary:{property_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return PriceAnalysisSummaryResponse(**json.loads(cached))
+
+    property_obj = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
+    if not property_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
+        )
+
+    pa, _stale = _get_or_run_analysis(property_obj, db, locale, auto_refresh_if_stale=True)
+    if not pa:
+        return PriceAnalysisSummaryResponse()
+
+    result = _pa_to_summary(pa, False)
+
+    # Cache for 30 min
+    cache_set(cache_key, json.dumps(result, default=str), 1800)
+
+    return PriceAnalysisSummaryResponse(**result)
+
+
+@router.get("/{property_id}/price-analysis/full", response_model=PriceAnalysisFullResponse)
+async def get_price_analysis_full(
+    property_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """Get full price analysis data for the Price Analyst page."""
+    locale = get_local(request)
+
+    # Check Redis cache first
+    cache_key = f"price_analysis_full:{property_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return PriceAnalysisFullResponse(**json.loads(cached))
+
+    property_obj = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
+    if not property_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
+        )
+
+    pa, _stale = _get_or_run_analysis(property_obj, db, locale, auto_refresh_if_stale=True)
+    if not pa:
+        return PriceAnalysisFullResponse()
+
+    result = _pa_to_full(pa, False)
+
+    # Cache for 30 min
+    cache_set(cache_key, json.dumps(result, default=str), 1800)
+
+    return PriceAnalysisFullResponse(**result)
+
+
+@router.post("/{property_id}/price-analysis/refresh", response_model=PriceAnalysisFullResponse)
+async def refresh_price_analysis(
+    property_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """Force re-run analysis with fresh DVF data."""
+    locale = get_local(request)
+
+    property_obj = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
+    if not property_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
+        )
+
+    if not property_obj.asking_price or not property_obj.surface_area:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=translate("property_needs_price_surface", locale),
+        )
+
+    # Preserve user exclusions from existing analysis
+    existing = db.query(PriceAnalysis).filter(PriceAnalysis.property_id == property_obj.id).first()
+    excluded_sale_ids: list[int] = existing.excluded_sale_ids if existing else []
+    excluded_neighboring: list[int] = existing.excluded_neighboring_sale_ids if existing else []
+
+    pa = _run_trend_analysis(
+        property_obj,
+        db,
+        locale,
+        excluded_sale_ids=excluded_sale_ids or [],
+        excluded_neighboring_sale_ids=excluded_neighboring or [],
+    )
+
+    # Invalidate cached price analysis
+    try:
+        r = get_redis()
+        r.delete(f"price_analysis_summary:{property_id}", f"price_analysis_full:{property_id}")
+    except Exception:
+        logger.debug("Failed to invalidate price analysis cache for property %s", property_id)
+
+    return PriceAnalysisFullResponse(**_pa_to_full(pa, False))
+
+
+@router.post(
+    "/{property_id}/price-analysis/exclude-sales", response_model=PriceAnalysisFullResponse
+)
+async def exclude_sales(
+    property_id: int,
+    request: Request,
+    body: ExcludeSalesRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """Persist sale exclusions and recalculate analysis."""
+    locale = get_local(request)
+
+    property_obj = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
+    if not property_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
+        )
+
+    if not property_obj.asking_price or not property_obj.surface_area:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=translate("property_needs_price_surface", locale),
+        )
+
+    pa = _run_trend_analysis(
+        property_obj,
+        db,
+        locale,
+        excluded_sale_ids=body.excluded_sale_ids,
+        excluded_neighboring_sale_ids=body.excluded_neighboring_sale_ids,
+    )
+
+    # Invalidate cached price analysis
+    try:
+        r = get_redis()
+        r.delete(f"price_analysis_summary:{property_id}", f"price_analysis_full:{property_id}")
+    except Exception:
+        logger.debug("Failed to invalidate price analysis cache for property %s", property_id)
+
+    return PriceAnalysisFullResponse(**_pa_to_full(pa, False))
+
+
+@router.get("/{property_id}/market-trend")
+async def get_market_trend(
+    property_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    """
+    Get year-over-year market trend data for visualization.
+    Returns cached data from price_analyses if available, otherwise computes fresh.
+    """
+    locale = get_local(request)
+
+    property_obj = (
+        db.query(Property)
+        .filter(Property.id == property_id, Property.user_id == int(current_user))
+        .first()
+    )
+    if not property_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=translate("property_not_found", locale)
+        )
+
+    # Try cached
+    pa = db.query(PriceAnalysis).filter(PriceAnalysis.property_id == property_obj.id).first()
+    if pa and pa.market_trend_json:
+        return pa.market_trend_json
+
+    return _compute_market_trend_json(property_obj, db)

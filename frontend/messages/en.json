@@ -20,6 +20,7 @@
     "dashboard": "Dashboard",
     "properties": "Properties",
     "logout": "Logout",
+    "settings": "Settings",
     "login": "Login",
     "getStarted": "Get Started",
     "appName": "AppArt Agent"
@@ -34,6 +35,7 @@
       "passwordPlaceholder": "Password",
       "submit": "Sign in",
       "submitting": "Signing in...",
+      "forgotPassword": "Forgot your password?",
       "googleButton": "Continue with Google",
       "googleLoading": "Connecting to Google...",
       "errors": {
@@ -70,6 +72,104 @@
         "registrationFailed": "Registration failed. Please try again.",
         "googleFailed": "Google sign-up failed. Please try again."
       }
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "email": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "submit": "Send reset link",
+      "submitting": "Sending...",
+      "successTitle": "Check your email",
+      "successMessage": "If an account exists with that email, we've sent a password reset link. Check your inbox and spam folder.",
+      "backToLogin": "Back to sign in",
+      "errors": {
+        "emailRequired": "Email is required",
+        "emailInvalid": "Invalid email address",
+        "failed": "Failed to send reset link. Please try again."
+      }
+    },
+    "resetPassword": {
+      "title": "Set new password",
+      "subtitle": "Enter your new password below",
+      "newPassword": "New password",
+      "newPasswordPlaceholder": "New password",
+      "confirmPassword": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "submit": "Reset password",
+      "submitting": "Resetting...",
+      "successTitle": "Password reset",
+      "successMessage": "Your password has been reset. You can now sign in with your new password.",
+      "goToLogin": "Sign in",
+      "errors": {
+        "passwordRequired": "Password is required",
+        "passwordMinLength": "Password must be at least {min} characters",
+        "confirmPasswordRequired": "Please confirm your password",
+        "passwordsMismatch": "Passwords do not match",
+        "invalidToken": "This reset link is invalid or has expired. Please request a new one.",
+        "failed": "Failed to reset password. Please try again."
+      }
+    }
+  },
+  "settings": {
+    "title": "Account Settings",
+    "profile": {
+      "title": "Profile",
+      "name": "Display name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "emailReadOnly": "Email cannot be changed",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "saved": "Profile updated",
+      "errors": {
+        "nameRequired": "Name is required",
+        "failed": "Failed to update profile. Please try again."
+      }
+    },
+    "password": {
+      "title": "Change Password",
+      "current": "Current password",
+      "currentPlaceholder": "Current password",
+      "new": "New password",
+      "newPlaceholder": "New password",
+      "confirm": "Confirm new password",
+      "confirmPlaceholder": "Confirm new password",
+      "submit": "Change password",
+      "submitting": "Changing...",
+      "changed": "Password changed successfully",
+      "errors": {
+        "currentRequired": "Current password is required",
+        "newRequired": "New password is required",
+        "newMinLength": "Password must be at least {min} characters",
+        "confirmRequired": "Please confirm your new password",
+        "mismatch": "Passwords do not match",
+        "wrongCurrent": "Current password is incorrect",
+        "failed": "Failed to change password. Please try again."
+      }
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred language",
+      "french": "Français",
+      "english": "English"
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "deleteAccount": "Delete account",
+      "deleteDescription": "Permanently delete your account and all associated data. This action cannot be undone.",
+      "deleteButton": "Delete my account",
+      "confirmTitle": "Delete your account?",
+      "confirmMessage": "This will permanently delete your account, all your properties, documents, photos, and analyses. This action cannot be undone.",
+      "confirmInstruction": "Type DELETE to confirm",
+      "confirmPlaceholder": "Type DELETE",
+      "confirmButton": "Permanently delete account",
+      "deleting": "Deleting account...",
+      "errors": {
+        "confirmRequired": "Please type DELETE to confirm",
+        "confirmMismatch": "Please type DELETE exactly",
+        "failed": "Failed to delete account. Please try again."
+      }
     }
   },
   "home": {
@@ -84,7 +184,7 @@
     "features": {
       "priceAnalysis": {
         "title": "Price Analysis",
-        "description": "Compare asking prices with real market data from French DVF records. Know if you're getting a fair deal."
+        "description": "Compare asking prices against real market data from French DVF records. Check if you're getting a fair deal."
       },
       "documentAnalysis": {
         "title": "Document Analysis",
@@ -99,8 +199,8 @@
         "description": "Comprehensive annual cost estimates including charges, taxes, and upcoming works."
       },
       "styleVisualization": {
-        "title": "Style Visualization",
-        "description": "Upload photos and use AI to visualize renovation potential and style transformations."
+        "title": "AI Renovation Visualization",
+        "description": "Upload photos and let AI show you what the property could look like after renovation."
       },
       "investmentScore": {
         "title": "Investment Score",
@@ -122,7 +222,7 @@
     },
     "footer": {
       "copyright": "© 2026 AppArt Agent. All rights reserved.",
-      "tagline": "Helping you make informed property decisions in France"
+      "tagline": "We help you make informed property decisions in France"
     }
   },
   "dashboard": {
@@ -133,6 +233,27 @@
       "documentsAnalyzed": "Documents Analyzed",
       "redesignsGenerated": "Redesigns Generated",
       "dvfRecords": "DVF Records Available"
+    },
+    "gettingStarted": {
+      "title": "Get started in 4 easy steps",
+      "subtitle": "Add a property and let AI do the heavy lifting",
+      "cta": "Add your first property",
+      "step1": {
+        "title": "Add a property",
+        "description": "Enter the address and basic details of the apartment you're considering"
+      },
+      "step2": {
+        "title": "Upload documents",
+        "description": "Drop in PV d'AG, diagnostics, tax notices — AI classifies them automatically"
+      },
+      "step3": {
+        "title": "AI analysis",
+        "description": "Get risk assessment, hidden costs, and cross-document insights in seconds"
+      },
+      "step4": {
+        "title": "Price insights",
+        "description": "Compare with real DVF market data and get a buying recommendation"
+      }
     },
     "properties": {
       "title": "Your Properties",
@@ -218,7 +339,7 @@
     "analysis": {
       "title": "Price Analysis",
       "simpleAnalysis": "Simple Analysis",
-      "trendAnalysis": "Trend Analysis (2025 Projection)",
+      "trendAnalysis": "Trend Analysis ({year} Projection)",
       "analyzing": "Analyzing...",
       "manageDocuments": "Manage Documents",
       "redesignStudio": "Apartment Redesign Studio",
@@ -238,13 +359,13 @@
       },
       "trendTooltip": {
         "title": "Trend Analysis",
-        "whatItDoes": "Projects 2025 value using market trends from neighboring addresses.",
+        "whatItDoes": "Projects current value using market trends from neighboring addresses.",
         "howItWorks": "How it works:",
         "steps": {
           "takeSale": "Takes most recent sale at your exact address",
           "analyzeNeighboring": "Analyzes sales from neighboring buildings (±2, ±4, ±6, etc.)",
           "calculateTrend": "Calculates year-over-year market trend",
-          "projectForward": "Projects historical price forward to 2025",
+          "projectForward": "Projects historical price forward to current date",
           "accountTime": "Accounts for time and market evolution"
         },
         "bestFor": "Best for: Properties with older sales data. Estimates current value based on neighborhood trends."
@@ -255,8 +376,9 @@
       "recommendation": "Recommendation:"
     },
     "trend": {
-      "title": "2025 Trend Projection",
-      "projectedValue": "Projected 2025 Value",
+      "title": "{year} Trend Projection",
+      "projectedValue": "Projected {year} Value",
+      "projectedValueInfo": "Calculated by taking the price/m² from the most recent sale at this address, then applying the latest year's market trend (change between the two most recent years of neighboring sales) up to today, multiplied by the surface area.",
       "marketTrend": "Market Trend",
       "basedOnSales": "Based on {count} neighboring sales",
       "neighboringSalesTitle": "Neighboring Sales Used for Trend ({count})",
@@ -279,6 +401,7 @@
       "units": "{count} units",
       "individualUnits": "Individual Units ({count} lots in this transaction)",
       "unit": "Unit",
+      "type": "Type",
       "rooms": "Rooms",
       "individualPricePerSqm": "Individual Price/m²",
       "groupedNote": "Note: Individual prices/m² shown above are calculated per lot. The grouped price/m² ({price}) is the correct market price for the entire transaction.",
@@ -331,6 +454,32 @@
     },
     "deleteTitle": "Delete Property",
     "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
+    "priceAnalyst": {
+      "title": "Price Analyst",
+      "summary": {
+        "title": "Price Analysis",
+        "noData": "No analysis available",
+        "completeInfo": "Complete price and surface area to see analysis",
+        "staleWarning": "Analysis may be outdated",
+        "refresh": "Refresh",
+        "viewFull": "Open Price Analyst"
+      },
+      "metrics": {
+        "estimatedValue": "Estimated Value",
+        "estimatedValueInfo": "Calculated from the average price/m² of included comparable sales, multiplied by your property's surface area. You can include or exclude sales in the table below to refine the estimate.",
+        "deviation": "Price Deviation",
+        "deviationInfo": "Percentage difference between your asking price and the estimated market value. A positive deviation means your price is above market, negative means below.",
+        "comparables": "Comparable Sales",
+        "comparablesInfo": "Number of similar sales at the same address used for the calculation. Outliers detected using the IQR method are excluded by default.",
+        "recommendation": "Recommendation",
+        "projection": "{year} Projection",
+        "trend": "Trend"
+      },
+      "refresh": "Refresh Analysis",
+      "refreshing": "Refreshing...",
+      "lastUpdated": "Last updated: {date}",
+      "backToProperty": "Back to Property"
+    },
     "analyzeFailed": "Failed to analyze price",
     "recalculateFailed": "Failed to recalculate analysis",
     "recalculateTrendFailed": "Failed to recalculate trend analysis",
@@ -545,7 +694,13 @@
     "promoted": "Promoted",
     "redesignPromoted": "Redesign promoted to property overview",
     "redesignDemoted": "Redesign removed from property overview",
-    "promoteFailed": "Failed to update promoted redesign"
+    "promoteFailed": "Failed to update promoted redesign",
+    "attachReference": "Attach reference image",
+    "maxReferenceImages": "Maximum 2 reference images",
+    "referenceImageTooLarge": "Reference image must be under 10MB",
+    "referenceImagesUploading": "Please wait for reference images to finish uploading",
+    "referenceImagesFailed": "Some reference images failed to upload. Remove them and try again.",
+    "referenceUploadFailed": "Failed to upload reference image"
   },
   "properties": {
     "title": "My Properties",
@@ -553,17 +708,210 @@
     "addProperty": "Add Property",
     "loading": "Loading properties...",
     "empty": {
-      "title": "No properties",
-      "description": "Get started by adding your first property."
+      "title": "No properties yet",
+      "subtitle": "Add your first property to unlock AI-powered analysis",
+      "feature1": "Document analysis",
+      "feature2": "AI risk assessment",
+      "feature3": "DVF price comparison"
     },
     "deleteTitle": "Delete Property",
     "deleteMessage": "Are you sure you want to delete this property? This action cannot be undone. All associated documents, analyses, and photos will be permanently deleted.",
     "deleteFailed": "Failed to delete property. Please try again."
   },
+  "report": {
+    "downloadReport": "Download Report",
+    "exportPdf": "Export PDF",
+    "downloading": "Downloading..."
+  },
   "metadata": {
     "title": "AppArt Agent - Smart Property Decisions",
-    "description": "AI-powered platform to help you make informed apartment purchasing decisions in France",
+    "description": "AI-powered platform that helps you make informed apartment purchasing decisions in France",
     "ogTitle": "AppArt Agent - Smart Property Decisions",
-    "ogDescription": "AI-powered platform to help you make informed apartment purchasing decisions in France"
+    "ogDescription": "AI-powered platform that helps you make informed apartment purchasing decisions in France"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: April 2, 2026",
+      "intro": "AppArt Agent (\"we\", \"us\", \"our\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your personal data when you use our AI-powered apartment purchasing decision platform.",
+      "controller": {
+        "title": "1. Data Controller",
+        "content": "AppArt Agent operates as the data controller for the personal data processed through our platform."
+      },
+      "dataCollected": {
+        "title": "2. Data We Collect",
+        "account": "Account information: name, email address, hashed password",
+        "property": "Property details: addresses, prices, surface areas, room counts, and other property characteristics you enter",
+        "documents": "Uploaded documents: PDFs and images of property-related documents (PV d'AG, diagnostics, tax notices, charges statements)",
+        "photos": "Uploaded photos: apartment photos submitted for AI redesign",
+        "generated": "AI-generated content: property analyses, document summaries, price estimations, and redesigned images",
+        "usage": "Usage data: pages visited, features used (via PostHog analytics, only with your consent)",
+        "technical": "Technical data: browser type, device information, IP address (for security and rate limiting)"
+      },
+      "purpose": {
+        "title": "3. Purpose of Processing",
+        "analysis": "Analyzing property documents and extracting key information using AI",
+        "price": "Estimating property values by comparing with the DVF (Demandes de Valeurs Foncières) dataset",
+        "redesign": "Generating interior redesign visualizations from your photos",
+        "account": "Managing your account and providing access to your saved properties",
+        "improvement": "Improving our services through anonymized analytics (with consent)"
+      },
+      "ai": {
+        "title": "4. AI Processing",
+        "content": "Your documents and photos are processed by Google Gemini (via Vertex AI) for analysis and image generation. This data is sent to Google's servers for processing. We do not use your data to train AI models. Google's data processing terms apply to this processing."
+      },
+      "storage": {
+        "title": "5. Data Storage",
+        "structured": "Structured data (account info, property details, analyses) is stored in PostgreSQL on Google Cloud SQL",
+        "files": "Files (documents, photos, redesigns) are stored in Google Cloud Storage",
+        "location": "All data is stored within the European Union or in regions compliant with EU data protection standards"
+      },
+      "cookies": {
+        "title": "6. Cookies",
+        "essential": "Essential cookies: session authentication, cookie consent preferences (always active)",
+        "analytics": "Analytics cookies: PostHog tracking (opt-in only, disabled by default)"
+      },
+      "retention": {
+        "title": "7. Data Retention",
+        "content": "Your data is retained as long as your account is active. When you delete your account, all associated data (properties, documents, photos, analyses) is permanently deleted."
+      },
+      "rights": {
+        "title": "8. Your Rights (GDPR)",
+        "content": "Under the General Data Protection Regulation (GDPR), you have the right to:",
+        "access": "Access your personal data",
+        "rectification": "Rectify inaccurate data",
+        "erasure": "Request erasure of your data (\"right to be forgotten\")",
+        "portability": "Data portability",
+        "objection": "Object to processing",
+        "contact": "To exercise these rights, contact us at:"
+      },
+      "thirdParty": {
+        "title": "9. Third-Party Services",
+        "content": "We use the following third-party services:",
+        "gcp": "Google Cloud Platform (hosting, storage, database)",
+        "gemini": "Google Gemini / Vertex AI (AI analysis and image generation)",
+        "posthog": "PostHog (analytics, opt-in only)",
+        "resend": "Resend (transactional email delivery)",
+        "betterAuth": "Better Auth (authentication)"
+      },
+      "changes": {
+        "title": "10. Changes to This Policy",
+        "content": "We may update this policy from time to time. We will notify registered users of significant changes via email."
+      },
+      "contactEmail": "benjamin.karaoglan@appartagent.com"
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: April 2, 2026",
+      "intro": "By using AppArt Agent, you agree to these Terms of Service. Please read them carefully.",
+      "service": {
+        "title": "1. Service Description",
+        "content": "AppArt Agent is an AI-powered platform that helps apartment buyers in France make informed purchasing decisions by analyzing property documents, comparing prices with public market data (DVF), and generating interior redesign visualizations."
+      },
+      "aiDisclaimer": {
+        "title": "2. AI Disclaimer",
+        "content": "All analyses, estimates, and recommendations provided by AppArt Agent are for informational purposes only. They do not constitute professional legal, financial, or real estate advice. AI-generated content may contain errors or inaccuracies. Always consult qualified professionals before making purchasing decisions."
+      },
+      "userResponsibilities": {
+        "title": "3. User Responsibilities",
+        "accurate": "Provide accurate information about properties",
+        "lawful": "Use the platform for lawful purposes only",
+        "credentials": "Keep your account credentials secure",
+        "rights": "Only upload documents and photos you have the right to use"
+      },
+      "ip": {
+        "title": "4. Intellectual Property",
+        "userContent": "You retain ownership of all content you upload (documents, photos). By uploading, you grant us a limited license to process this content for the purpose of providing our services.",
+        "aiContent": "AI-generated content (analyses, redesigned images) is provided for your personal use. You may download and share it freely.",
+        "platform": "The AppArt Agent platform, including its design, code, and features, remains our intellectual property."
+      },
+      "availability": {
+        "title": "5. Service Availability",
+        "content": "AppArt Agent is provided \"as is\" without warranty. We do not guarantee uninterrupted service availability. We may perform maintenance or updates that temporarily affect access."
+      },
+      "liability": {
+        "title": "6. Limitation of Liability",
+        "content": "To the maximum extent permitted by law, AppArt Agent shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform. This includes decisions made based on AI-generated analyses or estimates."
+      },
+      "termination": {
+        "title": "7. Account Termination",
+        "content": "We may suspend or terminate accounts that violate these terms. You may delete your account at any time, which will permanently remove all your data."
+      },
+      "law": {
+        "title": "8. Governing Law",
+        "content": "These terms are governed by French law. Any disputes shall be subject to the jurisdiction of French courts."
+      },
+      "changes": {
+        "title": "9. Changes to These Terms",
+        "content": "We may update these terms from time to time. Continued use of the platform after changes constitutes acceptance of the new terms."
+      },
+      "contactEmail": "benjamin.karaoglan@appartagent.com"
+    }
+  },
+  "cookie": {
+    "title": "Cookie Preferences",
+    "description": "We use cookies to improve your experience. Essential cookies are required for the site to function. Analytics cookies help us understand how you use the app.",
+    "acceptAll": "Accept All",
+    "rejectNonEssential": "Reject Non-Essential",
+    "managePreferences": "Manage Preferences",
+    "savePreferences": "Save Preferences",
+    "essential": {
+      "title": "Essential Cookies",
+      "description": "Required for authentication and basic functionality. Cannot be disabled."
+    },
+    "analytics": {
+      "title": "Analytics Cookies",
+      "description": "Help us understand how you use the app to improve it. Powered by PostHog."
+    },
+    "alwaysActive": "Always active"
+  },
+  "feedback": {
+    "button": "Feedback",
+    "title": "Send Feedback",
+    "type": {
+      "label": "Type",
+      "bug_report": "Bug Report",
+      "feature_request": "Feature Request",
+      "general_feedback": "General Feedback"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Describe the issue or suggestion..."
+    },
+    "email": {
+      "label": "Email (optional)",
+      "placeholder": "your@email.com"
+    },
+    "screenshot": {
+      "label": "Screenshot (optional)",
+      "hint": "Drag & drop or click to upload an image (max 5MB)"
+    },
+    "submit": "Send Feedback",
+    "submitting": "Sending...",
+    "success": "Thank you! We'll review your feedback.",
+    "error": "Failed to send feedback. Please try again."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Page Not Found",
+      "description": "The page you're looking for doesn't exist or has been moved.",
+      "goHome": "Go Home",
+      "goBack": "Go Back",
+      "goDashboard": "Go to Dashboard"
+    },
+    "serverError": {
+      "title": "Something Went Wrong",
+      "description": "An unexpected error occurred. Please try again.",
+      "tryAgain": "Try Again",
+      "reportIssue": "Report This Issue",
+      "details": "Error Details"
+    }
+  },
+  "footer": {
+    "copyright": "© 2026 AppArt Agent. All rights reserved.",
+    "tagline": "AI-powered apartment purchasing decisions in France",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "feedback": "Feedback"
   }
 }

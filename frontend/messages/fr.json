@@ -20,6 +20,7 @@
     "dashboard": "Tableau de bord",
     "properties": "Biens",
     "logout": "Déconnexion",
+    "settings": "Paramètres",
     "login": "Connexion",
     "getStarted": "Commencer",
     "appName": "AppArt Agent"
@@ -34,6 +35,7 @@
       "passwordPlaceholder": "Mot de passe",
       "submit": "Se connecter",
       "submitting": "Connexion en cours...",
+      "forgotPassword": "Mot de passe oublié ?",
       "googleButton": "Continuer avec Google",
       "googleLoading": "Connexion à Google...",
       "errors": {
@@ -70,6 +72,104 @@
         "registrationFailed": "L'inscription a échoué. Veuillez réessayer.",
         "googleFailed": "L'inscription Google a échoué. Veuillez réessayer."
       }
+    },
+    "forgotPassword": {
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "Entrez votre email et nous vous enverrons un lien de réinitialisation",
+      "email": "Adresse email",
+      "emailPlaceholder": "vous@exemple.com",
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi en cours...",
+      "successTitle": "Vérifiez votre email",
+      "successMessage": "Si un compte existe avec cet email, nous avons envoyé un lien de réinitialisation. Vérifiez votre boîte de réception et vos spams.",
+      "backToLogin": "Retour à la connexion",
+      "errors": {
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Adresse email invalide",
+        "failed": "Échec de l'envoi du lien. Veuillez réessayer."
+      }
+    },
+    "resetPassword": {
+      "title": "Nouveau mot de passe",
+      "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+      "newPassword": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "confirmPasswordPlaceholder": "Confirmer le nouveau mot de passe",
+      "submit": "Réinitialiser le mot de passe",
+      "submitting": "Réinitialisation...",
+      "successTitle": "Mot de passe réinitialisé",
+      "successMessage": "Votre mot de passe a été réinitialisé. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+      "goToLogin": "Se connecter",
+      "errors": {
+        "passwordRequired": "Le mot de passe est requis",
+        "passwordMinLength": "Le mot de passe doit contenir au moins {min} caractères",
+        "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+        "passwordsMismatch": "Les mots de passe ne correspondent pas",
+        "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
+        "failed": "Échec de la réinitialisation. Veuillez réessayer."
+      }
+    }
+  },
+  "settings": {
+    "title": "Paramètres du compte",
+    "profile": {
+      "title": "Profil",
+      "name": "Nom d'affichage",
+      "namePlaceholder": "Votre nom",
+      "email": "Email",
+      "emailReadOnly": "L'email ne peut pas être modifié",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "saved": "Profil mis à jour",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "failed": "Échec de la mise à jour du profil. Veuillez réessayer."
+      }
+    },
+    "password": {
+      "title": "Changer le mot de passe",
+      "current": "Mot de passe actuel",
+      "currentPlaceholder": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "newPlaceholder": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "confirmPlaceholder": "Confirmer le nouveau mot de passe",
+      "submit": "Changer le mot de passe",
+      "submitting": "Modification...",
+      "changed": "Mot de passe modifié avec succès",
+      "errors": {
+        "currentRequired": "Le mot de passe actuel est requis",
+        "newRequired": "Le nouveau mot de passe est requis",
+        "newMinLength": "Le mot de passe doit contenir au moins {min} caractères",
+        "confirmRequired": "Veuillez confirmer votre nouveau mot de passe",
+        "mismatch": "Les mots de passe ne correspondent pas",
+        "wrongCurrent": "Le mot de passe actuel est incorrect",
+        "failed": "Échec du changement de mot de passe. Veuillez réessayer."
+      }
+    },
+    "language": {
+      "title": "Langue",
+      "description": "Choisissez votre langue préférée",
+      "french": "Français",
+      "english": "English"
+    },
+    "dangerZone": {
+      "title": "Zone de danger",
+      "deleteAccount": "Supprimer le compte",
+      "deleteDescription": "Supprimez définitivement votre compte et toutes les données associées. Cette action est irréversible.",
+      "deleteButton": "Supprimer mon compte",
+      "confirmTitle": "Supprimer votre compte ?",
+      "confirmMessage": "Cela supprimera définitivement votre compte, tous vos biens, documents, photos et analyses. Cette action est irréversible.",
+      "confirmInstruction": "Tapez SUPPRIMER pour confirmer",
+      "confirmPlaceholder": "Tapez SUPPRIMER",
+      "confirmButton": "Supprimer définitivement le compte",
+      "deleting": "Suppression du compte...",
+      "errors": {
+        "confirmRequired": "Veuillez taper SUPPRIMER pour confirmer",
+        "confirmMismatch": "Veuillez taper SUPPRIMER exactement",
+        "failed": "Échec de la suppression du compte. Veuillez réessayer."
+      }
     }
   },
   "home": {
@@ -84,7 +184,7 @@
     "features": {
       "priceAnalysis": {
         "title": "Analyse de Prix",
-        "description": "Comparez les prix demandés avec les données réelles du marché issues des registres DVF français. Sachez si vous faites une bonne affaire."
+        "description": "Comparez les prix demandés avec les données réelles du marché issues des registres DVF français. Vérifiez si vous faites une bonne affaire."
       },
       "documentAnalysis": {
         "title": "Analyse de Documents",
@@ -99,8 +199,8 @@
         "description": "Estimations complètes des coûts annuels incluant charges, taxes et travaux à venir."
       },
       "styleVisualization": {
-        "title": "Visualisation de Style",
-        "description": "Téléchargez des photos et utilisez l'IA pour visualiser le potentiel de rénovation et les transformations de style."
+        "title": "Visualisation de rénovation par IA",
+        "description": "Ajoutez des photos et découvrez, grâce à l'IA, à quoi pourrait ressembler le bien après rénovation."
       },
       "investmentScore": {
         "title": "Score d'Investissement",
@@ -122,7 +222,7 @@
     },
     "footer": {
       "copyright": "© 2026 AppArt Agent. Tous droits réservés.",
-      "tagline": "Vous aidant à prendre des décisions immobilières éclairées en France"
+      "tagline": "Nous vous aidons à prendre des décisions immobilières éclairées en France"
     }
   },
   "dashboard": {
@@ -133,6 +233,27 @@
       "documentsAnalyzed": "Documents analysés",
       "redesignsGenerated": "Redesigns générés",
       "dvfRecords": "Données DVF disponibles"
+    },
+    "gettingStarted": {
+      "title": "Commencez en 4 étapes simples",
+      "subtitle": "Ajoutez un bien et laissez l'IA faire le travail",
+      "cta": "Ajouter votre premier bien",
+      "step1": {
+        "title": "Ajoutez un bien",
+        "description": "Entrez l'adresse et les détails de base de l'appartement que vous envisagez"
+      },
+      "step2": {
+        "title": "Téléchargez les documents",
+        "description": "Déposez PV d'AG, diagnostics, avis d'imposition — l'IA les classe automatiquement"
+      },
+      "step3": {
+        "title": "Analyse IA",
+        "description": "Obtenez l'évaluation des risques, coûts cachés et analyses croisées en quelques secondes"
+      },
+      "step4": {
+        "title": "Analyse de prix",
+        "description": "Comparez avec les données DVF réelles et obtenez une recommandation d'achat"
+      }
     },
     "properties": {
       "title": "Vos biens",
@@ -218,7 +339,7 @@
     "analysis": {
       "title": "Analyse de prix",
       "simpleAnalysis": "Analyse simple",
-      "trendAnalysis": "Analyse tendance (Projection 2025)",
+      "trendAnalysis": "Analyse tendance (Projection {year})",
       "analyzing": "Analyse en cours...",
       "manageDocuments": "Gérer les documents",
       "redesignStudio": "Studio de redesign d'appartement",
@@ -238,13 +359,13 @@
       },
       "trendTooltip": {
         "title": "Analyse tendance",
-        "whatItDoes": "Projette la valeur 2025 en utilisant les tendances du marché des adresses voisines.",
+        "whatItDoes": "Projette la valeur actuelle en utilisant les tendances du marché des adresses voisines.",
         "howItWorks": "Comment ça marche :",
         "steps": {
           "takeSale": "Prend la vente la plus récente à votre adresse exacte",
           "analyzeNeighboring": "Analyse les ventes des immeubles voisins (±2, ±4, ±6, etc.)",
           "calculateTrend": "Calcule la tendance annuelle du marché",
-          "projectForward": "Projette le prix historique vers 2025",
+          "projectForward": "Projette le prix historique vers la date actuelle",
           "accountTime": "Tient compte du temps et de l'évolution du marché"
         },
         "bestFor": "Idéal pour : Les biens avec des données de vente plus anciennes. Estime la valeur actuelle basée sur les tendances du quartier."
@@ -255,8 +376,9 @@
       "recommendation": "Recommandation :"
     },
     "trend": {
-      "title": "Projection Tendance 2025",
-      "projectedValue": "Valeur projetée 2025",
+      "title": "Projection Tendance {year}",
+      "projectedValue": "Valeur projetée {year}",
+      "projectedValueInfo": "Calculée en prenant le prix/m² de la dernière vente à cette adresse, puis en appliquant la tendance du marché de la dernière année (évolution entre l'avant-dernière et la dernière année de ventes voisines) jusqu'à aujourd'hui, multiplié par la surface.",
       "marketTrend": "Tendance du marché",
       "basedOnSales": "Basé sur {count} ventes voisines",
       "neighboringSalesTitle": "Ventes voisines pour la tendance ({count})",
@@ -279,6 +401,7 @@
       "units": "{count} lots",
       "individualUnits": "Lots individuels ({count} lots dans cette transaction)",
       "unit": "Lot",
+      "type": "Type",
       "rooms": "Pièces",
       "individualPricePerSqm": "Prix/m² individuel",
       "groupedNote": "Note : Les prix/m² individuels ci-dessus sont calculés par lot. Le prix/m² groupé ({price}) est le prix de marché correct pour l'ensemble de la transaction.",
@@ -331,6 +454,32 @@
     },
     "deleteTitle": "Supprimer le bien",
     "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
+    "priceAnalyst": {
+      "title": "Analyste de Prix",
+      "summary": {
+        "title": "Analyse de Prix",
+        "noData": "Aucune analyse disponible",
+        "completeInfo": "Renseignez le prix et la surface pour voir l'analyse",
+        "staleWarning": "Analyse potentiellement obsolète",
+        "refresh": "Actualiser",
+        "viewFull": "Ouvrir l'Analyste de Prix"
+      },
+      "metrics": {
+        "estimatedValue": "Valeur estimée",
+        "estimatedValueInfo": "Calculée à partir du prix moyen au m² des ventes comparables incluses, multiplié par la surface de votre bien. Vous pouvez inclure ou exclure des ventes dans le tableau ci-dessous pour affiner l'estimation.",
+        "deviation": "Écart de prix",
+        "deviationInfo": "Différence en pourcentage entre votre prix demandé et la valeur estimée. Un écart positif signifie que votre prix est au-dessus du marché, négatif en dessous.",
+        "comparables": "Ventes comparables",
+        "comparablesInfo": "Nombre de ventes similaires à la même adresse utilisées pour le calcul. Les valeurs aberrantes (méthode IQR) sont exclues par défaut.",
+        "recommendation": "Recommandation",
+        "projection": "Projection {year}",
+        "trend": "Tendance"
+      },
+      "refresh": "Actualiser l'analyse",
+      "refreshing": "Actualisation...",
+      "lastUpdated": "Dernière mise à jour : {date}",
+      "backToProperty": "Retour au bien"
+    },
     "analyzeFailed": "Échec de l'analyse de prix",
     "recalculateFailed": "Échec du recalcul de l'analyse",
     "recalculateTrendFailed": "Échec du recalcul de l'analyse tendance",
@@ -545,7 +694,13 @@
     "promoted": "Promu",
     "redesignPromoted": "Redesign promu sur l'aperçu du bien",
     "redesignDemoted": "Redesign retiré de l'aperçu du bien",
-    "promoteFailed": "Échec de la mise à jour du redesign promu"
+    "promoteFailed": "Échec de la mise à jour du redesign promu",
+    "attachReference": "Joindre une image de référence",
+    "maxReferenceImages": "Maximum 2 images de référence",
+    "referenceImageTooLarge": "L'image de référence doit faire moins de 10 Mo",
+    "referenceImagesUploading": "Veuillez attendre la fin du téléchargement des images de référence",
+    "referenceImagesFailed": "Certaines images de référence n'ont pas pu être téléchargées. Veuillez les supprimer et réessayer.",
+    "referenceUploadFailed": "Échec du téléchargement de l'image de référence"
   },
   "properties": {
     "title": "Mes biens",
@@ -553,17 +708,210 @@
     "addProperty": "Ajouter un bien",
     "loading": "Chargement des biens...",
     "empty": {
-      "title": "Aucun bien",
-      "description": "Commencez par ajouter votre premier bien."
+      "title": "Aucun bien pour le moment",
+      "subtitle": "Ajoutez votre premier bien pour débloquer l'analyse par IA",
+      "feature1": "Analyse de documents",
+      "feature2": "Évaluation des risques par IA",
+      "feature3": "Comparaison de prix DVF"
     },
     "deleteTitle": "Supprimer le bien",
     "deleteMessage": "Êtes-vous sûr de vouloir supprimer ce bien ? Cette action est irréversible. Tous les documents, analyses et photos associés seront définitivement supprimés.",
     "deleteFailed": "Échec de la suppression du bien. Veuillez réessayer."
   },
+  "report": {
+    "downloadReport": "Télécharger le rapport",
+    "exportPdf": "Exporter PDF",
+    "downloading": "Téléchargement..."
+  },
   "metadata": {
     "title": "AppArt Agent - Décisions Immobilières Intelligentes",
-    "description": "Plateforme IA pour vous aider à prendre des décisions d'achat immobilier éclairées en France",
+    "description": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France",
     "ogTitle": "AppArt Agent - Décisions Immobilières Intelligentes",
-    "ogDescription": "Plateforme IA pour vous aider à prendre des décisions d'achat immobilier éclairées en France"
+    "ogDescription": "Plateforme IA qui vous aide à prendre des décisions d'achat immobilier éclairées en France"
+  },
+  "legal": {
+    "privacy": {
+      "title": "Politique de Confidentialité",
+      "lastUpdated": "Dernière mise à jour : 2 avril 2026",
+      "intro": "AppArt Agent (« nous », « notre ») s'engage à protéger votre vie privée. Cette Politique de Confidentialité explique comment nous collectons, utilisons et protégeons vos données personnelles lorsque vous utilisez notre plateforme d'aide à l'achat immobilier propulsée par l'IA.",
+      "controller": {
+        "title": "1. Responsable du traitement",
+        "content": "AppArt Agent agit en tant que responsable du traitement des données personnelles traitées via notre plateforme."
+      },
+      "dataCollected": {
+        "title": "2. Données collectées",
+        "account": "Informations de compte : nom, adresse email, mot de passe chiffré",
+        "property": "Détails des biens : adresses, prix, surfaces, nombre de pièces et autres caractéristiques que vous saisissez",
+        "documents": "Documents téléversés : PDF et images de documents liés au bien (PV d'AG, diagnostics, avis d'imposition, appels de charges)",
+        "photos": "Photos téléversées : photos d'appartement soumises pour le redesign par IA",
+        "generated": "Contenu généré par l'IA : analyses de biens, résumés de documents, estimations de prix et images redesignées",
+        "usage": "Données d'utilisation : pages visitées, fonctionnalités utilisées (via PostHog, uniquement avec votre consentement)",
+        "technical": "Données techniques : type de navigateur, informations sur l'appareil, adresse IP (pour la sécurité)"
+      },
+      "purpose": {
+        "title": "3. Finalité du traitement",
+        "analysis": "Analyser les documents immobiliers et extraire les informations clés grâce à l'IA",
+        "price": "Estimer la valeur des biens en comparant avec le jeu de données DVF (Demandes de Valeurs Foncières)",
+        "redesign": "Générer des visualisations de rénovation intérieure à partir de vos photos",
+        "account": "Gérer votre compte et fournir l'accès à vos biens sauvegardés",
+        "improvement": "Améliorer nos services grâce à des analyses anonymisées (avec consentement)"
+      },
+      "ai": {
+        "title": "4. Traitement par l'IA",
+        "content": "Vos documents et photos sont traités par Google Gemini (via Vertex AI) pour l'analyse et la génération d'images. Ces données sont envoyées aux serveurs de Google pour traitement. Nous n'utilisons pas vos données pour entraîner des modèles d'IA. Les conditions de traitement des données de Google s'appliquent."
+      },
+      "storage": {
+        "title": "5. Stockage des données",
+        "structured": "Les données structurées (compte, détails des biens, analyses) sont stockées dans PostgreSQL sur Google Cloud SQL",
+        "files": "Les fichiers (documents, photos, redesigns) sont stockés dans Google Cloud Storage",
+        "location": "Toutes les données sont stockées au sein de l'Union Européenne ou dans des régions conformes aux normes de protection des données de l'UE"
+      },
+      "cookies": {
+        "title": "6. Cookies",
+        "essential": "Cookies essentiels : authentification de session, préférences de cookies (toujours actifs)",
+        "analytics": "Cookies analytiques : suivi PostHog (opt-in uniquement, désactivé par défaut)"
+      },
+      "retention": {
+        "title": "7. Conservation des données",
+        "content": "Vos données sont conservées tant que votre compte est actif. Lorsque vous supprimez votre compte, toutes les données associées (biens, documents, photos, analyses) sont définitivement supprimées."
+      },
+      "rights": {
+        "title": "8. Vos droits (RGPD)",
+        "content": "En vertu du Règlement Général sur la Protection des Données (RGPD), vous avez le droit de :",
+        "access": "Accéder à vos données personnelles",
+        "rectification": "Rectifier les données inexactes",
+        "erasure": "Demander l'effacement de vos données (« droit à l'oubli »)",
+        "portability": "Portabilité des données",
+        "objection": "Vous opposer au traitement",
+        "contact": "Pour exercer ces droits, contactez-nous à :"
+      },
+      "thirdParty": {
+        "title": "9. Services tiers",
+        "content": "Nous utilisons les services tiers suivants :",
+        "gcp": "Google Cloud Platform (hébergement, stockage, base de données)",
+        "gemini": "Google Gemini / Vertex AI (analyse IA et génération d'images)",
+        "posthog": "PostHog (analytique, opt-in uniquement)",
+        "resend": "Resend (envoi d'emails transactionnels)",
+        "betterAuth": "Better Auth (authentification)"
+      },
+      "changes": {
+        "title": "10. Modifications de cette politique",
+        "content": "Nous pouvons mettre à jour cette politique de temps en temps. Nous informerons les utilisateurs inscrits des changements importants par email."
+      },
+      "contactEmail": "benjamin.karaoglan@appartagent.com"
+    },
+    "terms": {
+      "title": "Conditions Générales d'Utilisation",
+      "lastUpdated": "Dernière mise à jour : 2 avril 2026",
+      "intro": "En utilisant AppArt Agent, vous acceptez ces Conditions Générales d'Utilisation. Veuillez les lire attentivement.",
+      "service": {
+        "title": "1. Description du service",
+        "content": "AppArt Agent est une plateforme propulsée par l'IA qui aide les acheteurs d'appartements en France à prendre des décisions d'achat éclairées en analysant les documents immobiliers, en comparant les prix avec les données publiques du marché (DVF), et en générant des visualisations de rénovation intérieure."
+      },
+      "aiDisclaimer": {
+        "title": "2. Avertissement IA",
+        "content": "Toutes les analyses, estimations et recommandations fournies par AppArt Agent sont à titre informatif uniquement. Elles ne constituent pas un conseil juridique, financier ou immobilier professionnel. Le contenu généré par l'IA peut contenir des erreurs ou inexactitudes. Consultez toujours des professionnels qualifiés avant de prendre des décisions d'achat."
+      },
+      "userResponsibilities": {
+        "title": "3. Responsabilités de l'utilisateur",
+        "accurate": "Fournir des informations exactes sur les biens",
+        "lawful": "Utiliser la plateforme à des fins légales uniquement",
+        "credentials": "Garder vos identifiants de compte sécurisés",
+        "rights": "Ne téléverser que des documents et photos dont vous avez les droits d'utilisation"
+      },
+      "ip": {
+        "title": "4. Propriété intellectuelle",
+        "userContent": "Vous conservez la propriété de tout contenu que vous téléversez (documents, photos). En téléversant, vous nous accordez une licence limitée pour traiter ce contenu afin de fournir nos services.",
+        "aiContent": "Le contenu généré par l'IA (analyses, images redesignées) est fourni pour votre usage personnel. Vous pouvez le télécharger et le partager librement.",
+        "platform": "La plateforme AppArt Agent, y compris son design, son code et ses fonctionnalités, reste notre propriété intellectuelle."
+      },
+      "availability": {
+        "title": "5. Disponibilité du service",
+        "content": "AppArt Agent est fourni « tel quel » sans garantie. Nous ne garantissons pas une disponibilité ininterrompue du service. Nous pouvons effectuer des maintenances ou mises à jour affectant temporairement l'accès."
+      },
+      "liability": {
+        "title": "6. Limitation de responsabilité",
+        "content": "Dans les limites autorisées par la loi, AppArt Agent ne saurait être tenu responsable de tout dommage indirect, accessoire ou consécutif résultant de votre utilisation de la plateforme. Cela inclut les décisions prises sur la base d'analyses ou estimations générées par l'IA."
+      },
+      "termination": {
+        "title": "7. Résiliation de compte",
+        "content": "Nous pouvons suspendre ou résilier les comptes qui enfreignent ces conditions. Vous pouvez supprimer votre compte à tout moment, ce qui supprimera définitivement toutes vos données."
+      },
+      "law": {
+        "title": "8. Droit applicable",
+        "content": "Ces conditions sont régies par le droit français. Tout litige sera soumis à la juridiction des tribunaux français."
+      },
+      "changes": {
+        "title": "9. Modifications de ces conditions",
+        "content": "Nous pouvons mettre à jour ces conditions de temps en temps. L'utilisation continue de la plateforme après les modifications constitue une acceptation des nouvelles conditions."
+      },
+      "contactEmail": "benjamin.karaoglan@appartagent.com"
+    }
+  },
+  "cookie": {
+    "title": "Préférences de cookies",
+    "description": "Nous utilisons des cookies pour améliorer votre expérience. Les cookies essentiels sont nécessaires au fonctionnement du site. Les cookies analytiques nous aident à comprendre comment vous utilisez l'application.",
+    "acceptAll": "Tout accepter",
+    "rejectNonEssential": "Refuser les non-essentiels",
+    "managePreferences": "Gérer les préférences",
+    "savePreferences": "Enregistrer les préférences",
+    "essential": {
+      "title": "Cookies essentiels",
+      "description": "Nécessaires à l'authentification et aux fonctionnalités de base. Ne peuvent pas être désactivés."
+    },
+    "analytics": {
+      "title": "Cookies analytiques",
+      "description": "Nous aident à comprendre comment vous utilisez l'application pour l'améliorer. Fournis par PostHog."
+    },
+    "alwaysActive": "Toujours actif"
+  },
+  "feedback": {
+    "button": "Feedback",
+    "title": "Envoyer un feedback",
+    "type": {
+      "label": "Type",
+      "bug_report": "Rapport de bug",
+      "feature_request": "Demande de fonctionnalité",
+      "general_feedback": "Feedback général"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Décrivez le problème ou la suggestion..."
+    },
+    "email": {
+      "label": "Email (optionnel)",
+      "placeholder": "votre@email.com"
+    },
+    "screenshot": {
+      "label": "Capture d'écran (optionnel)",
+      "hint": "Glissez-déposez ou cliquez pour téléverser une image (max 5 Mo)"
+    },
+    "submit": "Envoyer",
+    "submitting": "Envoi en cours...",
+    "success": "Merci ! Nous examinerons votre feedback.",
+    "error": "Échec de l'envoi. Veuillez réessayer."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+      "goHome": "Accueil",
+      "goBack": "Retour",
+      "goDashboard": "Aller au tableau de bord"
+    },
+    "serverError": {
+      "title": "Une erreur est survenue",
+      "description": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+      "tryAgain": "Réessayer",
+      "reportIssue": "Signaler ce problème",
+      "details": "Détails de l'erreur"
+    }
+  },
+  "footer": {
+    "copyright": "© 2026 AppArt Agent. Tous droits réservés.",
+    "tagline": "Aide à la décision d'achat immobilier propulsée par l'IA",
+    "privacy": "Politique de confidentialité",
+    "terms": "CGU",
+    "feedback": "Feedback"
   }
 }

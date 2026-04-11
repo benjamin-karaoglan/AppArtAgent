@@ -1,10 +1,22 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { PostHogProvider } from '@/components/PostHogProvider'
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Unregister stale service workers in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister()
+        }
+      })
+    }
+  }, [])
+
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -15,10 +27,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }))
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </QueryClientProvider>
+    <PostHogProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </QueryClientProvider>
+    </PostHogProvider>
   )
 }

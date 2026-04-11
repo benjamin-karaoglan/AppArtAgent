@@ -97,7 +97,7 @@ flowchart LR
 |---------|-------------|------------|
 | Cloud Run (Frontend) | $0-50/month | $50-100/month |
 | Cloud Run (Backend) | $0-100/month | $100-200/month |
-| Cloud SQL PostgreSQL | ~$10/month (db-f1-micro) | ~$50/month (db-custom-2-4096) |
+| Cloud SQL PostgreSQL | ~$10/month (db-g1-small) | ~$50/month (db-custom-2-4096) |
 | Memorystore Redis | ~$35/month (1GB BASIC) | ~$70/month (1GB STANDARD_HA) |
 | Cloud Storage | ~$1/month | ~$5/month |
 | Load Balancer | ~$20/month | ~$20/month |
@@ -105,7 +105,7 @@ flowchart LR
 
 !!! tip "Cost Optimization"
     - Set `min_instances = 0` in Terraform to enable scale-to-zero (saves ~$50/month per service)
-    - Use `db-f1-micro` for development/staging environments
+    - Use `db-g1-small` for development/staging environments
     - Consider BASIC Redis tier for non-production workloads
 
 ## Quick Start Deployment
@@ -190,6 +190,13 @@ docker push $REGION-docker.pkg.dev/$PROJECT_ID/appart-agent/frontend:latest
 gcloud run jobs execute db-migrate --region $REGION --wait
 ```
 
+### 5.5. Import DVF Dataset (Optional)
+
+```bash
+# Execute DVF import job
+gcloud run jobs execute dvf-import --region $REGION --wait
+```
+
 ### 6. Deploy Cloud Run Services
 
 ```bash
@@ -216,6 +223,7 @@ flowchart TD
         CR_FE["Cloud Run: Frontend"]
         CR_BE["Cloud Run: Backend"]
         CR_JOB["Cloud Run Job: Migrations"]
+        CR_DVF["Cloud Run Job: DVF Import"]
     end
 
     subgraph Database["Database & Cache"]
@@ -270,12 +278,14 @@ flowchart TD
 | `project_id` | GCP Project ID | Required |
 | `region` | GCP Region | `europe-west1` |
 | `environment` | Environment name | `production` |
+| `posthog_project_token` | PostHog project token | `""` (disabled) |
 | `domain` | Custom domain | `""` (none) |
 | `use_load_balancer` | Use Cloud Load Balancer | `true` |
 | `create_dns_zone` | Create Cloud DNS zone | `true` |
-| `db_tier` | Cloud SQL instance tier | `db-f1-micro` |
+| `db_tier` | Cloud SQL instance tier | `db-g1-small` |
 | `redis_tier` | Redis tier | `BASIC` |
 | `min_instances` | Minimum Cloud Run instances | `0` |
+| `backend_max_concurrency` | Max concurrent requests per backend instance | `20` |
 
 ### Service Account Permissions
 
@@ -487,6 +497,8 @@ Environment variables are set via Terraform and Secret Manager:
 | `DATABASE_URL` | Secret Manager | PostgreSQL connection string (for Better Auth) |
 | `BETTER_AUTH_SECRET` | Secret Manager | Session signing secret (min 32 chars) |
 | `NODE_ENV` | Terraform | `production` |
+| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | Terraform / Build arg | PostHog project token (optional) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Terraform / Build arg | PostHog host (`https://eu.i.posthog.com`) |
 | `GOOGLE_CLIENT_ID` | Secret Manager | Google OAuth client ID (optional) |
 | `GOOGLE_CLIENT_SECRET` | Secret Manager | Google OAuth client secret (optional) |
 
@@ -522,6 +534,38 @@ gcloud run jobs execute db-migrate --region $REGION --wait
 # Check job logs
 gcloud run jobs executions logs db-migrate --region $REGION
 ```
+
+### DVF Import
+
+The DVF (Demandes de Valeurs Foncieres) dataset contains 20M+ French property transactions and is imported via a dedicated Cloud Run Job.
+
+```bash
+# Execute DVF import job (downloads and imports full dataset)
+gcloud run jobs execute dvf-import --region $REGION --wait
+
+# Check import job logs
+gcloud run jobs executions logs dvf-import --region $REGION
+
+# View job configuration
+gcloud run jobs describe dvf-import --region $REGION
+```
+
+The `dvf-import` job:
+
+- **Resources**: 8 vCPU, 32 GiB RAM
+- **Timeout**: 60 minutes
+- **Max retries**: 0 (fail fast for easier debugging)
+- **VPC egress**: `PRIVATE_RANGES_ONLY` — only Cloud SQL traffic goes through the VPC; the data.gouv.fr download bypasses the VPC directly to the internet
+- **Process**: Downloads DVF data from data.gouv.fr, extracts `.csv.gz`, imports via polars + COPY FROM STDIN
+- **Duration**: ~55 seconds locally, ~25 minutes on Cloud Run for full dataset (4.8M sales, 13.5M lots)
+- **Trigger**: Manual via GitHub Actions workflow (`.github/workflows/dvf-import.yml`) or `gcloud` command
+
+To trigger via GitHub Actions:
+
+1. Go to **Actions** tab in GitHub
+2. Select **DVF Import** workflow
+3. Click **Run workflow**
+4. Select branch and click **Run workflow**
 
 ### Direct Database Access
 
@@ -638,13 +682,14 @@ echo -n "your-logfire-token" | gcloud secrets versions add logfire-token --data-
 The backend automatically sends traces and logs to Logfire when `LOGFIRE_ENABLED=true`.
 
 !!! warning "VPC Egress Configuration"
-    Logfire requires external network access. The VPC connector must use `PRIVATE_RANGES_ONLY` egress
-    (not `ALL_TRAFFIC`) to allow the backend to reach `logfire-eu.pydantic.dev`. If using `ALL_TRAFFIC`,
-    you must configure Cloud NAT for the VPC.
+    All Cloud Run services and jobs must use `PRIVATE_RANGES_ONLY` egress (not `ALL_TRAFFIC`)
+    unless a Cloud NAT gateway is configured on the VPC. Without Cloud NAT, `ALL_TRAFFIC` routes
+    all outbound requests through the VPC — which blocks access to the public internet (data.gouv.fr
+    downloads, Logfire, Vertex AI, etc.) and causes connection timeouts.
 
-    The Terraform configuration uses `PRIVATE_RANGES_ONLY` by default, which routes only internal
-    traffic (Cloud SQL, Redis) through the VPC while allowing external traffic (Logfire, Vertex AI)
-    to use the default internet egress.
+    The Terraform configuration uses `PRIVATE_RANGES_ONLY` on all resources, which routes only
+    internal traffic (Cloud SQL, Redis) through the VPC while allowing external traffic to use
+    the default internet egress.
 
 ## Scaling Configuration
 
@@ -679,6 +724,10 @@ max_instances = 10
 # Always-on (no cold starts, ~$50/month/service)
 min_instances = 1
 max_instances = 10
+
+# Backend concurrency (default: 20, Cloud Run default is 80)
+# Lower value = autoscale sooner, critical for DB-heavy endpoints
+backend_max_concurrency = 20
 ```
 
 ### Cold Start Optimization
@@ -691,6 +740,11 @@ To minimize cold start latency:
 4. **Use CPU boost** - enabled by default on Cloud Run
 
 ## CI/CD with GitHub Actions
+
+The project includes two GitHub Actions workflows:
+
+1. **`.github/workflows/deploy.yml`**: Main deployment workflow (triggered on push to `main`)
+2. **`.github/workflows/dvf-import.yml`**: DVF import workflow (manual trigger only)
 
 ### Setup GitHub Actions
 
@@ -711,6 +765,7 @@ cat deployer-key.json | base64
 | `GCP_PROJECT_ID` | Your project ID |
 | `GCP_REGION` | `europe-west1` |
 | `GCP_SA_KEY` | Base64-encoded service account key |
+| `POSTHOG_PROJECT_TOKEN` | PostHog project token (optional, for analytics) |
 
 ### Deployment Workflow
 
@@ -727,6 +782,7 @@ sequenceDiagram
     GA->>GA: Build Docker images
     GA->>AR: Push images
     GA->>CR: Execute db-migrate job
+    GA->>CR: Update dvf-import job image
     GA->>CR: Deploy backend
     GA->>CR: Deploy frontend
     GA->>GH: Report status
@@ -902,8 +958,9 @@ terraform destroy
 gcloud run services delete appart-backend --region $REGION
 gcloud run services delete appart-frontend --region $REGION
 
-# Delete only the migration job
+# Delete only the jobs
 gcloud run jobs delete db-migrate --region $REGION
+gcloud run jobs delete dvf-import --region $REGION
 ```
 
 ## Next Steps

@@ -1,102 +1,103 @@
-Custom Non-Commercial License
+Custom Non-Commercial License (CNCL)
+Version 1.0
 
 Copyright (c) 2026 Benjamin Karaoglan
 
-Terms and Conditions
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, and distribute the Software, subject to the following terms
+and conditions.
 
 1. Definitions
 
-- **"Software"** refers to AppArt Agent and all associated source code, documentation, and assets.
-- **"Commercial Use"** means any use of the Software that is primarily intended for or directed toward commercial advantage or monetary compensation.
-- **"Non-Commercial Use"** means personal, educational, research, or other use that is not primarily intended for commercial advantage.
+"Software" means the AppArt Agent project, including all source code,
+documentation, configuration files, models, assets, and any derivative works.
 
-2. Grant of License
+"Non-Commercial Use" means use of the Software solely for personal,
+educational, academic, research, or other purposes that are not primarily
+intended for or directed toward commercial advantage, monetary compensation,
+or revenue generation.
 
-Subject to the terms of this License, the copyright holders grant you a non-exclusive, worldwide, royalty-free license to:
+"Commercial Use" means any use of the Software that is primarily intended
+for or directed toward commercial advantage or monetary compensation,
+including but not limited to use in products, services, consulting,
+client work, internal business tools, or revenue-generating activities,
+whether direct or indirect.
 
-2.1 Non-Commercial Use (Permitted)
+2. Grant of License (Non-Commercial Use Only)
 
-- ✅ Use, copy, and modify the Software for personal projects
-- ✅ Use the Software for educational and academic purposes
-- ✅ Use the Software for non-commercial research
-- ✅ Share modifications under this same license
-- ✅ Fork and contribute to the project
+Subject to the terms of this License, the copyright holder grants you a
+non-exclusive, worldwide, royalty-free license to:
 
-2.2 Commercial Use (Requires Separate License)
+a) Use the Software for Non-Commercial Use
+b) Copy and modify the Software
+c) Distribute the Software or your modifications
+d) Fork the Software and contribute changes back to the project
 
-The following uses require a separate commercial license:
+3. Restrictions
 
-- ❌ Using the Software in a commercial product or service
-- ❌ Offering the Software as a hosted service (SaaS)
-- ❌ Using the Software for commercial consulting or client work
-- ❌ Integrating the Software into proprietary applications
-- ❌ Any use generating direct or indirect revenue
+You may NOT, without obtaining a separate commercial license:
 
-3. Conditions
+a) Use the Software in a commercial product or service
+b) Offer the Software or a derivative work as a hosted or managed service
+   (including SaaS or API-based offerings)
+c) Use the Software for commercial consulting, professional services,
+   or client-facing work
+d) Integrate the Software into proprietary or closed-source systems
+e) Use the Software in any activity that generates, or is intended to
+   generate, revenue or commercial advantage
 
-3.1 Attribution
+4. Conditions
 
-You must:
-- Retain all copyright notices in the Software
-- Provide attribution to the original authors
-- Include a copy of this License with any distribution
+a) Attribution
+You must retain all copyright notices and include a copy of this License
+with any distribution of the Software or derivative works.
 
-3.2 Share-Alike
+b) Modification Disclosure
+If you distribute modified versions of the Software, you must clearly
+indicate that changes have been made and that the original author is not
+responsible for those modifications.
 
-If you modify and distribute the Software:
-- Modifications must be licensed under compatible terms
-- You must clearly indicate changes made
-- You must not imply endorsement by the original authors
+c) No Endorsement
+You may not use the name of the copyright holder to endorse or promote
+products derived from the Software without prior written permission.
 
-3.3 No Trademark Rights
+5. No Trademark Rights
 
-This License does not grant permission to use trade names, trademarks, service marks, or product names of the copyright holders.
+This License does not grant permission to use any trade names, trademarks,
+service marks, or product names associated with the Software.
 
-4. Commercial Licensing
+6. Commercial Licensing
 
-For commercial use, please contact:
+Commercial use of the Software requires a separate written agreement.
+Commercial licenses may include, but are not limited to, rights for
+commercial deployment, redistribution, support, service-level agreements,
+and indemnification.
 
-📧 **benjamin.karaoglan@appartagent.com**
+To inquire about a commercial license, contact:
 
-Commercial licenses are available with:
-- Full commercial usage rights
-- Priority technical support
-- Custom feature development
-- Service level agreements (SLA)
-- Indemnification
+benjamin.karaoglan@appartagent.com
 
-5. Disclaimer of Warranty
+7. Disclaimer of Warranty
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
 
-6. Limitation of Liability
+8. Limitation of Liability
 
-IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES,
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
 
-7. Termination
+9. Termination
 
-This License automatically terminates if you violate any of its terms. Upon termination, you must cease all use and destroy all copies of the Software.
+This License is automatically terminated if you violate any of its terms.
+Upon termination, you must immediately cease all use of the Software and
+destroy all copies in your possession or control.
 
-8. Governing Law
+10. Governing Law
 
-This License shall be governed by and construed in accordance with the laws of France, without regard to its conflict of law provisions.
-
----
-
-Quick Reference
-
-| Use Case | Permitted? |
-|----------|------------|
-| Personal projects | ✅ Yes |
-| Educational use | ✅ Yes |
-| Academic research | ✅ Yes |
-| Non-profit organizations | ✅ Yes |
-| Contributing back | ✅ Yes |
-| Commercial product | ❌ License required |
-| SaaS offering | ❌ License required |
-| Client work | ❌ License required |
-| Enterprise deployment | ❌ License required |
-
----
-
-For questions about licensing, please contact: **benjamin.karaoglan@appartagent.com**
+This License shall be governed by and construed in accordance with the laws
+of France, without regard to its conflict of law provisions.

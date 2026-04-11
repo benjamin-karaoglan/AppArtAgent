@@ -36,7 +36,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 cd backend
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt
+uv sync
 ```
 
 3. Set up environment variables:
@@ -52,28 +52,23 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-### Local Development with pip
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
 ## Configuration
 
 Key environment variables (set in `.env`):
 
 - `DATABASE_URL`: PostgreSQL connection string
-- `GOOGLE_CLOUD_API_KEY`: Your Google Cloud API key for Gemini
-- `SECRET_KEY`: Secret key for JWT token generation
+- `SECRET_KEY`: Secret key for legacy auth (32+ chars)
+- `GEMINI_USE_VERTEXAI`: `true` for Vertex AI (production), `false` for REST API key (dev)
+- `GOOGLE_CLOUD_API_KEY`: Gemini REST API key (only when `GEMINI_USE_VERTEXAI=false`)
+- `GOOGLE_CLOUD_PROJECT`: GCP project ID (required for Vertex AI)
+- `GOOGLE_CLOUD_LOCATION`: GCP region (default: us-central1)
+- `GEMINI_LLM_MODEL`: Text analysis model (default: gemini-2.5-flash)
+- `GEMINI_IMAGE_MODEL`: Image generation model (default: gemini-2.5-flash-image)
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `STORAGE_BACKEND`: `minio` (dev) or `gcs` (production)
 - `MINIO_ENDPOINT`: MinIO server endpoint (default: minio:9000)
 - `MINIO_ACCESS_KEY`: MinIO access key (default: minioadmin)
 - `MINIO_SECRET_KEY`: MinIO secret key (default: minioadmin)
-- `MINIO_BUCKET`: MinIO bucket name (default: documents)
 
 ## Logging
 
@@ -127,24 +122,29 @@ Once running, visit:
 
 ## DVF Data Management
 
-### Current Database
+### Schema
 
-The database contains **5.4 million DVF property records** across 4 years (2022-2025 Q1-Q2).
+The database uses two tables for DVF data:
+
+- `dvf_sales` (~4.8M rows): One row per real estate transaction, with GPS coordinates
+- `dvf_sale_lots` (~13.5M rows): One row per lot/component within a transaction
+
+Source: [Geolocalized DVF dataset](https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/) (20M rows with lat/lon).
 
 ### Importing DVF Data
 
 ```bash
-# Import a specific year (using Docker)
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024
+# 1. Download the dataset (one-time)
+uv run download-dvf https://static.data.gouv.fr/resources/demandes-de-valeurs-foncieres-geolocalisees/20251105-140205/dvf.csv.gz
 
-# Import with custom chunk size for memory-constrained environments
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2023.txt --year 2023 --read-chunk-size 30000
+# 2. Run migration (creates empty tables)
+cd backend && uv run alembic upgrade head
 
-# Force re-import (bypasses file hash check)
-docker-compose exec backend python scripts/import_dvf_chunked.py \
-  data/dvf/ValeursFoncieres-2024.txt --year 2024 --force
+# 3. Import data (~55s locally for 20M rows; ~25 min on Cloud Run)
+uv run import-dvf
+
+# Or with custom CSV path:
+uv run import-dvf --csv /path/to/dvf.csv
 ```
 
 ### Migration Management
@@ -165,31 +165,50 @@ docker-compose exec backend alembic current
 docker-compose exec backend alembic downgrade -1
 ```
 
-### Import Management
+## Performance
 
-```bash
-# View import history
-docker-compose exec backend python scripts/rollback_dvf_import.py --list
+### Redis Caching
 
-# Rollback a specific import
-docker-compose exec backend python scripts/rollback_dvf_import.py <batch_id>
+The backend uses a fault-tolerant Redis cache (`app/core/cache.py`) for expensive endpoints. If Redis is down, requests bypass the cache without errors.
 
-# Check database status
-docker-compose exec db psql -U appart -d appart_agent -c \
-  "SELECT data_year, COUNT(*) as records FROM dvf_records GROUP BY data_year ORDER BY data_year;"
-```
+| Endpoint | Cache Key | TTL | Notes |
+|----------|-----------|-----|-------|
+| `/api/properties/dvf-stats` | `dvf_stats` | 1 hour | `COUNT(*)` on 4.8M rows |
+| `/api/properties/{id}/price-analysis` | `price_analysis_summary:{id}` | 30 min | Summary view |
+| `/api/properties/{id}/price-analysis/full` | `price_analysis_full:{id}` | 30 min | Full analysis |
+
+Cache is invalidated on refresh or exclude-sales operations.
+
+### N+1 Query Fix
+
+The `/api/properties/with-synthesis` endpoint is optimized from 3N+1 queries to 4 total queries using batch `.in_()` fetches and dictionary lookups.
 
 ## Testing
 
 ```bash
-# With uv
-uv pip install pytest pytest-asyncio
-pytest
+# Run all tests
+uv run pytest
 
-# With pip
-pip install pytest pytest-asyncio
-pytest
+# With coverage
+uv run pytest --cov
 
 # Run DVF service tests specifically
-pytest tests/test_dvf_service.py -v
+uv run pytest tests/test_dvf_service.py -v
 ```
+
+### Load Testing
+
+Load tests use [Locust](https://locust.io/) and live at `loadtest/locustfile.py` (project root). Locust is a root-level dev dependency.
+
+```bash
+# From project root — backend API load test (Web UI at http://localhost:8089)
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com
+
+# Frontend SSR pages (run separately)
+uv run python -m locust -f loadtest/locustfile.py --host https://appartagent.com FrontendUser
+
+# Headless mode for CI
+uv run python -m locust -f loadtest/locustfile.py --host https://api.appartagent.com --headless -u 50 -r 5 --run-time 2m AppArtUser
+```
+
+Environment variables: `LOCUST_AUTH_TOKEN` (Better Auth session cookie), `LOCUST_PROPERTY_ID` (default: 1).

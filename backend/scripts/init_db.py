@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
 Automatic database initialization script.
-Runs migrations and optionally imports DVF data on first startup.
+Runs migrations on startup and creates a test user for development.
 """
 
 import logging
-import os
 import sys
 import time
 from pathlib import Path
@@ -47,7 +46,7 @@ def check_tables_exist():
     try:
         inspector = inspect(engine)
         tables = inspector.get_table_names()
-        required_tables = ["users", "properties", "documents", "dvf_records"]
+        required_tables = ["users", "properties", "documents", "dvf_sales"]
 
         missing_tables = [t for t in required_tables if t not in tables]
 
@@ -119,80 +118,6 @@ def create_test_user():
         return False
 
 
-def check_dvf_data():
-    """Check if DVF data exists."""
-    try:
-        from app.models.property import DVFRecord
-
-        db = SessionLocal()
-        try:
-            count = db.query(DVFRecord).count()
-
-            if count > 0:
-                logger.info(f"✓ DVF data exists ({count:,} records)")
-                return True
-            else:
-                logger.info("⚠ No DVF data found")
-                return False
-        finally:
-            db.close()
-    except Exception as e:
-        logger.warning(f"Could not check DVF data: {e}")
-        return False
-
-
-def import_dvf_data():
-    """Import DVF data if files exist and database is empty."""
-    logger.info("Checking for DVF data files...")
-
-    dvf_dir = Path("/app/data/dvf")
-    if not dvf_dir.exists():
-        logger.warning(f"DVF directory not found: {dvf_dir}")
-        return False
-
-    dvf_files = list(dvf_dir.glob("*.txt"))
-    if not dvf_files:
-        logger.warning("No DVF .txt files found")
-        return False
-
-    logger.info(f"Found {len(dvf_files)} DVF files:")
-    for f in sorted(dvf_files):
-        file_size_mb = f.stat().st_size / (1024 * 1024)
-        logger.info(f"  - {f.name} ({file_size_mb:.1f} MB)")
-
-    # Check if data already exists
-    if check_dvf_data():
-        logger.info("DVF data already loaded, skipping import")
-        return True
-
-    logger.info("Starting DVF data import (this may take 10-15 minutes)...")
-    logger.info("You can monitor progress in the logs")
-
-    try:
-        import subprocess
-
-        result = subprocess.run(
-            ["python", "scripts/import_all_dvf.py"],
-            cwd="/app",
-            timeout=1800,  # 30 minute timeout for all files
-            capture_output=False,  # Show output in real-time
-            text=True,
-        )
-
-        if result.returncode == 0:
-            logger.info("✓ DVF data import completed")
-            return True
-        else:
-            logger.error("DVF import failed")
-            return False
-    except subprocess.TimeoutExpired:
-        logger.error("DVF import timed out after 30 minutes")
-        return False
-    except Exception as e:
-        logger.error(f"Error importing DVF data: {e}")
-        return False
-
-
 def main():
     """Main initialization function."""
     logger.info("=" * 60)
@@ -220,17 +145,6 @@ def main():
     # Step 4: Create test user
     create_test_user()
 
-    # Step 5: Import DVF data (only if AUTO_IMPORT_DVF is set)
-    auto_import = os.getenv("AUTO_IMPORT_DVF", "false").lower() == "true"
-
-    if auto_import:
-        logger.info("AUTO_IMPORT_DVF is enabled, checking DVF data...")
-        import_dvf_data()
-    else:
-        logger.info("AUTO_IMPORT_DVF is disabled, skipping DVF import")
-        logger.info("To import DVF data manually, run:")
-        logger.info("  docker-compose exec backend python scripts/import_dvf_chunked.py")
-
     logger.info("=" * 60)
     logger.info("DATABASE INITIALIZATION COMPLETE")
     logger.info("=" * 60)
@@ -238,8 +152,9 @@ def main():
     logger.info("You can now:")
     logger.info("  - Access frontend: http://localhost:3000")
     logger.info("  - Login with: test@example.com / test123")
-    logger.info("  - Access Temporal UI: http://localhost:8088")
     logger.info("  - Access MinIO Console: http://localhost:9001 (minioadmin/minioadmin)")
+    logger.info("")
+    logger.info("To import DVF data, run: uv run import-dvf")
     logger.info("")
 
 

@@ -25,11 +25,17 @@ interface PropertyFormData {
 }
 
 interface AddressSuggestion {
-  address: string;
-  postal_code: string;
+  /** Full label: "35 Rue Notre-Dame des Champs 75006 Paris" */
+  label: string;
+  /** House number (may be empty for street-level results) */
+  housenumber: string;
+  /** Street name: "Rue Notre-Dame des Champs" */
+  street: string;
+  /** Full name: "35 Rue Notre-Dame des Champs" or "Rue Notre-Dame des Champs" */
+  name: string;
+  postcode: string;
   city: string;
-  property_type: string;
-  count: number;
+  context: string; // "75, Paris, Île-de-France"
 }
 
 function NewPropertyContent() {
@@ -65,38 +71,57 @@ function NewPropertyContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search addresses as user types
+  // Search addresses via French government geocoding API (fast, free, no backend needed)
   useEffect(() => {
     const searchAddresses = async () => {
-      if (addressQuery.length < 2) {
+      if (addressQuery.length < 3) {
         setSuggestions([]);
         return;
       }
 
       setLoadingSuggestions(true);
       try {
-        const response = await api.get(`/api/properties/search-addresses?q=${encodeURIComponent(addressQuery)}&limit=15`);
-        setSuggestions(response.data);
-        setShowSuggestions(true);
+        const params = new URLSearchParams({
+          q: addressQuery,
+          limit: '8',
+          autocomplete: '1',
+        });
+        const resp = await fetch(`https://api-adresse.data.gouv.fr/search/?${params}`);
+        const data = await resp.json();
+        const results: AddressSuggestion[] = (data.features || []).map(
+          (f: { properties: Record<string, string> }) => ({
+            label: f.properties.label || '',
+            housenumber: f.properties.housenumber || '',
+            street: f.properties.street || f.properties.name || '',
+            name: f.properties.name || '',
+            postcode: f.properties.postcode || '',
+            city: f.properties.city || '',
+            context: f.properties.context || '',
+          })
+        );
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
       } catch (err) {
-        console.error('Failed to search addresses:', err);
+        console.error('Address search failed:', err);
         setSuggestions([]);
       } finally {
         setLoadingSuggestions(false);
       }
     };
 
-    const timeoutId = setTimeout(searchAddresses, 400);
+    const timeoutId = setTimeout(searchAddresses, 250);
     return () => clearTimeout(timeoutId);
   }, [addressQuery]);
 
   const selectAddress = (suggestion: AddressSuggestion) => {
-    setValue('address', suggestion.address);
-    setValue('postal_code', suggestion.postal_code);
+    // Use the full name (number + street) from the geocoding API
+    const fullAddress = suggestion.name;
+
+    setValue('address', fullAddress);
+    setValue('postal_code', suggestion.postcode);
     setValue('city', suggestion.city);
-    setValue('property_type', suggestion.property_type);
-    setValue('department', suggestion.postal_code.substring(0, 2));
-    setAddressQuery(suggestion.address);
+    setValue('department', suggestion.postcode.substring(0, 2));
+    setAddressQuery(fullAddress);
     setShowSuggestions(false);
   };
 
@@ -145,8 +170,8 @@ function NewPropertyContent() {
           <div className="bg-white shadow rounded-lg">
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
               {error && (
-                <div className="rounded-md bg-red-50 p-4">
-                  <p className="text-sm text-red-800">{error}</p>
+                <div className="rounded-md bg-danger-50 p-4">
+                  <p className="text-sm text-danger-700">{error}</p>
                 </div>
               )}
 
@@ -158,7 +183,7 @@ function NewPropertyContent() {
                 <div className="space-y-4">
                   <div className="relative" ref={suggestionsRef}>
                     <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                      {t('location.address')} <span className="text-red-500">*</span>
+                      {t('location.address')} <span className="text-danger-500">*</span>
                     </label>
                     <div className="relative mt-1">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -174,19 +199,19 @@ function NewPropertyContent() {
                           setValue('address', value);
                         }}
                         onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         placeholder={t('location.addressPlaceholder')}
                         autoComplete="off"
                       />
                       <input type="hidden" {...register('address', { required: 'Address is required' })} />
                       {loadingSuggestions && (
                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
                         </div>
                       )}
                     </div>
                     {errors.address && (
-                      <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+                      <p className="mt-1 text-sm text-danger-600">{errors.address.message}</p>
                     )}
 
                     {/* Suggestions dropdown */}
@@ -196,13 +221,13 @@ function NewPropertyContent() {
                           <div
                             key={index}
                             onClick={() => selectAddress(suggestion)}
-                            className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50"
+                            className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-primary-50"
                           >
                             <div className="flex flex-col">
-                              <span className="font-medium text-gray-900">{suggestion.address}</span>
+                              <span className="font-medium text-gray-900">{suggestion.name}</span>
                               <span className="text-sm text-gray-500">
-                                {suggestion.city} {suggestion.postal_code} - {suggestion.property_type}
-                                <span className="ml-2 text-xs text-gray-400">({t('location.salesCount', { count: suggestion.count })})</span>
+                                {suggestion.postcode} {suggestion.city}
+                                <span className="ml-2 text-xs text-gray-400">{suggestion.context}</span>
                               </span>
                             </div>
                           </div>
@@ -225,7 +250,7 @@ function NewPropertyContent() {
                         id="postal_code"
                         type="text"
                         {...register('postal_code')}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         placeholder="75001"
                       />
                     </div>
@@ -238,7 +263,7 @@ function NewPropertyContent() {
                         id="city"
                         type="text"
                         {...register('city')}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         placeholder="Paris"
                       />
                     </div>
@@ -251,7 +276,7 @@ function NewPropertyContent() {
                         id="department"
                         type="text"
                         {...register('department')}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         placeholder="75"
                       />
                     </div>
@@ -272,7 +297,7 @@ function NewPropertyContent() {
                     <select
                       id="property_type"
                       {...register('property_type')}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     >
                       <option value="">{t('details.selectType')}</option>
                       <option value="Appartement">{t('details.appartement')}</option>
@@ -290,7 +315,7 @@ function NewPropertyContent() {
                       {...register('asking_price', {
                         valueAsNumber: true,
                       })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="250000"
                     />
                   </div>
@@ -306,7 +331,7 @@ function NewPropertyContent() {
                       {...register('surface_area', {
                         valueAsNumber: true,
                       })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="65"
                     />
                   </div>
@@ -321,7 +346,7 @@ function NewPropertyContent() {
                       {...register('rooms', {
                         valueAsNumber: true,
                       })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="3"
                     />
                   </div>
@@ -336,7 +361,7 @@ function NewPropertyContent() {
                       {...register('floor', {
                         valueAsNumber: true,
                       })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="2"
                     />
                   </div>
@@ -351,7 +376,7 @@ function NewPropertyContent() {
                       {...register('building_floors', {
                         valueAsNumber: true,
                       })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="5"
                     />
                   </div>
@@ -366,7 +391,7 @@ function NewPropertyContent() {
                       {...register('building_year', {
                         valueAsNumber: true,
                       })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                       placeholder="1990"
                     />
                   </div>
@@ -378,14 +403,14 @@ function NewPropertyContent() {
                 <button
                   type="button"
                   onClick={() => router.push('/dashboard')}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   {tc('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? t('submitting') : t('submit')}
                 </button>

@@ -7,7 +7,8 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
-import { Plus, Home, FileText, TrendingUp, Trash2, Palette } from 'lucide-react';
+import { Plus, Home, FileText, TrendingUp, Trash2, Palette, Sparkles, ArrowRight } from 'lucide-react';
+import Spinner from '@/components/ui/Spinner';
 import type { Property, PropertyWithSynthesis } from '@/types';
 
 interface UserStats {
@@ -121,86 +122,25 @@ function DashboardContent() {
           </div>
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 mb-8">
+            {[
+              { icon: <Home className="h-5 w-5" />, label: t('stats.totalProperties'), value: properties.length },
+              { icon: <FileText className="h-5 w-5" />, label: t('stats.documentsAnalyzed'), value: userStats?.documents_analyzed_count ?? 0 },
+              { icon: <Palette className="h-5 w-5" />, label: t('stats.redesignsGenerated'), value: userStats?.redesigns_generated_count ?? 0 },
+              { icon: <TrendingUp className="h-5 w-5" />, label: t('stats.dvfRecords'), value: dvfStats?.formatted_count ?? '0' },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white overflow-hidden shadow rounded-lg p-5">
                 <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Home className="h-6 w-6 text-gray-400" />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600">
+                    {stat.icon}
                   </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.totalProperties')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {properties.length}
-                      </dd>
-                    </dl>
+                  <div className="ml-4 flex-1">
+                    <p className="text-sm font-medium text-gray-500 truncate">{stat.label}</p>
+                    <p className="mt-1 text-2xl font-semibold text-gray-900">{stat.value}</p>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <FileText className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.documentsAnalyzed')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {userStats?.documents_analyzed_count ?? 0}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <Palette className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.redesignsGenerated')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {userStats?.redesigns_generated_count ?? 0}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <TrendingUp className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {t('stats.dvfRecords')}
-                      </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        {dvfStats?.formatted_count ?? '0'}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Properties Section */}
@@ -212,7 +152,7 @@ function DashboardContent() {
                 </h3>
                 <button
                   onClick={() => router.push('/properties/new')}
-                  className="inline-flex items-center justify-center min-w-[10rem] px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center justify-center min-w-[10rem] px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   {t('properties.addProperty')}
@@ -223,23 +163,45 @@ function DashboardContent() {
             <div className="px-4 py-5 sm:p-6">
               {loading ? (
                 <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <Spinner size={32} className="inline-block text-primary-600" />
                   <p className="mt-2 text-sm text-gray-500">{t('properties.loading')}</p>
                 </div>
               ) : properties.length === 0 ? (
-                <div className="text-center py-12">
-                  <Home className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">{t('properties.empty.title')}</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {t('properties.empty.description')}
-                  </p>
-                  <div className="mt-6">
+                <div className="py-8 px-4">
+                  <div className="text-center mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900">{t('gettingStarted.title')}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{t('gettingStarted.subtitle')}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    {[
+                      { step: 1, icon: <Home className="h-6 w-6" />, title: t('gettingStarted.step1.title'), description: t('gettingStarted.step1.description'), active: true },
+                      { step: 2, icon: <FileText className="h-6 w-6" />, title: t('gettingStarted.step2.title'), description: t('gettingStarted.step2.description'), active: false },
+                      { step: 3, icon: <Sparkles className="h-6 w-6" />, title: t('gettingStarted.step3.title'), description: t('gettingStarted.step3.description'), active: false },
+                      { step: 4, icon: <TrendingUp className="h-6 w-6" />, title: t('gettingStarted.step4.title'), description: t('gettingStarted.step4.description'), active: false },
+                    ].map(({ step, icon, title, description, active }) => (
+                      <div
+                        key={step}
+                        className={`relative rounded-lg p-4 ${active ? 'bg-primary-50 border-2 border-primary-200' : 'bg-gray-50 border border-gray-200'}`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${active ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                            {step}
+                          </span>
+                          <span className={active ? 'text-primary-600' : 'text-gray-400'}>{icon}</span>
+                        </div>
+                        <h4 className={`text-sm font-medium ${active ? 'text-gray-900' : 'text-gray-500'}`}>{title}</h4>
+                        <p className={`mt-1 text-xs ${active ? 'text-gray-600' : 'text-gray-400'}`}>{description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center">
                     <button
                       onClick={() => router.push('/properties/new')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                     >
                       <Plus className="h-5 w-5 mr-2" />
-                      {t('properties.addProperty')}
+                      {t('gettingStarted.cta')}
+                      <ArrowRight className="h-5 w-5 ml-2" />
                     </button>
                   </div>
                 </div>
@@ -253,7 +215,7 @@ function DashboardContent() {
                     >
                       <button
                         onClick={(e) => handleDeleteClick(e, property.id)}
-                        className="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        className="absolute top-2 right-2 p-2 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-md transition-colors"
                         title={t('properties.deleteTooltip')}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -265,7 +227,7 @@ function DashboardContent() {
                         {property.city} {property.postal_code}
                       </p>
                       {property.asking_price && (
-                        <p className="text-lg font-semibold text-blue-600">
+                        <p className="text-lg font-semibold text-gray-900">
                           {new Intl.NumberFormat('fr-FR', {
                             style: 'currency',
                             currency: 'EUR',
@@ -320,8 +282,8 @@ function DashboardContent() {
                 {/* Modal panel */}
                 <div className="relative inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                   <div className="sm:flex sm:items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                      <Trash2 className="h-6 w-6 text-red-600" aria-hidden="true" />
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-danger-50 sm:mx-0 sm:h-10 sm:w-10">
+                      <Trash2 className="h-6 w-6 text-danger-600" aria-hidden="true" />
                     </div>
                     <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                       <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
@@ -339,7 +301,7 @@ function DashboardContent() {
                       type="button"
                       disabled={deleting}
                       onClick={confirmDelete}
-                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:min-w-[6.5rem] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-danger-600 text-base font-medium text-white hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500 sm:ml-3 sm:w-auto sm:min-w-[6.5rem] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {deleting ? tc('deleting') : tc('delete')}
                     </button>
@@ -347,7 +309,7 @@ function DashboardContent() {
                       type="button"
                       disabled={deleting}
                       onClick={cancelDelete}
-                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:min-w-[6.5rem] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:min-w-[6.5rem] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {tc('cancel')}
                     </button>

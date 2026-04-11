@@ -4,7 +4,10 @@ import { getMessages, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import { Providers } from '@/components/Providers'
-import type { Metadata } from 'next'
+import CookieConsent from '@/components/ui/CookieConsent'
+import FeedbackButton from '@/components/ui/FeedbackButton'
+import Footer from '@/components/ui/Footer'
+import type { Metadata, Viewport } from 'next'
 import '../globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -18,6 +21,10 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
 }
 
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'metadata' })
@@ -25,6 +32,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('description'),
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'AppArt Agent',
+    },
+    icons: {
+      icon: [
+        { url: '/favicon.ico', sizes: '48x48' },
+        { url: '/icon.svg', type: 'image/svg+xml' },
+      ],
+      apple: '/icons/apple-touch-icon.png',
+    },
     openGraph: {
       title: t('ogTitle'),
       description: t('ogDescription'),
@@ -48,10 +68,15 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale}>
-      <body className={inter.className}>
+      <body className={`${inter.className} flex flex-col min-h-screen`}>
         <NextIntlClientProvider messages={messages}>
           <Providers>
-            {children}
+            <div className="flex-1">
+              {children}
+            </div>
+            <Footer />
+            <FeedbackButton />
+            <CookieConsent />
           </Providers>
         </NextIntlClientProvider>
       </body>

@@ -26,13 +26,10 @@ cd appart-agent
 
 # Configure environment
 cp .env.example .env
-# Add GOOGLE_CLOUD_API_KEY to .env
+# Configure AI: set GEMINI_USE_VERTEXAI=true or add GOOGLE_CLOUD_API_KEY
 
-# Start services
+# Start services (migrations run automatically)
 docker-compose up -d
-
-# Run migrations
-docker-compose exec backend alembic upgrade head
 
 # Verify
 docker-compose ps
@@ -53,7 +50,8 @@ services:
       target: dev              # Use dev target for hot-reload
     environment:
       DATABASE_URL: postgresql://appart:appart@db:5432/appart_agent
-      GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY}
+      GEMINI_USE_VERTEXAI: ${GEMINI_USE_VERTEXAI:-false}
+      GOOGLE_CLOUD_API_KEY: ${GOOGLE_CLOUD_API_KEY:-}
       MINIO_ENDPOINT: minio:9000
     volumes:
       - ./backend:/app         # Mount source for hot-reload
@@ -68,12 +66,16 @@ Create `.env` in project root (backend):
 
 ```bash
 # Required
-GOOGLE_CLOUD_API_KEY=your_api_key
 SECRET_KEY=your-secret-key-32-chars-minimum
 
-# Optional
-GOOGLE_CLOUD_PROJECT=your-project
+# AI — choose one:
+GEMINI_USE_VERTEXAI=true                    # Vertex AI (production)
+GOOGLE_CLOUD_PROJECT=your-project           # Required for Vertex AI
+# OR
 GEMINI_USE_VERTEXAI=false
+GOOGLE_CLOUD_API_KEY=your_api_key           # REST API key (dev)
+
+# Optional
 AUTO_IMPORT_DVF=false
 ```
 
@@ -196,7 +198,7 @@ docker-compose exec backend alembic upgrade head
 docker-compose exec db psql -U appart -d appart_agent
 
 # Run SQL command
-docker-compose exec db psql -U appart -d appart_agent -c "SELECT COUNT(*) FROM dvf_records;"
+docker-compose exec db psql -U appart -d appart_agent -c "SELECT COUNT(*) FROM dvf_sales;"
 ```
 
 ### Backup Database
@@ -232,27 +234,27 @@ docker-compose exec minio-setup mc ls local/documents/
 
 ## Development Workflow
 
-### Using dev.sh Script
+### Using Task Commands
 
 ```bash
 # Start services
-./dev.sh start
+task start
 
 # View logs
-./dev.sh logs
-./dev.sh logs backend
+task logs
+task logs -- backend
 
 # Restart service
-./dev.sh restart backend
+task restart -- backend
 
 # Stop services
-./dev.sh stop
+task stop
 
 # Open shell in container
-./dev.sh shell backend
+task shell -- backend
 
 # Rebuild service
-./dev.sh rebuild backend
+task rebuild -- backend
 ```
 
 ### Hot Reload

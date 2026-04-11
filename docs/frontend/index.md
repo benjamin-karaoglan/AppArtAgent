@@ -9,10 +9,13 @@ The AppArt Agent frontend is a Next.js 14 application using the App Router.
 | Next.js 14 | React framework with App Router |
 | React 18 | UI library with Server Components |
 | TypeScript | Type safety |
-| Tailwind CSS | Styling |
+| Tailwind CSS | Styling (semantic design tokens) |
 | Better Auth | Authentication (email/password + Google OAuth) |
 | next-intl | Internationalization (FR/EN) |
 | React Query | Data fetching and caching |
+| Lucide React | Icons |
+| PostHog | Product analytics (proxied via Next.js rewrites) |
+| @ducanh2912/next-pwa | Progressive Web App (installable on mobile) |
 | pnpm | Package management |
 
 ## Project Structure
@@ -30,7 +33,8 @@ frontend/
 │   │   │   ├── properties/      # Property management
 │   │   │   │   ├── [id]/
 │   │   │   │   │   ├── documents/
-│   │   │   │   │   └── photos/
+│   │   │   │   │   ├── photos/
+│   │   │   │   │   └── price-analyst/
 │   │   │   │   └── new/
 │   │   │   └── auth/
 │   │   │       ├── login/
@@ -39,9 +43,16 @@ frontend/
 │   │   ├── globals.css          # Global styles
 │   │   └── layout.tsx           # Root layout
 │   ├── components/              # Shared components
+│   │   ├── ui/                  # Design system (Button, Badge, Card, Spinner, etc.)
 │   │   ├── Header.tsx           # Navigation + locale switcher
 │   │   ├── ProtectedRoute.tsx   # Auth guard
-│   │   └── MarketTrendChart.tsx
+│   │   ├── InfoTooltip.tsx      # Informational tooltips
+│   │   ├── AppArtLogo.tsx       # SVG logo
+│   │   ├── MarketTrendChart.tsx
+│   │   ├── PriceAnalysisSummary.tsx
+│   │   ├── PriceMetricsGrid.tsx
+│   │   ├── ComparableSalesTable.tsx
+│   │   └── TrendProjectionCard.tsx
 │   ├── contexts/
 │   │   └── AuthContext.tsx       # Auth state (Better Auth)
 │   ├── i18n/                    # Internationalization
@@ -51,7 +62,8 @@ frontend/
 │   ├── lib/
 │   │   ├── api.ts               # Axios API client
 │   │   ├── auth.ts              # Better Auth server config
-│   │   └── auth-client.ts       # Better Auth client
+│   │   ├── auth-client.ts       # Better Auth client
+│   │   └── posthog.ts           # PostHog init + config
 │   ├── middleware.ts            # next-intl locale middleware
 │   └── types/
 │       └── index.ts
@@ -90,6 +102,12 @@ pnpm lint
 ```
 
 ## Key Features
+
+- **Property Management**: Create, edit, and track real estate properties
+- **Document Analysis**: AI-powered analysis of property documents (PV d'AG, diagnostics)
+- **Photo Redesign Studio**: AI-generated apartment redesigns with style presets
+- **Price Analyst**: Comprehensive price analysis with DVF comparable sales, market trends, and projections
+- **Dashboard**: Overview with synthesis summaries and quick stats
 
 ### Server Components
 
@@ -152,15 +170,47 @@ Development server includes Fast Refresh:
 - State is preserved when possible
 - Errors show inline
 
-### Styling
+### Design System
 
-Using Tailwind CSS with custom configuration:
+Using Tailwind CSS with semantic color tokens defined in `tailwind.config.js`. All components use semantic tokens (`primary-*`, `accent-*`, `success-*`, `warning-*`, `danger-*`) instead of raw Tailwind colors.
+
+Shared UI components in `src/components/ui/` (Button, Badge, Card, SectionHeader, StatCard):
 
 ```tsx
-<div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
-  <h2 className="text-lg font-semibold text-gray-900">Title</h2>
-  <button className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-    Action
-  </button>
-</div>
+import { Button, Badge, Card } from '@/components/ui';
+
+<Card>
+  <div className="flex items-center justify-between p-4">
+    <h2 className="text-lg font-semibold text-gray-900">Title</h2>
+    <Button variant="primary">Action</Button>
+  </div>
+</Card>
 ```
+
+See [Components](components.md) for the full design system reference.
+
+### Analytics (PostHog)
+
+Product analytics via [PostHog](https://posthog.com/) (EU cloud). Requests are proxied through the app via Next.js rewrites to bypass ad blockers:
+
+- **Config**: `src/lib/posthog.ts` — initializes PostHog with `api_host: '/ingest'`
+- **Provider**: `src/components/PostHogProvider.tsx` — wraps the app, handles manual pageview tracking
+- **Proxy**: `next.config.js` rewrites `/ingest/*` to `eu.i.posthog.com`
+- **Middleware**: `src/middleware.ts` excludes `/ingest` from next-intl locale routing
+- **Auto-tracked**: pageviews (manual via router), page leaves, autocapture (clicks, form submits)
+- **Disabled**: when `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` is empty
+
+Environment variables:
+
+```bash
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_...  # Leave empty to disable
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+```
+
+### PWA (Progressive Web App)
+
+The app is installable on mobile devices. Configuration in `next.config.js`:
+
+- Disabled in development
+- Service worker files (`sw.js`, `workbox-*.js`) generated during `pnpm build` and gitignored
+- Manifest at `public/manifest.json`

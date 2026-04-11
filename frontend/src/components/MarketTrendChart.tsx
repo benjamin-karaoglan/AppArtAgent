@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { api } from '@/lib/api';
-import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import Spinner from '@/components/ui/Spinner';
 
 interface MarketTrendData {
   years: number[];
@@ -46,7 +46,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        <Spinner size={24} className="text-primary-600" />
       </div>
     );
   }
@@ -83,7 +83,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
         </h3>
         <p className="text-sm text-gray-600 mt-1">
           {t('basedOnSales', { count: trendData.total_sales })}{trendData.outliers_excluded > 0 && (
-            <span className="font-medium text-orange-600">
+            <span className="font-medium text-warning-600">
               {' '}({t('outliersExcluded', { count: trendData.outliers_excluded })})
             </span>
           )}
@@ -233,31 +233,6 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
         </svg>
       </div>
 
-      {/* Legend and Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div className="flex items-center gap-2 p-3 bg-green-50 rounded">
-          <TrendingUp className="h-5 w-5 text-green-600" />
-          <div>
-            <div className="font-medium text-green-900">{t('positiveGrowth')}</div>
-            <div className="text-green-700 text-xs">{t('positiveGrowthDesc')}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-red-50 rounded">
-          <TrendingDown className="h-5 w-5 text-red-600" />
-          <div>
-            <div className="font-medium text-red-900">{t('negativeGrowth')}</div>
-            <div className="text-red-700 text-xs">{t('negativeGrowthDesc')}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded">
-          <div className="w-5 h-5 bg-blue-500 rounded"></div>
-          <div>
-            <div className="font-medium text-blue-900">{t('trendLine')}</div>
-            <div className="text-blue-700 text-xs">{t('trendLineDesc')}</div>
-          </div>
-        </div>
-      </div>
-
       {/* Overall trend summary */}
       {trendData.years.length > 1 && (
         <div className="mt-4 p-4 bg-gray-50 rounded border border-gray-200">
@@ -287,8 +262,8 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
               <span className="text-gray-600">{t('totalChange')}</span>
               <span className={`ml-2 font-semibold ${
                 trendData.average_prices[trendData.average_prices.length - 1] >= trendData.average_prices[0]
-                  ? 'text-green-600'
-                  : 'text-red-600'
+                  ? 'text-success-600'
+                  : 'text-danger-600'
               }`}>
                 {((trendData.average_prices[trendData.average_prices.length - 1] - trendData.average_prices[0]) / trendData.average_prices[0] * 100).toFixed(1)}%
               </span>

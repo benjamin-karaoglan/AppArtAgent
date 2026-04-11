@@ -35,7 +35,8 @@ backend/
 │   │   ├── analysis.py      # Analysis results (DocumentSummary)
 │   │   ├── document.py      # Documents (storage_key/storage_bucket)
 │   │   ├── photo.py         # Photos (promoted_redesign_id) and redesigns
-│   │   ├── property.py      # Properties (building_floors) and DVF
+│   │   ├── price_analysis.py  # Cached price analysis results
+│   │   ├── property.py      # Properties and DVF (DVFSale, DVFSaleLot)
 │   │   └── user.py          # Users
 │   ├── schemas/             # Pydantic schemas
 │   │   ├── document.py      # Document schemas (BulkDeleteRequest, RenameRequest)
@@ -49,8 +50,8 @@ backend/
 │   │   ├── documents/       # Document processing
 │   │   │   ├── bulk_processor.py      # Async parallel processing
 │   │   │   └── parser.py
-│   │   ├── dvf_service.py   # DVF data management
-│   │   ├── price_analysis.py
+│   │   ├── dvf_service.py   # DVF price analysis and address matching
+│   │   ├── price_analysis.py  # Price analysis caching service
 │   │   └── storage.py       # Storage abstraction (MinIO/GCS)
 │   ├── prompts/             # AI prompt templates
 │   │   └── v1/              # Versioned prompts (incl. dp_process_other.md)
@@ -69,6 +70,12 @@ backend/
 | [Prompt Templates](prompt-templates.md) | Versioned AI prompt management |
 | [Database & Models](database.md) | Data models and migrations |
 | [DVF Data](dvf-data.md) | French property data import and queries |
+
+## Performance
+
+- **Redis caching**: Expensive endpoints (`/dvf-stats`, `/price-analysis`, `/price-analysis/full`) are cached via the fault-tolerant `app/core/cache.py` module. Redis down = cache miss, never an error.
+- **N+1 query fix**: `/api/properties/with-synthesis` uses batch fetches (4 queries total instead of 3N+1).
+- **Load testing**: Locust-based load tests in `loadtest/locustfile.py` with `AppArtUser` and `FrontendUser` classes.
 
 ## Quick Commands
 

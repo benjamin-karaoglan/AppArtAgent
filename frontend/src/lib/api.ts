@@ -160,5 +160,39 @@ export const photosAPI = {
   },
 }
 
+// Feedback API
+export const feedbackAPI = {
+  submit: async (data: {
+    type: string
+    message: string
+    email?: string
+    screenshot?: File
+  }) => {
+    const formData = new FormData()
+    formData.append('type', data.type)
+    formData.append('message', data.message)
+    if (data.email) formData.append('email', data.email)
+    if (data.screenshot) formData.append('screenshot', data.screenshot)
+
+    const response = await api.post('/api/feedback', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+}
+
+// Reports API (PDF exports)
+export const reportsAPI = {
+  downloadFullReport: (propertyId: number): string => {
+    return `${API_URL}/api/properties/${propertyId}/report/pdf`
+  },
+  downloadPriceAnalysis: (propertyId: number): string => {
+    return `${API_URL}/api/properties/${propertyId}/report/price-analysis/pdf`
+  },
+  downloadSynthesis: (propertyId: number): string => {
+    return `${API_URL}/api/properties/${propertyId}/report/synthesis/pdf`
+  },
+}
+
 // Default export for convenience
 export default api
