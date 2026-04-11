@@ -73,6 +73,7 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- [`go-task`](https://taskfile.dev) CLI
 - Google Cloud project with Vertex AI enabled, **or** a [Gemini API key](https://aistudio.google.com/) for development
 
 ### Installation
@@ -87,7 +88,7 @@ cp .env.example .env
 # Edit .env — set GEMINI_USE_VERTEXAI=true (production) or add GOOGLE_CLOUD_API_KEY (dev)
 
 # Start all services (migrations run automatically)
-docker-compose up -d
+task start
 ```
 
 ### Access the Application
@@ -158,13 +159,13 @@ uv run --extra docs mkdocs serve
 
 ```bash
 # Start services with hot-reload
-./dev.sh start
+task start
 
 # View logs
-./dev.sh logs backend
+task logs -- backend
 
 # Stop services
-./dev.sh stop
+task stop
 ```
 
 ### Local Development
@@ -242,7 +243,7 @@ GOOGLE_CLOUD_LOCATION=europe-west1
 GEMINI_USE_VERTEXAI=true
 ```
 
-Start with: `./dev.sh start-gcs`
+Start with: `task start-gcs`
 </details>
 
 <details>

@@ -297,7 +297,7 @@ GOOGLE_CLOUD_PROJECT=YOUR_PROJECT
 GOOGLE_CLOUD_LOCATION=europe-west1
 
 # 4. Start with GCS (uses ADC automatically)
-./dev.sh start-gcs
+task start-gcs
 ```
 
 This ensures you test with:

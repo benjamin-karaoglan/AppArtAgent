@@ -15,13 +15,13 @@ This section covers local development setup, workflows, and contributing guideli
 
 ```bash
 # Start development environment
-./dev.sh start
+task start
 
 # View logs
-./dev.sh logs
+task logs
 
 # Stop services
-./dev.sh stop
+task stop
 ```
 
 ## Development Stack

@@ -122,7 +122,7 @@ function DashboardContent() {
           </div>
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 mb-8">
             {[
               { icon: <Home className="h-5 w-5" />, label: t('stats.totalProperties'), value: properties.length },
               { icon: <FileText className="h-5 w-5" />, label: t('stats.documentsAnalyzed'), value: userStats?.documents_analyzed_count ?? 0 },

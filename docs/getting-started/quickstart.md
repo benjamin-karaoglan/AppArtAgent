@@ -106,7 +106,7 @@ GOOGLE_CLOUD_PROJECT=your-project-id
 GEMINI_USE_VERTEXAI=true
 
 # 4. Start with GCS
-./dev.sh start-gcs
+task start-gcs
 ```
 
 See [Local Setup - GCS with Impersonation](../development/local-setup.md#google-cloud-storage-with-service-account-impersonation-recommended) for detailed instructions.
@@ -158,24 +158,24 @@ lsof -i :3000
 # Or modify ports in docker-compose.yml
 ```
 
-## Using the Dev Script
+## Using Task Commands
 
-For convenience, use the included dev script:
+For convenience, use [`go-task`](https://taskfile.dev):
 
 ```bash
 # Start all services
-./dev.sh start
+task start
 
 # View logs
-./dev.sh logs
-./dev.sh logs backend  # Specific service
+task logs
+task logs -- backend  # Specific service
 
 # Restart a service
-./dev.sh restart backend
+task restart -- backend
 
 # Stop all services
-./dev.sh stop
+task stop
 
 # View all commands
-./dev.sh help
+task --list
 ```

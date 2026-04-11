@@ -170,8 +170,8 @@ This creates credentials at `~/.config/gcloud/application_default_credentials.js
 #### Step 3: Start with GCS Backend
 
 ```bash
-# Using the dev script
-./dev.sh start-gcs
+# Using task
+task start-gcs
 
 # Or manually with docker-compose
 docker-compose -f docker-compose.yml -f docker-compose.gcs.yml up -d
