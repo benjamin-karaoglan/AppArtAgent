@@ -39,7 +39,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: 'AppArt Agent',
     },
     icons: {
-      icon: '/icon.svg',
+      icon: [
+        { url: '/favicon.ico', sizes: '48x48' },
+        { url: '/icon.svg', type: 'image/svg+xml' },
+      ],
       apple: '/icons/apple-touch-icon.png',
     },
     openGraph: {

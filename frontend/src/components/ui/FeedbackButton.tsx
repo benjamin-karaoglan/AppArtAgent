@@ -13,7 +13,7 @@ export default function FeedbackButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 z-40 flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-full shadow-lg hover:bg-primary-700 transition-all hover:shadow-xl"
+        className="fixed bottom-6 right-4 z-40 flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-full shadow-lg hover:bg-primary-700 transition-all hover:shadow-xl"
         aria-label={t('button')}
       >
         <MessageSquarePlus className="w-4 h-4" />
