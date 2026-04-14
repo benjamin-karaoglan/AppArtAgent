@@ -43,17 +43,12 @@ cors_origins = list(settings.ALLOWED_ORIGINS)
 if settings.EXTRA_CORS_ORIGINS:
     cors_origins.extend([o.strip() for o in settings.EXTRA_CORS_ORIGINS.split(",") if o.strip()])
 
-# In production, allow Cloud Run URLs
-if settings.ENVIRONMENT == "production":
-    cors_origins.append("https://*.run.app")
-
 logger.info(f"CORS origins: {cors_origins}")
 
-# CORS middleware with regex pattern support for Cloud Run
+# CORS middleware — origins are explicit (localhost for dev, custom domain for prod via EXTRA_CORS_ORIGINS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://.*\.run\.app",  # Allow all Cloud Run URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

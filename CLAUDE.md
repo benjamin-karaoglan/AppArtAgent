@@ -279,6 +279,7 @@ Key variables (see `.env.example` for full list):
 - **AI**: Vertex AI (managed Gemini models)
 - **Registry**: Google Artifact Registry (Docker images)
 - **IaC**: Terraform (`infra/terraform/`)
+- **Network security**: Backend Cloud Run uses `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` — only reachable via the load balancer (`api.appartagent.com`) or from within the VPC. Direct `*.run.app` URLs are not publicly accessible.
 
 ### Terraform
 
