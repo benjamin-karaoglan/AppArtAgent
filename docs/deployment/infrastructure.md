@@ -319,7 +319,7 @@ flowchart TB
 
 ### Load Balancer (Optional)
 
-When `use_load_balancer = true` and `domain` is set:
+When `use_load_balancer = true` and `domain` is set, the load balancer is the **only** public entry point to the backend. The backend Cloud Run service uses `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER`, which blocks direct access to the `*.run.app` URL from the internet:
 
 ```mermaid
 flowchart TB
@@ -601,6 +601,8 @@ terraform refresh
 3. **Least privilege** - Service accounts have minimal permissions
 4. **Private networking** - Database and Redis use private IPs only
 5. **Secrets in Secret Manager** - No secrets in Terraform variables
+6. **Backend ingress restriction** - Backend Cloud Run uses `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER`; direct access to `*.run.app` URLs is blocked. All API traffic must flow through the load balancer at `api.<domain>`
+7. **CORS** - Only explicit origins are allowed (custom domain in production, localhost in development). No wildcard patterns
 
 ## Next Steps
 
