@@ -67,6 +67,14 @@ When deploying AppArt Agent:
 - Use HTTPS in production
 - Implement rate limiting
 
+### Network Security
+
+- Backend Cloud Run service uses `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` — direct access to `*.run.app` URLs is blocked
+- All API traffic flows through the Google Cloud Load Balancer at `api.appartagent.com`
+- CORS allows only explicit origins (custom domain in production, localhost in development)
+- Database and Redis are on private VPC networking with no public IP
+- VPC Connector provides Cloud Run services access to private resources
+
 ### Storage
 
 - Use presigned URLs with short expiration times
