@@ -694,7 +694,7 @@ resource "google_secret_manager_secret_iam_member" "frontend_database_url" {
 resource "google_cloud_run_v2_service" "backend" {
   name     = "appart-backend"
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   template {
     service_account = google_service_account.backend.email
@@ -937,7 +937,12 @@ resource "google_secret_manager_secret_version" "database_url" {
   }
 }
 
-# Allow unauthenticated access to backend (API handles its own auth)
+# Allow unauthenticated invocation via the load balancer.
+# The LB forwards requests as unauthenticated callers, so this binding is
+# required for traffic to reach the service. Direct internet access to the
+# *.run.app URL is blocked by the INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER
+# ingress setting above — this IAM binding does NOT make the service
+# publicly accessible on its own.
 resource "google_cloud_run_v2_service_iam_member" "backend_public" {
   location = google_cloud_run_v2_service.backend.location
   name     = google_cloud_run_v2_service.backend.name
