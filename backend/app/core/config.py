@@ -62,7 +62,10 @@ class Settings(BaseSettings):
 
     # File uploads - Use environment variable or /tmp for Cloud Run
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "/tmp/uploads")
-    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_UPLOAD_SIZE: int = 30 * 1024 * 1024  # 30MB
+    PDF_CHUNK_SIZE: int = (
+        5 * 1024 * 1024
+    )  # 5MB — PDFs larger than this are split into page-based chunks
     ALLOWED_EXTENSIONS: List[str] = [
         ".pdf",
         ".png",
