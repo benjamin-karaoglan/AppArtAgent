@@ -358,6 +358,38 @@ class DocumentProcessor:
             "document_id": document_id,
         }
 
+    async def merge_chunk_results(
+        self,
+        chunk_results: List[Dict[str, Any]],
+        document_type: str,
+        output_language: str = "French",
+    ) -> Dict[str, Any]:
+        """Merge analysis results from multiple chunks of a single document."""
+        logger.info(f"Merging {len(chunk_results)} chunk results for type: {document_type}")
+
+        chunk_summaries = "\n\n---\n\n".join(
+            f"**Chunk {i + 1}:**\n{json.dumps(r, ensure_ascii=False, indent=2)}"
+            for i, r in enumerate(chunk_results)
+        )
+
+        prompt = get_prompt(
+            "dp_merge_chunks",
+            chunk_count=len(chunk_results),
+            document_type=document_type,
+            chunk_results=chunk_summaries,
+            output_language=output_language,
+        )
+
+        response = await self._call_gemini_with_retry(
+            parts=[types.Part.from_text(text=prompt)],
+            config=self._get_config(max_tokens=16384, use_thinking=True),
+            context=f"merging {len(chunk_results)} chunks",
+        )
+        raw_text = self._extract_text(response)
+        cleaned = _extract_json(raw_text)
+        logger.info(f"Merge response: {len(raw_text)} chars raw, {len(cleaned)} chars cleaned")
+        return json.loads(cleaned)
+
     async def synthesize_results(
         self, results: List[Dict[str, Any]], output_language: str = "French"
     ) -> Dict[str, Any]:
