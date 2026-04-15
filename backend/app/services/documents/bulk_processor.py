@@ -156,7 +156,7 @@ class BulkProcessor:
             async def process_and_save(i: int, upload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 """Process a single document and save the result. Returns None on failure."""
                 try:
-                    logger.info(f"Starting {i+1}/{len(document_uploads)}: {upload['filename']}")
+                    logger.info(f"Starting {i + 1}/{len(document_uploads)}: {upload['filename']}")
 
                     pdf_data = prepared_docs[i]["pdf_data"]
                     chunks = chunk_pdf(pdf_data, settings.PDF_CHUNK_SIZE)
@@ -236,7 +236,7 @@ class BulkProcessor:
                         }
 
                     await self._save_document_result(db, result)
-                    logger.info(f"Completed {i+1}/{len(document_uploads)}: {upload['filename']}")
+                    logger.info(f"Completed {i + 1}/{len(document_uploads)}: {upload['filename']}")
                     return result
                 except Exception as e:
                     logger.error(f"Failed to process {upload['filename']}: {e}", exc_info=True)
@@ -256,8 +256,7 @@ class BulkProcessor:
 
             if successful_results:
                 logger.info(
-                    f"Synthesizing {len(successful_results)}/{len(results)} "
-                    f"successful results..."
+                    f"Synthesizing {len(successful_results)}/{len(results)} successful results..."
                 )
                 synthesis = await processor.synthesize_results(
                     successful_results, output_language=output_language
