@@ -20,6 +20,17 @@ from app.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
 
+# Retry configuration for transient Vertex AI errors
+MAX_RETRIES = 3
+RETRY_BASE_DELAY = 2  # seconds
+RETRYABLE_PATTERNS = {"429", "503", "RESOURCE_EXHAUSTED", "SERVICE_UNAVAILABLE"}
+
+
+def _is_retryable(error: Exception) -> bool:
+    """Check if an error is a transient Vertex AI error worth retrying."""
+    error_str = str(error)
+    return any(pattern in error_str for pattern in RETRYABLE_PATTERNS)
+
 
 def _repair_json(json_str: str) -> str:
     """Attempt to repair truncated or malformed JSON from LLM responses."""
@@ -159,11 +170,38 @@ class DocumentProcessor:
 
         return parts
 
+    async def _call_gemini_with_retry(
+        self, parts: List[types.Part], config: types.GenerateContentConfig, context: str = ""
+    ):
+        """Call Gemini with retry on transient errors (429, 503)."""
+        last_error = None
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                return await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=self.model,
+                    contents=[types.Content(role="user", parts=parts)],
+                    config=config,
+                )
+            except Exception as e:
+                last_error = e
+                if _is_retryable(e) and attempt < MAX_RETRIES:
+                    delay = RETRY_BASE_DELAY * (2**attempt)
+                    logger.warning(
+                        f"Retryable error for {context} (attempt {attempt + 1}/{MAX_RETRIES}), "
+                        f"retrying in {delay}s: {e}"
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise
+        raise last_error  # Should not reach here, but safety net
+
     async def classify_document(self, document: Dict[str, Any]) -> str:
         """Classify document type from the PDF.
 
         Only sends the native PDF (no extracted text) to keep classification fast and light.
         Thinking is explicitly disabled for this simple categorization task.
+        Retries on transient Vertex AI errors (429, 503).
         """
         filename = document.get("filename", "")
         pdf_data = document.get("pdf_data")
@@ -172,18 +210,16 @@ class DocumentProcessor:
             logger.warning(f"No PDF data for: {filename}")
             return "other"
 
-        # Only send the PDF for classification (skip extracted text — not needed)
         parts = [
             types.Part.from_bytes(data=pdf_data, mime_type="application/pdf"),
             types.Part.from_text(text=get_prompt("dp_classify_document", filename=filename)),
         ]
 
         try:
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model,
-                contents=[types.Content(role="user", parts=parts)],
+            response = await self._call_gemini_with_retry(
+                parts=parts,
                 config=self._get_config(max_tokens=100, use_thinking=False),
+                context=f"classification of {filename}",
             )
             raw_text = self._extract_text(response)
             category = raw_text.strip().lower()
@@ -205,48 +241,39 @@ class DocumentProcessor:
             return "other"
 
     async def _process_with_prompt(self, document: Dict[str, Any], prompt: str) -> Dict[str, Any]:
-        """Generic processing with custom prompt and thinking enabled."""
+        """Generic processing with custom prompt and thinking enabled.
+
+        Retries on transient Vertex AI errors. Raises on permanent failures
+        so the caller can mark the document as failed.
+        """
         filename = document.get("filename", "")
 
         parts = self._build_document_parts(document)
         parts.append(types.Part.from_text(text=prompt))
 
+        response = await self._call_gemini_with_retry(
+            parts=parts,
+            config=self._get_config(max_tokens=16384, use_thinking=True),
+            context=f"processing of {filename}",
+        )
+        raw_text = self._extract_text(response)
+        logger.info(f"Raw response for {filename}: {len(raw_text)} chars")
+        response_text = _extract_json(raw_text)
+        if not response_text:
+            raise ValueError(f"Empty response for {filename}")
+
         try:
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=self.model,
-                contents=[types.Content(role="user", parts=parts)],
-                config=self._get_config(max_tokens=16384, use_thinking=True),
+            return json.loads(response_text)
+        except json.JSONDecodeError as je:
+            pos = je.pos if hasattr(je, "pos") else 0
+            context_start = max(0, pos - 100)
+            context_end = min(len(response_text), pos + 100)
+            logger.error(
+                f"JSON parse error for {filename} at pos {pos}: {je.msg}\n"
+                f"Context: ...{response_text[context_start:context_end]}..."
             )
-            raw_text = self._extract_text(response)
-            logger.info(f"Raw response for {filename}: {len(raw_text)} chars")
-            response_text = _extract_json(raw_text)
-            if not response_text:
-                raise ValueError("Empty response")
-
-            try:
-                return json.loads(response_text)
-            except json.JSONDecodeError as je:
-                # Log the problematic area for debugging
-                pos = je.pos if hasattr(je, "pos") else 0
-                context_start = max(0, pos - 100)
-                context_end = min(len(response_text), pos + 100)
-                logger.error(
-                    f"JSON parse error for {filename} at pos {pos}: {je.msg}\n"
-                    f"Context: ...{response_text[context_start:context_end]}..."
-                )
-                # Try a more aggressive cleanup and retry
-                response_text = _repair_json(response_text)
-                return json.loads(response_text)
-
-        except Exception as e:
-            logger.error(f"Processing error for {filename}: {e}")
-            return {
-                "summary": f"Error processing {filename}",
-                "key_insights": [],
-                "estimated_annual_cost": 0.0,
-                "one_time_costs": 0.0,
-            }
+            response_text = _repair_json(response_text)
+            return json.loads(response_text)
 
     async def process_pv_ag(
         self, document: Dict[str, Any], output_language: str = "French"
@@ -330,6 +357,38 @@ class DocumentProcessor:
             "result": analysis,
             "document_id": document_id,
         }
+
+    async def merge_chunk_results(
+        self,
+        chunk_results: List[Dict[str, Any]],
+        document_type: str,
+        output_language: str = "French",
+    ) -> Dict[str, Any]:
+        """Merge analysis results from multiple chunks of a single document."""
+        logger.info(f"Merging {len(chunk_results)} chunk results for type: {document_type}")
+
+        chunk_summaries = "\n\n---\n\n".join(
+            f"**Chunk {i + 1}:**\n{json.dumps(r, ensure_ascii=False, indent=2)}"
+            for i, r in enumerate(chunk_results)
+        )
+
+        prompt = get_prompt(
+            "dp_merge_chunks",
+            chunk_count=len(chunk_results),
+            document_type=document_type,
+            chunk_results=chunk_summaries,
+            output_language=output_language,
+        )
+
+        response = await self._call_gemini_with_retry(
+            parts=[types.Part.from_text(text=prompt)],
+            config=self._get_config(max_tokens=16384, use_thinking=True),
+            context=f"merging {len(chunk_results)} chunks",
+        )
+        raw_text = self._extract_text(response)
+        cleaned = _extract_json(raw_text)
+        logger.info(f"Merge response: {len(raw_text)} chars raw, {len(cleaned)} chars cleaned")
+        return json.loads(cleaned)
 
     async def synthesize_results(
         self, results: List[Dict[str, Any]], output_language: str = "French"
