@@ -132,7 +132,7 @@ class BulkProcessor:
         logger.info(f"Starting bulk processing: {workflow_id}, {len(document_uploads)} documents")
 
         db = SessionLocal()
-        semaphore = asyncio.Semaphore(1)
+        semaphore = asyncio.Semaphore(3)
         try:
             # Update all documents to processing status
             for upload in document_uploads:
@@ -171,11 +171,10 @@ class BulkProcessor:
                             "page_count": prepared_docs[i]["page_count"],
                             "document_id": upload["document_id"],
                         }
-                        async with semaphore:
-                            result = await processor.process_document(
-                                doc_data,
-                                output_language=output_language,
-                            )
+                        result = await processor.process_document(
+                            doc_data,
+                            output_language=output_language,
+                        )
                     else:
                         # Chunked path — split, process in parallel, merge
                         logger.info(
@@ -192,8 +191,7 @@ class BulkProcessor:
                             "page_count": first_chunk_prepared["page_count"],
                             "document_id": upload["document_id"],
                         }
-                        async with semaphore:
-                            category = await processor.classify_document(first_chunk_data)
+                        category = await processor.classify_document(first_chunk_data)
 
                         # Process each chunk with the determined category
                         processors_map = {
@@ -206,27 +204,33 @@ class BulkProcessor:
                         }
                         process_fn = processors_map.get(category, processor.process_other)
 
-                        async def process_chunk(chunk_bytes: bytes) -> Dict[str, Any]:
+                        # Process all chunks in parallel — skip extracted text
+                        # to reduce per-request tokens (PDF already has the content)
+                        async def process_chunk(ci: int, chunk_bytes: bytes) -> Dict[str, Any]:
                             chunk_prepared = prepare_pdf(chunk_bytes)
                             chunk_doc = {
                                 "filename": upload["filename"],
                                 "pdf_data": chunk_prepared["pdf_data"],
-                                "text_extractable": chunk_prepared["text_extractable"],
-                                "extracted_text": chunk_prepared["extracted_text"],
+                                "text_extractable": False,
+                                "extracted_text": "",
                                 "page_count": chunk_prepared["page_count"],
                                 "document_id": upload["document_id"],
                             }
+                            logger.info(
+                                f"Processing chunk {ci + 1}/{len(chunks)} "
+                                f"({chunk_prepared['page_count']} pages) "
+                                f"for {upload['filename']}"
+                            )
                             async with semaphore:
                                 return await process_fn(chunk_doc, output_language=output_language)
 
-                        chunk_tasks = [process_chunk(c) for c in chunks]
+                        chunk_tasks = [process_chunk(ci, c) for ci, c in enumerate(chunks)]
                         chunk_results = await asyncio.gather(*chunk_tasks)
 
                         # Merge chunk results
-                        async with semaphore:
-                            merged_analysis = await processor.merge_chunk_results(
-                                chunk_results, category, output_language=output_language
-                            )
+                        merged_analysis = await processor.merge_chunk_results(
+                            chunk_results, category, output_language=output_language
+                        )
 
                         result = {
                             "filename": upload["filename"],

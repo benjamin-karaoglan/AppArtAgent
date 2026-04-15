@@ -268,10 +268,18 @@ class DocumentProcessor:
             pos = je.pos if hasattr(je, "pos") else 0
             context_start = max(0, pos - 100)
             context_end = min(len(response_text), pos + 100)
-            logger.error(
+            logger.warning(
                 f"JSON parse error for {filename} at pos {pos}: {je.msg}\n"
                 f"Context: ...{response_text[context_start:context_end]}..."
             )
+
+            # "Extra data" means valid JSON followed by trailing text — parse just the first object
+            if "Extra data" in je.msg:
+                decoder = json.JSONDecoder()
+                obj, _ = decoder.raw_decode(response_text)
+                return obj
+
+            # Truncated JSON — try to repair
             response_text = _repair_json(response_text)
             return json.loads(response_text)
 
