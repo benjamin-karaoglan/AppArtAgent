@@ -6,7 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import fitz  # PyMuPDF
 import pytest
+from fastapi.testclient import TestClient
 
+from app.core.better_auth_security import get_current_user_hybrid as get_current_user
+from app.main import app
 from app.services.ai.document_processor import DocumentProcessor
 from app.services.documents.bulk_processor import BulkProcessor, chunk_pdf
 
@@ -357,3 +360,31 @@ class TestErrorPropagation:
         results_arg = mock_ai.synthesize_results.call_args[0][0]
         assert len(results_arg) == 1
         assert results_arg[0]["filename"] == "doc2.pdf"
+
+
+test_client = TestClient(app)
+
+
+class TestFileSizeValidation:
+    """Test upload file size enforcement."""
+
+    @patch("app.api.documents.settings")
+    def test_single_upload_rejects_oversized_file(self, mock_settings):
+        """Single upload should return 413 for files exceeding MAX_UPLOAD_SIZE."""
+        mock_settings.MAX_UPLOAD_SIZE = 100  # 100 bytes for testing
+        mock_settings.ALLOWED_EXTENSIONS = [".pdf"]
+
+        # Override the auth dependency to bypass authentication
+        app.dependency_overrides[get_current_user] = lambda: "1"
+
+        try:
+            oversized_content = b"x" * 200  # 200 bytes > 100 byte limit
+            response = test_client.post(
+                "/api/documents/upload",
+                files={"file": ("test.pdf", oversized_content, "application/pdf")},
+                data={"document_category": "other"},
+            )
+
+            assert response.status_code == 413
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)

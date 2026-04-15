@@ -119,6 +119,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "fr": "Échec de la lecture du fichier : {error}",
         "en": "Failed to read file: {error}",
     },
+    "file_too_large": {
+        "fr": "Le fichier dépasse la taille maximale autorisée ({max_size})",
+        "en": "File exceeds the maximum allowed size ({max_size})",
+    },
     "failed_extract_pdf": {
         "fr": "Échec de l'extraction du texte du PDF : {error}",
         "en": "Failed to extract text from PDF: {error}",

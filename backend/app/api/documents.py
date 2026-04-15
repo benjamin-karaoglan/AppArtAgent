@@ -242,6 +242,14 @@ async def upload_document(
             detail=translate("failed_read_file", locale, error=str(e)),
         )
 
+    # Validate file size
+    if file_size > settings.MAX_UPLOAD_SIZE:
+        max_mb = settings.MAX_UPLOAD_SIZE // (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=translate("file_too_large", locale, max_size=f"{max_mb}MB"),
+        )
+
     # Calculate file hash for deduplication
     file_hash = hashlib.sha256(content).hexdigest()
 
@@ -1320,6 +1328,15 @@ async def bulk_upload_documents(
             # Read file
             content = await file.read()
             file_size = len(content)
+
+            # Validate file size — skip oversized files in bulk
+            if file_size > settings.MAX_UPLOAD_SIZE:
+                logger.warning(
+                    f"Skipping oversized file: {file.filename} "
+                    f"({file_size} bytes, max {settings.MAX_UPLOAD_SIZE})"
+                )
+                continue
+
             file_hash = hashlib.sha256(content).hexdigest()
 
             # Generate UUID for document path
