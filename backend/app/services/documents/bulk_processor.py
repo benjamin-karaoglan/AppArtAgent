@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import fitz  # PyMuPDF
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.document import Document, DocumentSummary
 from app.models.user import User
@@ -131,6 +132,7 @@ class BulkProcessor:
         logger.info(f"Starting bulk processing: {workflow_id}, {len(document_uploads)} documents")
 
         db = SessionLocal()
+        semaphore = asyncio.Semaphore(3)
         try:
             # Update all documents to processing status
             for upload in document_uploads:
@@ -155,18 +157,84 @@ class BulkProcessor:
                 """Process a single document and save the result. Returns None on failure."""
                 try:
                     logger.info(f"Starting {i+1}/{len(document_uploads)}: {upload['filename']}")
-                    doc_data = {
-                        "filename": upload["filename"],
-                        "pdf_data": prepared_docs[i]["pdf_data"],
-                        "text_extractable": prepared_docs[i]["text_extractable"],
-                        "extracted_text": prepared_docs[i]["extracted_text"],
-                        "page_count": prepared_docs[i]["page_count"],
-                        "document_id": upload["document_id"],
-                    }
-                    result = await processor.process_document(
-                        doc_data,
-                        output_language=output_language,
-                    )
+
+                    pdf_data = prepared_docs[i]["pdf_data"]
+                    chunks = chunk_pdf(pdf_data, settings.PDF_CHUNK_SIZE)
+
+                    if len(chunks) == 1:
+                        # Normal path — single chunk, process as before
+                        doc_data = {
+                            "filename": upload["filename"],
+                            "pdf_data": pdf_data,
+                            "text_extractable": prepared_docs[i]["text_extractable"],
+                            "extracted_text": prepared_docs[i]["extracted_text"],
+                            "page_count": prepared_docs[i]["page_count"],
+                            "document_id": upload["document_id"],
+                        }
+                        async with semaphore:
+                            result = await processor.process_document(
+                                doc_data,
+                                output_language=output_language,
+                            )
+                    else:
+                        # Chunked path — split, process in parallel, merge
+                        logger.info(
+                            f"Document {upload['filename']} split into {len(chunks)} chunks"
+                        )
+
+                        # Classify using first chunk only
+                        first_chunk_prepared = prepare_pdf(chunks[0])
+                        first_chunk_data = {
+                            "filename": upload["filename"],
+                            "pdf_data": first_chunk_prepared["pdf_data"],
+                            "text_extractable": first_chunk_prepared["text_extractable"],
+                            "extracted_text": first_chunk_prepared["extracted_text"],
+                            "page_count": first_chunk_prepared["page_count"],
+                            "document_id": upload["document_id"],
+                        }
+                        async with semaphore:
+                            category = await processor.classify_document(first_chunk_data)
+
+                        # Process each chunk with the determined category
+                        processors_map = {
+                            "pv_ag": processor.process_pv_ag,
+                            "diags": processor.process_diagnostic,
+                            "diagnostic": processor.process_diagnostic,
+                            "taxe_fonciere": processor.process_tax,
+                            "charges": processor.process_charges,
+                            "other": processor.process_other,
+                        }
+                        process_fn = processors_map.get(category, processor.process_other)
+
+                        async def process_chunk(chunk_bytes: bytes) -> Dict[str, Any]:
+                            chunk_prepared = prepare_pdf(chunk_bytes)
+                            chunk_doc = {
+                                "filename": upload["filename"],
+                                "pdf_data": chunk_prepared["pdf_data"],
+                                "text_extractable": chunk_prepared["text_extractable"],
+                                "extracted_text": chunk_prepared["extracted_text"],
+                                "page_count": chunk_prepared["page_count"],
+                                "document_id": upload["document_id"],
+                            }
+                            async with semaphore:
+                                return await process_fn(chunk_doc, output_language=output_language)
+
+                        chunk_tasks = [process_chunk(c) for c in chunks]
+                        chunk_results = await asyncio.gather(*chunk_tasks)
+
+                        # Merge chunk results
+                        async with semaphore:
+                            merged_analysis = await processor.merge_chunk_results(
+                                chunk_results, category, output_language=output_language
+                            )
+
+                        result = {
+                            "filename": upload["filename"],
+                            "document_type": category,
+                            "result": merged_analysis,
+                            "document_id": upload["document_id"],
+                        }
+
                     await self._save_document_result(db, result)
                     logger.info(f"Completed {i+1}/{len(document_uploads)}: {upload['filename']}")
                     return result
