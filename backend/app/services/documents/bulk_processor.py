@@ -7,6 +7,7 @@ Handles bulk document uploads with parallel processing and synthesis.
 import asyncio
 import json
 import logging
+import math
 import threading
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -63,6 +64,45 @@ def prepare_pdf(pdf_bytes: bytes) -> Dict[str, Any]:
             "extracted_text": "",
             "page_count": 0,
         }
+
+
+def chunk_pdf(pdf_bytes: bytes, chunk_size: int) -> List[bytes]:
+    """Split a PDF into page-based chunks if it exceeds chunk_size.
+
+    Args:
+        pdf_bytes: Raw PDF bytes.
+        chunk_size: Maximum target size per chunk in bytes.
+
+    Returns:
+        List of PDF byte arrays. Single-element list if no splitting needed.
+    """
+    if len(pdf_bytes) <= chunk_size:
+        return [pdf_bytes]
+
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    page_count = len(doc)
+
+    if page_count == 0:
+        doc.close()
+        return [pdf_bytes]
+
+    bytes_per_page = len(pdf_bytes) / page_count
+    pages_per_chunk = max(math.floor(chunk_size / bytes_per_page), 10)
+
+    chunks = []
+    for start in range(0, page_count, pages_per_chunk):
+        end = min(start + pages_per_chunk, page_count)
+        sub_doc = fitz.open()
+        sub_doc.insert_pdf(doc, from_page=start, to_page=end - 1)
+        chunks.append(sub_doc.tobytes())
+        sub_doc.close()
+
+    doc.close()
+    logger.info(
+        f"Split {page_count}-page PDF ({len(pdf_bytes)} bytes) into "
+        f"{len(chunks)} chunks of ~{pages_per_chunk} pages each"
+    )
+    return chunks
 
 
 class BulkProcessor:
