@@ -2,13 +2,13 @@
 
 import asyncio
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import fitz  # PyMuPDF
 import pytest
 
 from app.services.ai.document_processor import DocumentProcessor
-from app.services.documents.bulk_processor import chunk_pdf
+from app.services.documents.bulk_processor import BulkProcessor, chunk_pdf
 
 
 class TestRetryLogic:
@@ -216,3 +216,144 @@ class TestChunkPdf:
             doc = fitz.open(stream=chunk, filetype="pdf")
             assert len(doc) >= 10
             doc.close()
+
+
+class TestErrorPropagation:
+    """Test that processing errors are properly propagated to document status."""
+
+    @pytest.mark.asyncio
+    async def test_failed_document_marked_as_failed(self):
+        """When AI processing raises, document should be marked as failed."""
+        mock_db = MagicMock()
+        mock_doc = MagicMock()
+        mock_doc.id = 1
+        mock_doc.processing_status = "processing"
+        mock_doc.processing_error = None
+        mock_doc.is_analyzed = False
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_doc
+
+        processor = BulkProcessor()
+
+        with patch("app.services.documents.bulk_processor.get_document_processor") as mock_get_proc:
+            mock_processor = MagicMock()
+            mock_processor.process_document = AsyncMock(
+                side_effect=Exception("429 RESOURCE_EXHAUSTED")
+            )
+            mock_get_proc.return_value = mock_processor
+
+            with patch("app.services.documents.bulk_processor.SessionLocal", return_value=mock_db):
+                with patch.object(
+                    processor, "_download_files", new=AsyncMock(return_value=[b"fake-pdf"])
+                ):
+                    with patch.object(
+                        processor,
+                        "_prepare_documents",
+                        new=AsyncMock(
+                            return_value=[
+                                {
+                                    "pdf_data": b"fake-pdf",
+                                    "text_extractable": False,
+                                    "extracted_text": "",
+                                    "page_count": 5,
+                                }
+                            ]
+                        ),
+                    ):
+                        with patch.object(processor, "_save_synthesis", new=AsyncMock()):
+                            await processor.process_bulk_upload(
+                                workflow_id="test-workflow",
+                                property_id=1,
+                                document_uploads=[
+                                    {
+                                        "document_id": 1,
+                                        "filename": "test.pdf",
+                                        "storage_key": "key/test.pdf",
+                                    }
+                                ],
+                            )
+
+        # Document should be marked as failed
+        assert mock_doc.processing_status == "failed"
+        assert "RESOURCE_EXHAUSTED" in mock_doc.processing_error
+        assert mock_doc.is_analyzed is False
+
+    @pytest.mark.asyncio
+    async def test_partial_failure_synthesizes_successful_only(self):
+        """When one doc fails and another succeeds, synthesis uses only the success."""
+        mock_db = MagicMock()
+        mock_doc = MagicMock(
+            id=1, processing_status="processing", processing_error=None, is_analyzed=False
+        )
+        mock_db.query.return_value.filter.return_value.first.return_value = mock_doc
+        mock_db.commit = MagicMock()
+
+        processor = BulkProcessor()
+
+        with patch("app.services.documents.bulk_processor.get_document_processor") as mock_get_proc:
+            mock_ai = MagicMock()
+            call_count = 0
+
+            async def mock_process(doc, output_language="French"):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise Exception("429 RESOURCE_EXHAUSTED")
+                return {
+                    "filename": "doc2.pdf",
+                    "document_type": "other",
+                    "result": {"summary": "Success"},
+                    "document_id": 2,
+                }
+
+            mock_ai.process_document = mock_process
+            mock_ai.synthesize_results = AsyncMock(return_value={"summary": "Partial synthesis"})
+            mock_get_proc.return_value = mock_ai
+
+            with patch("app.services.documents.bulk_processor.SessionLocal", return_value=mock_db):
+                with patch.object(
+                    processor, "_download_files", new=AsyncMock(return_value=[b"pdf1", b"pdf2"])
+                ):
+                    with patch.object(
+                        processor,
+                        "_prepare_documents",
+                        new=AsyncMock(
+                            return_value=[
+                                {
+                                    "pdf_data": b"pdf1",
+                                    "text_extractable": False,
+                                    "extracted_text": "",
+                                    "page_count": 5,
+                                },
+                                {
+                                    "pdf_data": b"pdf2",
+                                    "text_extractable": False,
+                                    "extracted_text": "",
+                                    "page_count": 5,
+                                },
+                            ]
+                        ),
+                    ):
+                        with patch.object(processor, "_save_document_result", new=AsyncMock()):
+                            with patch.object(processor, "_save_synthesis", new=AsyncMock()):
+                                await processor.process_bulk_upload(
+                                    workflow_id="test-workflow",
+                                    property_id=1,
+                                    document_uploads=[
+                                        {
+                                            "document_id": 1,
+                                            "filename": "doc1.pdf",
+                                            "storage_key": "key/doc1.pdf",
+                                        },
+                                        {
+                                            "document_id": 2,
+                                            "filename": "doc2.pdf",
+                                            "storage_key": "key/doc2.pdf",
+                                        },
+                                    ],
+                                )
+
+        # synthesize_results should have been called with only the successful result
+        mock_ai.synthesize_results.assert_called_once()
+        results_arg = mock_ai.synthesize_results.call_args[0][0]
+        assert len(results_arg) == 1
+        assert results_arg[0]["filename"] == "doc2.pdf"

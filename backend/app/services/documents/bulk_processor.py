@@ -151,34 +151,52 @@ class BulkProcessor:
             logger.info(f"Processing {len(document_uploads)} documents in parallel...")
             processor = get_document_processor()
 
-            async def process_and_save(i: int, upload: Dict[str, Any]) -> Dict[str, Any]:
-                """Process a single document and save the result."""
-                logger.info(f"Starting {i+1}/{len(document_uploads)}: {upload['filename']}")
-                doc_data = {
-                    "filename": upload["filename"],
-                    "pdf_data": prepared_docs[i]["pdf_data"],
-                    "text_extractable": prepared_docs[i]["text_extractable"],
-                    "extracted_text": prepared_docs[i]["extracted_text"],
-                    "page_count": prepared_docs[i]["page_count"],
-                    "document_id": upload["document_id"],
-                }
-                result = await processor.process_document(
-                    doc_data,
-                    output_language=output_language,
-                )
-                await self._save_document_result(db, result)
-                logger.info(f"Completed {i+1}/{len(document_uploads)}: {upload['filename']}")
-                return result
+            async def process_and_save(i: int, upload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+                """Process a single document and save the result. Returns None on failure."""
+                try:
+                    logger.info(f"Starting {i+1}/{len(document_uploads)}: {upload['filename']}")
+                    doc_data = {
+                        "filename": upload["filename"],
+                        "pdf_data": prepared_docs[i]["pdf_data"],
+                        "text_extractable": prepared_docs[i]["text_extractable"],
+                        "extracted_text": prepared_docs[i]["extracted_text"],
+                        "page_count": prepared_docs[i]["page_count"],
+                        "document_id": upload["document_id"],
+                    }
+                    result = await processor.process_document(
+                        doc_data,
+                        output_language=output_language,
+                    )
+                    await self._save_document_result(db, result)
+                    logger.info(f"Completed {i+1}/{len(document_uploads)}: {upload['filename']}")
+                    return result
+                except Exception as e:
+                    logger.error(f"Failed to process {upload['filename']}: {e}", exc_info=True)
+                    doc = db.query(Document).filter(Document.id == upload["document_id"]).first()
+                    if doc:
+                        doc.processing_status = "failed"
+                        doc.processing_error = str(e)
+                        doc.is_analyzed = False
+                    db.commit()
+                    return None
 
             tasks = [process_and_save(i, upload) for i, upload in enumerate(document_uploads)]
             results = await asyncio.gather(*tasks)
 
-            # Step 4: Synthesize
-            logger.info("Synthesizing results...")
-            synthesis = await processor.synthesize_results(results, output_language=output_language)
+            # Step 4: Synthesize only successful results
+            successful_results = [r for r in results if r is not None]
 
-            # Step 5: Save synthesis
-            await self._save_synthesis(db, synthesis, property_id)
+            if successful_results:
+                logger.info(
+                    f"Synthesizing {len(successful_results)}/{len(results)} "
+                    f"successful results..."
+                )
+                synthesis = await processor.synthesize_results(
+                    successful_results, output_language=output_language
+                )
+                await self._save_synthesis(db, synthesis, property_id)
+            else:
+                logger.warning(f"All {len(results)} documents failed — skipping synthesis")
 
             logger.info(f"Bulk processing completed: {workflow_id}")
 
