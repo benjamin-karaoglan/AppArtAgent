@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Retry configuration for transient Vertex AI errors
 MAX_RETRIES = 3
-RETRY_BASE_DELAY = 2  # seconds
+RETRY_BASE_DELAY = 5  # seconds
 RETRYABLE_PATTERNS = {"429", "503", "RESOURCE_EXHAUSTED", "SERVICE_UNAVAILABLE"}
 
 

@@ -132,7 +132,7 @@ class BulkProcessor:
         logger.info(f"Starting bulk processing: {workflow_id}, {len(document_uploads)} documents")
 
         db = SessionLocal()
-        semaphore = asyncio.Semaphore(3)
+        semaphore = asyncio.Semaphore(1)
         try:
             # Update all documents to processing status
             for upload in document_uploads:
