@@ -10,7 +10,7 @@ interface MarketTrendData {
   average_prices: number[];
   year_over_year_changes: number[];
   sample_counts: number[];
-  street_name?: string;
+  postal_code?: string;
   total_sales: number;
   outliers_excluded: number;
 }
@@ -79,7 +79,7 @@ export default function MarketTrendChart({ propertyId }: MarketTrendChartProps) 
     <div className="bg-white rounded-lg p-6">
       <div className="mb-4">
         <h3 className="text-lg font-medium text-gray-900">
-          {t('title')}{trendData.street_name ? ` - ${trendData.street_name}` : ''}
+          {trendData.postal_code ? t('titleWithPostalCode', { postalCode: trendData.postal_code }) : t('title')}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
           {t('basedOnSales', { count: trendData.total_sales })}{trendData.outliers_excluded > 0 && (
