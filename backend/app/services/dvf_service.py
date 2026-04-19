@@ -414,12 +414,13 @@ class DVFService:
         postal_code: str,
         property_type: str,
         months_back: int = 60,
-        max_results: int = 500,
     ) -> List[DVFSale]:
         """
         Get postal-code-level sales for trend calculation.
         Uses all sales in the postal code for the given property type.
         NO surface area filter - we want all sales for accurate trends.
+        No row limit - the date window (5 years) is the constraint.
+        Dense postal codes (e.g. Paris) can have 2000+ sales in 5 years.
         """
         cutoff_date = datetime.now() - timedelta(days=30 * months_back)
 
@@ -434,7 +435,6 @@ class DVFService:
                 DVFSale.code_postal == postal_code,
             )
             .order_by(DVFSale.date_mutation.desc())
-            .limit(max_results)
         )
 
         return query.all()
