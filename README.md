@@ -52,7 +52,7 @@ AppArt Agent helps buyers make informed real estate decisions by combining:
 
 - Address-based property search with DVF data (2022-2025) using api-adresse.data.gouv.fr for instant autocomplete
 - Historical sales analysis and trend projections
-- Interactive 5-year market evolution chart
+- Interactive 10-year market evolution chart
 - IQR-based outlier detection for accurate pricing
 
 ### 📄 Document Analysis
