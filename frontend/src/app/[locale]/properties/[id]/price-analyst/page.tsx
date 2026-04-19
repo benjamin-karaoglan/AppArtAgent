@@ -176,6 +176,7 @@ function PriceAnalystContent() {
                   trendProjection={analysis.trend_projection}
                   excludedNeighboringIds={excludedNeighboringIds}
                   onToggle={toggleNeighboringExclusion}
+                  postalCode={property?.postal_code}
                 />
               )}
 
