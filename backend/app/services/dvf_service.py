@@ -210,7 +210,7 @@ class DVFService:
         postal_code: str,
         property_type: str,
         address: str,
-        months_back: int = 60,
+        months_back: int = 120,
         max_results: int = 20,
     ) -> List[DVFSale]:
         """
@@ -272,7 +272,7 @@ class DVFService:
         surface_area: float,
         address: str = "",
         radius_km: int = 2,
-        months_back: int = 60,
+        months_back: int = 120,
         max_results: int = 20,
     ) -> List[DVFSale]:
         """
@@ -414,7 +414,7 @@ class DVFService:
         property_type: str,
         surface_area: float,
         address: str,
-        months_back: int = 24,
+        months_back: int = 120,
         max_results: int = 200,
     ) -> List[DVFSale]:
         """

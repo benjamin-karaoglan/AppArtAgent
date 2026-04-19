@@ -418,7 +418,7 @@ def _compute_market_trend_json(property_obj: Property, db: Session) -> dict:
         property_type=property_obj.property_type or "Appartement",
         surface_area=property_obj.surface_area,
         address=property_obj.address or "",
-        months_back=60,
+        months_back=120,
     )
 
     if not neighboring_sales:
@@ -502,7 +502,7 @@ def _run_trend_analysis(
         property_type=property_obj.property_type or "Appartement",
         surface_area=property_obj.surface_area,
         address=property_obj.address or "",
-        months_back=60,
+        months_back=120,
     )
 
     # Detect outliers
