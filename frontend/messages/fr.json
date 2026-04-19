@@ -378,10 +378,13 @@
     "trend": {
       "title": "Projection Tendance {year}",
       "projectedValue": "Valeur projetée {year}",
-      "projectedValueInfo": "Calculée en prenant le prix/m² de la dernière vente à cette adresse, puis en appliquant la tendance du marché de la dernière année (évolution entre l'avant-dernière et la dernière année de ventes voisines) jusqu'à aujourd'hui, multiplié par la surface.",
+      "projectedValueInfo": "Calculée en prenant le prix/m² de la dernière vente à cette adresse, puis en appliquant la tendance du marché du code postal (régression linéaire sur les prix médians annuels) jusqu'à aujourd'hui, multiplié par la surface.",
       "marketTrend": "Tendance du marché",
-      "basedOnSales": "Basé sur {count} ventes voisines",
-      "neighboringSalesTitle": "Ventes voisines pour la tendance ({count})",
+      "basedOnSales": "Basé sur {count} ventes dans le {postalCode}",
+      "neighboringSalesTitle": "Ventes utilisées pour la tendance ({count})",
+      "confidenceHigh": "Confiance élevée",
+      "confidenceModerate": "Confiance modérée",
+      "confidenceLow": "Confiance faible",
       "baseSale": "Vente de référence",
       "date": "Date :",
       "pricePerSqm": "Prix/m² :"
@@ -412,6 +415,7 @@
     },
     "marketTrend": {
       "title": "Évolution des prix du marché",
+      "titleWithPostalCode": "Évolution des prix du marché - {postalCode}",
       "basedOnSales": "Basé sur {count} ventes",
       "outliersExcluded": "{count, plural, one {# valeur aberrante exclue} other {# valeurs aberrantes exclues}} pour plus de précision",
       "noData": "Aucune donnée de tendance du marché disponible",
