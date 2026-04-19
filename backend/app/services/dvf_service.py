@@ -8,6 +8,7 @@ import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
@@ -463,16 +464,24 @@ class DVFService:
 
     @staticmethod
     def calculate_market_trend(
-        comparable_sales: List[DVFSale], use_latest_year_only: bool = False
-    ) -> float:
+        comparable_sales: List[DVFSale],
+    ) -> Dict[str, Any]:
         """
-        Calculate market trend (annual price increase/decrease percentage).
+        Calculate market trend using linear regression on yearly median EUR/m2.
 
         Returns:
-            Annual trend as percentage (e.g., 5.0 for +5% per year)
+            Dict with trend_pct, r_squared, sample_size, years_count, confidence_level
         """
+        insufficient = {
+            "trend_pct": 0.0,
+            "r_squared": 0.0,
+            "sample_size": len(comparable_sales),
+            "years_count": 0,
+            "confidence_level": "low",
+        }
+
         if len(comparable_sales) < 2:
-            return 0.0
+            return insufficient
 
         sales_by_year: dict[int, list[float]] = {}
         for sale in comparable_sales:
@@ -485,27 +494,45 @@ class DVFService:
                 sales_by_year[year].append(float(prix_m2))
 
         if len(sales_by_year) < 2:
-            return 0.0
+            return insufficient
 
-        year_averages = {year: statistics.mean(prices) for year, prices in sales_by_year.items()}
+        year_medians = {year: statistics.median(prices) for year, prices in sales_by_year.items()}
+        sorted_years = sorted(year_medians.keys())
+        years_array = np.array(sorted_years, dtype=float)
+        medians_array = np.array([year_medians[y] for y in sorted_years], dtype=float)
 
-        sorted_years = sorted(year_averages.keys())
+        # Linear regression: median_price = slope * year + intercept
+        coeffs = np.polyfit(years_array, medians_array, 1)
+        slope = coeffs[0]
 
-        yoy_changes = []
-        for i in range(1, len(sorted_years)):
-            prev_year = sorted_years[i - 1]
-            curr_year = sorted_years[i]
-            years_diff = curr_year - prev_year
+        # R-squared calculation
+        predicted = np.polyval(coeffs, years_array)
+        ss_res = np.sum((medians_array - predicted) ** 2)
+        ss_tot = np.sum((medians_array - np.mean(medians_array)) ** 2)
+        r_squared = float(1 - ss_res / ss_tot) if ss_tot > 0 else 0.0
 
-            if years_diff > 0 and year_averages[prev_year] > 0:
-                price_change = year_averages[curr_year] - year_averages[prev_year]
-                annual_change_pct = (price_change / year_averages[prev_year]) / years_diff * 100
-                yoy_changes.append(annual_change_pct)
+        # Convert slope to annual percentage relative to latest year median
+        latest_median = year_medians[sorted_years[-1]]
+        trend_pct = (slope / latest_median) * 100 if latest_median > 0 else 0.0
 
-        if use_latest_year_only and yoy_changes:
-            return yoy_changes[-1]
+        sample_size = len(comparable_sales)
+        years_count = len(sales_by_year)
+
+        # Confidence level
+        if r_squared >= 0.7 and sample_size >= 50 and years_count >= 4:
+            confidence_level = "high"
+        elif r_squared >= 0.4 and sample_size >= 20 and years_count >= 3:
+            confidence_level = "moderate"
         else:
-            return statistics.mean(yoy_changes) if yoy_changes else 0.0
+            confidence_level = "low"
+
+        return {
+            "trend_pct": round(trend_pct, 2),
+            "r_squared": round(r_squared, 4),
+            "sample_size": sample_size,
+            "years_count": years_count,
+            "confidence_level": confidence_level,
+        }
 
     @staticmethod
     def apply_time_adjustment(
@@ -557,7 +584,8 @@ class DVFService:
             getattr(base_sale, "prix_m2", None) or getattr(base_sale, "price_per_sqm", None) or 0
         )
 
-        trend_pct = DVFService.calculate_market_trend(neighboring_sales, use_latest_year_only=True)
+        trend_result = DVFService.calculate_market_trend(neighboring_sales)
+        trend_pct = trend_result["trend_pct"]
 
         if abs(trend_pct) < 0.1:
             return {
@@ -617,7 +645,8 @@ class DVFService:
                 "market_trend_annual": 0,
             }
 
-        market_trend = DVFService.calculate_market_trend(filtered_sales)
+        market_trend_result = DVFService.calculate_market_trend(filtered_sales)
+        market_trend = market_trend_result["trend_pct"]
 
         adjusted_prices = []
         for sale in filtered_sales:
