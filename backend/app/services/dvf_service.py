@@ -569,6 +569,7 @@ class DVFService:
                 "trend_source": "insufficient_data",
                 "base_sale_date": None,
                 "base_price_per_sqm": None,
+                "confidence_level": "low",
             }
 
         # Get most recent exact address sale
@@ -594,6 +595,7 @@ class DVFService:
                 "trend_source": "no_significant_trend",
                 "base_sale_date": base_date,
                 "base_price_per_sqm": base_prix_m2,
+                "confidence_level": trend_result["confidence_level"],
             }
 
         projected_price_per_sqm = DVFService.apply_time_adjustment(
@@ -604,10 +606,11 @@ class DVFService:
             "estimated_value_2025": projected_price_per_sqm * surface_area,
             "projected_price_per_sqm": projected_price_per_sqm,
             "trend_used": trend_pct,
-            "trend_source": "neighboring_addresses",
+            "trend_source": "postal_code_regression",
             "base_sale_date": base_date,
             "base_price_per_sqm": base_prix_m2,
-            "trend_sample_size": len(neighboring_sales),
+            "trend_sample_size": trend_result["sample_size"],
+            "confidence_level": trend_result["confidence_level"],
         }
 
     @staticmethod

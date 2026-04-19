@@ -403,6 +403,33 @@ class TestCalculateTrendBasedProjection:
         assert projection["estimated_value_2025"] is None
         assert projection["trend_source"] == "insufficient_data"
 
+    def test_projection_includes_confidence_level(self):
+        """Projection result should include confidence_level from trend."""
+        exact_sales = [_mock_sale(date(2023, 6, 1), 12000)]
+        neighboring_sales = []
+        for year_offset in range(5):
+            price = 10000 + (year_offset * 300)
+            for month in [1, 4, 7, 10]:
+                neighboring_sales.append(_mock_sale(date(2021 + year_offset, month, 1), price))
+        result = DVFService.calculate_trend_based_projection(
+            exact_address_sales=exact_sales,
+            neighboring_sales=neighboring_sales,
+            surface_area=50.0,
+        )
+        assert "confidence_level" in result
+        assert result["confidence_level"] in ("high", "moderate", "low")
+        assert result["trend_source"] == "postal_code_regression"
+        assert result["trend_sample_size"] == 20
+
+    def test_projection_insufficient_has_confidence(self):
+        """Empty sales should return confidence_level = low."""
+        result = DVFService.calculate_trend_based_projection(
+            exact_address_sales=[],
+            neighboring_sales=[],
+            surface_area=50.0,
+        )
+        assert result["confidence_level"] == "low"
+
 
 class TestDetectOutliersIQR:
     """Test outlier detection via IQR method."""
