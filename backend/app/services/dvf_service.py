@@ -413,49 +413,26 @@ class DVFService:
         db: Session,
         postal_code: str,
         property_type: str,
-        surface_area: float,
-        address: str,
-        months_back: int = 120,
-        max_results: int = 200,
+        months_back: int = 60,
+        max_results: int = 500,
     ) -> List[DVFSale]:
         """
-        Get neighboring address sales for trend calculation.
+        Get postal-code-level sales for trend calculation.
+        Uses all sales in the postal code for the given property type.
         NO surface area filter - we want all sales for accurate trends.
         """
-        street_number, street_name = DVFService.extract_street_info(address)
-
-        if not street_name:
-            return []
-
         cutoff_date = datetime.now() - timedelta(days=30 * months_back)
-
-        base_filters = and_(
-            DVFSale.date_mutation >= cutoff_date,
-            DVFSale.type_principal == property_type,
-            DVFSale.surface_bati.isnot(None),
-            DVFSale.prix_m2.isnot(None),
-            DVFSale.prix_m2 > 0,
-            DVFSale.code_postal == postal_code,
-        )
-
-        conditions = []
-        if street_number:
-            for offset in [2, 4, 6, 8, 10]:
-                conditions.append(
-                    DVFService._build_street_filter(street_name, with_number=street_number + offset)
-                )
-                if street_number - offset > 0:
-                    conditions.append(
-                        DVFService._build_street_filter(
-                            street_name, with_number=street_number - offset
-                        )
-                    )
-        # Always include whole-street match
-        conditions.append(DVFService._build_street_filter(street_name))
 
         query = (
             db.query(DVFSale)
-            .filter(base_filters, or_(*conditions))
+            .filter(
+                DVFSale.date_mutation >= cutoff_date,
+                DVFSale.type_principal == property_type,
+                DVFSale.surface_bati.isnot(None),
+                DVFSale.prix_m2.isnot(None),
+                DVFSale.prix_m2 > 0,
+                DVFSale.code_postal == postal_code,
+            )
             .order_by(DVFSale.date_mutation.desc())
             .limit(max_results)
         )
