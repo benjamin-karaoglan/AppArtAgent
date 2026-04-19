@@ -504,8 +504,8 @@ class DVFService:
             confidence_level = "low"
 
         return {
-            "trend_pct": round(trend_pct, 2),
-            "r_squared": round(r_squared, 4),
+            "trend_pct": float(round(trend_pct, 2)),
+            "r_squared": float(round(r_squared, 4)),
             "sample_size": sample_size,
             "years_count": years_count,
             "confidence_level": confidence_level,
@@ -528,7 +528,7 @@ class DVFService:
 
         adjustment_factor = (1 + trend_pct / 100) ** years_diff
 
-        return price_per_sqm * adjustment_factor
+        return float(price_per_sqm * adjustment_factor)
 
     @staticmethod
     def calculate_trend_based_projection(
