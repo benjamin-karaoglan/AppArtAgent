@@ -200,8 +200,8 @@ AI-powered price analysis page displaying comprehensive market insights:
 - **PriceAnalysisSummary**: Summary card showing estimated value, deviation from market average, and recommendation
 - **PriceMetricsGrid**: Grid of key price metrics (asking price, market average, deviation percentage)
 - **ComparableSalesTable**: Displays comparable DVF sales with outlier highlighting and exclusion toggles to refine analysis
-- **TrendProjectionCard**: Shows trend-based price projection with confidence indicator
-- **MarketTrendChart**: SVG chart showing price trends over time with neighboring address data
+- **TrendProjectionCard**: Shows trend-based price projection with a confidence badge (high / moderate / low) from the postal-code regression
+- **MarketTrendChart**: SVG chart showing yearly median EUR/m² over time at the postal-code level
 
 ## Protected Routes
 

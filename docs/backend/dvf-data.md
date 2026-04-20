@@ -212,9 +212,9 @@ The `DVFService` class provides high-level methods for price analysis:
 |--------|---------|
 | `get_exact_address_sales()` | Find historical sales at exact address |
 | `get_comparable_sales()` | Find similar properties in same postal code |
-| `get_neighboring_sales_for_trend()` | Get recent sales in area for trend calculation |
-| `calculate_market_trend()` | Compute monthly price trend from neighboring sales |
-| `calculate_trend_based_projection()` | Project future price using trend |
+| `get_neighboring_sales_for_trend()` | Get all postal-code sales over a 5-year window for trend calculation |
+| `calculate_market_trend()` | Fit a linear regression on yearly median EUR/m² and return annual trend + R² + confidence level |
+| `calculate_trend_based_projection()` | Project future price using trend (returns `confidence_level` and `trend_source="postal_code_regression"`) |
 | `calculate_price_analysis()` | Full analysis: exact + comparable + trend projection |
 
 ### Address Autocomplete
@@ -252,11 +252,11 @@ result = service.calculate_price_analysis(
     "exact_match_sales": [...],          # Sales at same address
     "comparable_sales": [...],           # Similar properties in 75006
     "excluded_sale_ids": [1, 2, 3],      # Outliers removed by IQR
-    "market_trend_monthly": 0.008,       # 0.8% monthly growth
-    "market_trend_annual": 0.096,        # 9.6% annual growth
+    "market_trend_annual": 0.096,        # 9.6% annual growth (linear regression on yearly medians)
     "projected_price": 875000,           # Estimated value
     "projected_price_m2": 13360,
-    "confidence": "medium",
+    "confidence_level": "high",          # high | moderate | low (from R², sample size, years)
+    "trend_source": "postal_code_regression",
     "excluded_neighboring_sale_ids": [4, 5]
 }
 ```
@@ -375,19 +375,35 @@ comparables = service.get_comparable_sales(
 # - Sorted by date descending
 ```
 
-### Market Trend (Neighboring Sales)
+### Market Trend (Postal-Code Linear Regression)
+
+Trend is a linear regression fitted on the yearly median EUR/m² across a 5-year window
+of postal-code sales. The slope is expressed as an annual percentage relative to the
+most recent year's median, and a confidence level is derived from R², sample size,
+and number of distinct years.
 
 ```python
-trend = service.calculate_market_trend(
+sales = DVFService.get_neighboring_sales_for_trend(
+    db=db,
     postal_code="75006",
     property_type="Appartement",
-    surface_area=65.5,
-    rooms=3
 )
 
-print(f"Monthly trend: {trend['monthly_change']:.2%}")
-print(f"Annual trend: {trend['annual_change']:.2%}")
+trend = DVFService.calculate_market_trend(sales)
+# {
+#   "trend_pct": 6.2,           # annual % change (fit on yearly medians)
+#   "r_squared": 0.91,          # regression fit quality
+#   "sample_size": 412,         # sales used
+#   "years_count": 5,
+#   "confidence_level": "high", # high | moderate | low
+# }
 ```
+
+Confidence thresholds:
+
+- **high**: R² ≥ 0.7, sample ≥ 50, years ≥ 4
+- **moderate**: R² ≥ 0.4, sample ≥ 20, years ≥ 3
+- **low**: otherwise
 
 ## Data Validation
 
