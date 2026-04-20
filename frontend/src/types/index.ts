@@ -115,13 +115,14 @@ export interface PriceAnalysisFull extends PriceAnalysisSummary {
     base_sale_date?: string
     base_price_per_sqm?: number
     neighboring_sales?: Array<DVFRecord & { is_outlier?: boolean }>
+    confidence_level?: 'high' | 'moderate' | 'low'
   }
   market_trend?: {
     years: number[]
     average_prices: number[]
     year_over_year_changes: number[]
     sample_counts: number[]
-    street_name?: string
+    postal_code?: string
     total_sales: number
     outliers_excluded: number
   }

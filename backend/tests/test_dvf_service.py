@@ -182,49 +182,85 @@ def _mock_sale(sale_date, prix_m2):
 
 
 class TestCalculateMarketTrend:
-    """Test calculate_market_trend method."""
+    """Test calculate_market_trend with linear regression."""
 
-    def test_calculate_trend_with_increasing_prices(self):
-        """Test trend calculation with increasing prices."""
-        sales = [
-            _mock_sale(date(2022, 1, 1), 10000),
-            _mock_sale(date(2022, 6, 1), 10100),
-            _mock_sale(date(2023, 1, 1), 10500),
-            _mock_sale(date(2023, 6, 1), 10600),
-            _mock_sale(date(2024, 1, 1), 11000),
-            _mock_sale(date(2024, 6, 1), 11100),
-        ]
+    def test_trend_with_linear_increase(self):
+        """Steady +5% per year over 5 years should produce ~5% trend."""
+        base = 10000
+        sales = []
+        for year_offset in range(5):
+            price = base * (1.05**year_offset)
+            # 11 sales per year to exceed high confidence threshold (55 total >= 50)
+            for month in range(1, 12):
+                sales.append(_mock_sale(date(2021 + year_offset, month, 1), price + (month * 5)))
+        result = DVFService.calculate_market_trend(sales)
+        assert isinstance(result, dict)
+        assert 4.0 < result["trend_pct"] < 6.0
+        assert result["confidence_level"] == "high"
+        assert result["sample_size"] == 55
+        assert result["years_count"] == 5
 
-        trend = DVFService.calculate_market_trend(sales)
-        assert trend > 0
+    def test_trend_with_flat_market(self):
+        """Same median every year should produce ~0% trend."""
+        sales = []
+        for year_offset in range(4):
+            for month in [1, 6]:
+                sales.append(_mock_sale(date(2021 + year_offset, month, 1), 10000))
+        result = DVFService.calculate_market_trend(sales)
+        assert isinstance(result, dict)
+        assert abs(result["trend_pct"]) < 1.0
 
-    def test_calculate_trend_with_decreasing_prices(self):
-        """Test trend calculation with decreasing prices."""
-        sales = [
-            _mock_sale(date(2022, 1, 1), 11000),
-            _mock_sale(date(2023, 1, 1), 10500),
-            _mock_sale(date(2024, 1, 1), 10000),
-        ]
+    def test_trend_with_decrease(self):
+        """Decreasing prices should produce negative trend."""
+        sales = []
+        for year_offset in range(4):
+            price = 12000 - (year_offset * 500)
+            for month in [1, 6]:
+                sales.append(_mock_sale(date(2021 + year_offset, month, 1), price))
+        result = DVFService.calculate_market_trend(sales)
+        assert result["trend_pct"] < 0
 
-        trend = DVFService.calculate_market_trend(sales)
-        assert trend < 0
-
-    def test_calculate_trend_insufficient_data(self):
-        """Test with insufficient data (less than 2 sales)."""
+    def test_trend_insufficient_data_one_sale(self):
+        """Single sale returns zero trend with low confidence."""
         sales = [_mock_sale(date(2024, 1, 1), 10000)]
-        trend = DVFService.calculate_market_trend(sales)
-        assert trend == 0.0
+        result = DVFService.calculate_market_trend(sales)
+        assert result["trend_pct"] == 0.0
+        assert result["confidence_level"] == "low"
 
-    def test_calculate_trend_single_year(self):
-        """Test with all sales in same year."""
+    def test_trend_insufficient_data_single_year(self):
+        """All sales in one year returns zero trend."""
         sales = [
             _mock_sale(date(2024, 1, 1), 10000),
             _mock_sale(date(2024, 6, 1), 10500),
             _mock_sale(date(2024, 12, 1), 11000),
         ]
+        result = DVFService.calculate_market_trend(sales)
+        assert result["trend_pct"] == 0.0
+        assert result["confidence_level"] == "low"
 
-        trend = DVFService.calculate_market_trend(sales)
-        assert trend == 0.0
+    def test_confidence_moderate(self):
+        """Moderate confidence: R² >= 0.4, >= 20 sales, >= 3 years."""
+        sales = []
+        for year_offset in range(3):
+            price = 10000 + (year_offset * 300)
+            for i in range(7):
+                # Add noise to lower R²
+                noise = (i - 3) * 200
+                sales.append(_mock_sale(date(2022 + year_offset, 1 + i, 1), price + noise))
+        result = DVFService.calculate_market_trend(sales)
+        assert result["years_count"] == 3
+        assert result["sample_size"] == 21
+        # With noise, confidence should be moderate (not high due to lower R²)
+        assert result["confidence_level"] in ("moderate", "high")
+
+    def test_confidence_low_few_years(self):
+        """Only 2 years with few sales = low confidence."""
+        sales = [
+            _mock_sale(date(2023, 1, 1), 10000),
+            _mock_sale(date(2024, 1, 1), 10500),
+        ]
+        result = DVFService.calculate_market_trend(sales)
+        assert result["confidence_level"] == "low"
 
 
 class TestCalculatePriceAnalysis:
@@ -366,6 +402,33 @@ class TestCalculateTrendBasedProjection:
 
         assert projection["estimated_value_2025"] is None
         assert projection["trend_source"] == "insufficient_data"
+
+    def test_projection_includes_confidence_level(self):
+        """Projection result should include confidence_level from trend."""
+        exact_sales = [_mock_sale(date(2023, 6, 1), 12000)]
+        neighboring_sales = []
+        for year_offset in range(5):
+            price = 10000 + (year_offset * 300)
+            for month in [1, 4, 7, 10]:
+                neighboring_sales.append(_mock_sale(date(2021 + year_offset, month, 1), price))
+        result = DVFService.calculate_trend_based_projection(
+            exact_address_sales=exact_sales,
+            neighboring_sales=neighboring_sales,
+            surface_area=50.0,
+        )
+        assert "confidence_level" in result
+        assert result["confidence_level"] in ("high", "moderate", "low")
+        assert result["trend_source"] == "postal_code_regression"
+        assert result["trend_sample_size"] == 20
+
+    def test_projection_insufficient_has_confidence(self):
+        """Empty sales should return confidence_level = low."""
+        result = DVFService.calculate_trend_based_projection(
+            exact_address_sales=[],
+            neighboring_sales=[],
+            surface_area=50.0,
+        )
+        assert result["confidence_level"] == "low"
 
 
 class TestDetectOutliersIQR:

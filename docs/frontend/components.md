@@ -183,7 +183,7 @@ Interactive table of comparable DVF sales with outlier highlighting (warning tok
 
 **File**: `src/components/TrendProjectionCard.tsx`
 
-Card showing trend-based price projection with confidence indicator based on neighboring sales data. Displays projected value range and historical trend direction with success/warning/danger color coding.
+Card showing trend-based price projection with a confidence badge (high / moderate / low) derived from the postal-code linear regression on yearly median EUR/m². Displays projected value, annual trend percentage, and base sale reference with success/warning/danger color coding.
 
 ## Color Token Reference
 
