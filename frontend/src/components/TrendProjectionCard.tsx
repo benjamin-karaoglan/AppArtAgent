@@ -23,18 +23,21 @@ interface TrendProjection {
   base_sale_date?: string;
   base_price_per_sqm?: number;
   neighboring_sales?: NeighboringSale[];
+  confidence_level?: 'high' | 'moderate' | 'low';
 }
 
 interface TrendProjectionCardProps {
   trendProjection: TrendProjection;
   excludedNeighboringIds: Set<number>;
   onToggle: (saleId: number) => void;
+  postalCode?: string;
 }
 
 export default function TrendProjectionCard({
   trendProjection,
   excludedNeighboringIds,
   onToggle,
+  postalCode,
 }: TrendProjectionCardProps) {
   const t = useTranslations('property');
   const [showNeighboringSales, setShowNeighboringSales] = useState(false);
@@ -83,12 +86,25 @@ export default function TrendProjectionCard({
             {(trendProjection.trend_used ?? 0) > 0 ? '+' : ''}
             {trendProjection.trend_used?.toFixed(2)}% /year
           </dd>
+          {trendProjection.confidence_level && (
+            <dd className="mt-1">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                trendProjection.confidence_level === 'high'
+                  ? 'bg-success-100 text-success-700'
+                  : trendProjection.confidence_level === 'moderate'
+                  ? 'bg-warning-100 text-warning-700'
+                  : 'bg-danger-100 text-danger-700'
+              }`}>
+                {t(`trend.confidence${trendProjection.confidence_level.charAt(0).toUpperCase() + trendProjection.confidence_level.slice(1)}`)}
+              </span>
+            </dd>
+          )}
           <dd className="mt-1">
             <button
               onClick={() => setShowNeighboringSales(!showNeighboringSales)}
               className="text-sm text-primary-600 hover:text-primary-800 flex items-center gap-1"
             >
-              {t('trend.basedOnSales', { count: trendProjection.trend_sample_size ?? 0 })}
+              {t('trend.basedOnSales', { count: trendProjection.trend_sample_size ?? 0, postalCode: postalCode ?? '' })}
               {showNeighboringSales ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
           </dd>

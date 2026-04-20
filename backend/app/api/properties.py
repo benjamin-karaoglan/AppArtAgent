@@ -416,9 +416,6 @@ def _compute_market_trend_json(property_obj: Property, db: Session) -> dict:
         db=db,
         postal_code=property_obj.postal_code or "",
         property_type=property_obj.property_type or "Appartement",
-        surface_area=property_obj.surface_area,
-        address=property_obj.address or "",
-        months_back=120,
     )
 
     if not neighboring_sales:
@@ -447,25 +444,23 @@ def _compute_market_trend_json(property_obj: Property, db: Session) -> dict:
     sample_counts = []
 
     for i, year in enumerate(sorted_years):
-        avg_price = statistics.mean(sales_by_year[year])
+        median_price = statistics.median(sales_by_year[year])
         years.append(year)
-        average_prices.append(round(avg_price, 2))
+        average_prices.append(round(median_price, 2))
         sample_counts.append(len(sales_by_year[year]))
         if i > 0:
-            prev_avg = statistics.mean(sales_by_year[sorted_years[i - 1]])
-            yoy_change = ((avg_price - prev_avg) / prev_avg) * 100
+            prev_median = statistics.median(sales_by_year[sorted_years[i - 1]])
+            yoy_change = ((median_price - prev_median) / prev_median) * 100
             year_over_year_changes.append(round(yoy_change, 2))
         else:
             year_over_year_changes.append(0)
-
-    _, street_name = DVFService.extract_street_info(property_obj.address or "")
 
     return {
         "years": years,
         "average_prices": average_prices,
         "year_over_year_changes": year_over_year_changes,
         "sample_counts": sample_counts,
-        "street_name": street_name or property_obj.address or "Unknown",
+        "postal_code": property_obj.postal_code or "",
         "total_sales": len(neighboring_sales),
         "outliers_excluded": outliers_excluded,
     }
@@ -500,9 +495,6 @@ def _run_trend_analysis(
         db=db,
         postal_code=property_obj.postal_code or "",
         property_type=property_obj.property_type or "Appartement",
-        surface_area=property_obj.surface_area,
-        address=property_obj.address or "",
-        months_back=120,
     )
 
     # Detect outliers

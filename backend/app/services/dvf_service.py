@@ -8,6 +8,7 @@ import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
@@ -412,67 +413,52 @@ class DVFService:
         db: Session,
         postal_code: str,
         property_type: str,
-        surface_area: float,
-        address: str,
-        months_back: int = 120,
-        max_results: int = 200,
+        months_back: int = 60,
     ) -> List[DVFSale]:
         """
-        Get neighboring address sales for trend calculation.
+        Get postal-code-level sales for trend calculation.
+        Uses all sales in the postal code for the given property type.
         NO surface area filter - we want all sales for accurate trends.
+        No row limit - the date window (5 years) is the constraint.
+        Dense postal codes (e.g. Paris) can have 2000+ sales in 5 years.
         """
-        street_number, street_name = DVFService.extract_street_info(address)
-
-        if not street_name:
-            return []
-
         cutoff_date = datetime.now() - timedelta(days=30 * months_back)
-
-        base_filters = and_(
-            DVFSale.date_mutation >= cutoff_date,
-            DVFSale.type_principal == property_type,
-            DVFSale.surface_bati.isnot(None),
-            DVFSale.prix_m2.isnot(None),
-            DVFSale.prix_m2 > 0,
-            DVFSale.code_postal == postal_code,
-        )
-
-        conditions = []
-        if street_number:
-            for offset in [2, 4, 6, 8, 10]:
-                conditions.append(
-                    DVFService._build_street_filter(street_name, with_number=street_number + offset)
-                )
-                if street_number - offset > 0:
-                    conditions.append(
-                        DVFService._build_street_filter(
-                            street_name, with_number=street_number - offset
-                        )
-                    )
-        # Always include whole-street match
-        conditions.append(DVFService._build_street_filter(street_name))
 
         query = (
             db.query(DVFSale)
-            .filter(base_filters, or_(*conditions))
+            .filter(
+                DVFSale.date_mutation >= cutoff_date,
+                DVFSale.type_principal == property_type,
+                DVFSale.surface_bati.isnot(None),
+                DVFSale.prix_m2.isnot(None),
+                DVFSale.prix_m2 > 0,
+                DVFSale.code_postal == postal_code,
+            )
             .order_by(DVFSale.date_mutation.desc())
-            .limit(max_results)
         )
 
         return query.all()
 
     @staticmethod
     def calculate_market_trend(
-        comparable_sales: List[DVFSale], use_latest_year_only: bool = False
-    ) -> float:
+        comparable_sales: List[DVFSale],
+    ) -> Dict[str, Any]:
         """
-        Calculate market trend (annual price increase/decrease percentage).
+        Calculate market trend using linear regression on yearly median EUR/m2.
 
         Returns:
-            Annual trend as percentage (e.g., 5.0 for +5% per year)
+            Dict with trend_pct, r_squared, sample_size, years_count, confidence_level
         """
+        insufficient = {
+            "trend_pct": 0.0,
+            "r_squared": 0.0,
+            "sample_size": len(comparable_sales),
+            "years_count": 0,
+            "confidence_level": "low",
+        }
+
         if len(comparable_sales) < 2:
-            return 0.0
+            return insufficient
 
         sales_by_year: dict[int, list[float]] = {}
         for sale in comparable_sales:
@@ -485,27 +471,45 @@ class DVFService:
                 sales_by_year[year].append(float(prix_m2))
 
         if len(sales_by_year) < 2:
-            return 0.0
+            return insufficient
 
-        year_averages = {year: statistics.mean(prices) for year, prices in sales_by_year.items()}
+        year_medians = {year: statistics.median(prices) for year, prices in sales_by_year.items()}
+        sorted_years = sorted(year_medians.keys())
+        years_array = np.array(sorted_years, dtype=float)
+        medians_array = np.array([year_medians[y] for y in sorted_years], dtype=float)
 
-        sorted_years = sorted(year_averages.keys())
+        # Linear regression: median_price = slope * year + intercept
+        coeffs = np.polyfit(years_array, medians_array, 1)
+        slope = coeffs[0]
 
-        yoy_changes = []
-        for i in range(1, len(sorted_years)):
-            prev_year = sorted_years[i - 1]
-            curr_year = sorted_years[i]
-            years_diff = curr_year - prev_year
+        # R-squared calculation
+        predicted = np.polyval(coeffs, years_array)
+        ss_res = np.sum((medians_array - predicted) ** 2)
+        ss_tot = np.sum((medians_array - np.mean(medians_array)) ** 2)
+        r_squared = float(1 - ss_res / ss_tot) if ss_tot > 0 else 0.0
 
-            if years_diff > 0 and year_averages[prev_year] > 0:
-                price_change = year_averages[curr_year] - year_averages[prev_year]
-                annual_change_pct = (price_change / year_averages[prev_year]) / years_diff * 100
-                yoy_changes.append(annual_change_pct)
+        # Convert slope to annual percentage relative to latest year median
+        latest_median = year_medians[sorted_years[-1]]
+        trend_pct = (slope / latest_median) * 100 if latest_median > 0 else 0.0
 
-        if use_latest_year_only and yoy_changes:
-            return yoy_changes[-1]
+        sample_size = len(comparable_sales)
+        years_count = len(sales_by_year)
+
+        # Confidence level
+        if r_squared >= 0.7 and sample_size >= 50 and years_count >= 4:
+            confidence_level = "high"
+        elif r_squared >= 0.4 and sample_size >= 20 and years_count >= 3:
+            confidence_level = "moderate"
         else:
-            return statistics.mean(yoy_changes) if yoy_changes else 0.0
+            confidence_level = "low"
+
+        return {
+            "trend_pct": float(round(trend_pct, 2)),
+            "r_squared": float(round(r_squared, 4)),
+            "sample_size": sample_size,
+            "years_count": years_count,
+            "confidence_level": confidence_level,
+        }
 
     @staticmethod
     def apply_time_adjustment(
@@ -524,7 +528,7 @@ class DVFService:
 
         adjustment_factor = (1 + trend_pct / 100) ** years_diff
 
-        return price_per_sqm * adjustment_factor
+        return float(price_per_sqm * adjustment_factor)
 
     @staticmethod
     def calculate_trend_based_projection(
@@ -542,6 +546,7 @@ class DVFService:
                 "trend_source": "insufficient_data",
                 "base_sale_date": None,
                 "base_price_per_sqm": None,
+                "confidence_level": "low",
             }
 
         # Get most recent exact address sale
@@ -557,7 +562,8 @@ class DVFService:
             getattr(base_sale, "prix_m2", None) or getattr(base_sale, "price_per_sqm", None) or 0
         )
 
-        trend_pct = DVFService.calculate_market_trend(neighboring_sales, use_latest_year_only=True)
+        trend_result = DVFService.calculate_market_trend(neighboring_sales)
+        trend_pct = trend_result["trend_pct"]
 
         if abs(trend_pct) < 0.1:
             return {
@@ -566,6 +572,7 @@ class DVFService:
                 "trend_source": "no_significant_trend",
                 "base_sale_date": base_date,
                 "base_price_per_sqm": base_prix_m2,
+                "confidence_level": trend_result["confidence_level"],
             }
 
         projected_price_per_sqm = DVFService.apply_time_adjustment(
@@ -576,10 +583,11 @@ class DVFService:
             "estimated_value_2025": projected_price_per_sqm * surface_area,
             "projected_price_per_sqm": projected_price_per_sqm,
             "trend_used": trend_pct,
-            "trend_source": "neighboring_addresses",
+            "trend_source": "postal_code_regression",
             "base_sale_date": base_date,
             "base_price_per_sqm": base_prix_m2,
-            "trend_sample_size": len(neighboring_sales),
+            "trend_sample_size": trend_result["sample_size"],
+            "confidence_level": trend_result["confidence_level"],
         }
 
     @staticmethod
@@ -617,7 +625,8 @@ class DVFService:
                 "market_trend_annual": 0,
             }
 
-        market_trend = DVFService.calculate_market_trend(filtered_sales)
+        market_trend_result = DVFService.calculate_market_trend(filtered_sales)
+        market_trend = market_trend_result["trend_pct"]
 
         adjusted_prices = []
         for sale in filtered_sales:
